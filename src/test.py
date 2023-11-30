@@ -728,3 +728,5 @@ for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
 
+plt.close('all') # clean up desktop 
+

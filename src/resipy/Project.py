@@ -2907,6 +2907,7 @@ class Project(object): # Project master class instanciated by the GUI
         # define num_xz_poly or num_xy_poly
         elec = self.elec[~self.elec['remote']][['x','y','z']].values
         elec_x, elec_y, elec_z = elec[:,0], elec[:,1], elec[:,2]
+        
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.param['num_xz_poly'] = 5
             if all(self.elec['buried']): # we don't know if there is a surface
@@ -2924,6 +2925,20 @@ class Project(object): # Project master class instanciated by the GUI
             [xmin, zmin],
             [xmin, zmax]])
             self.param['xz_poly_table'] = xz_poly_table
+        elif all(np.array(elec_y)==elec_y[0]): #catch 2d line case 
+            self.param['num_xy_poly'] = 5
+            xmin, xmax = np.min(elec_x), np.max(elec_x)
+            ymin, ymax = np.min(elec_y)-(self.fmd/5), np.max(elec_y)+(self.fmd/5)
+            zmin, zmax = np.min(elec_z)-self.fmd, np.max(elec_z)
+            xy_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['zmin'] = zmin
+            self.param['zmax'] = zmax
+            self.param['xy_poly_table'] = xy_poly_table
         else:
             self.param['num_xy_poly'] = 5
             xmin, xmax = np.min(elec_x), np.max(elec_x)
@@ -5250,7 +5265,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
-        fmd = self.fmd#.copy()
+        #fmd = self.fmd#.copy()
         elec = self.elec.copy()
         if self.typ[-1]=='t' and not self.hasElecString():
             #need to add elec strings to labels if in 3D
@@ -5282,6 +5297,15 @@ class Project(object): # Project master class instanciated by the GUI
         # self.zlim[0] = np.min(elec['z']) - self.fmd
         if iplot is True:
             self.showPseudo()
+            
+        # save results with noise 
+        if noise > 0 or noiseIP > 0:
+            outputname = os.path.join(fwdDir, self.typ + '_forward_w_noise.dat')
+            if self.typ[0] == 'c':
+                self.surveys[0].write2protocol(outputname,ip=True)
+            else: 
+                self.surveys[0].write2protocol(outputname)
+                
         dump('Forward modelling done.')
         
     def saveForwardModelResult(self,fname):

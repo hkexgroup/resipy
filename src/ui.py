@@ -4807,7 +4807,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.helpSection2.setHtml(r2help[arg])
 
 
-        self.parallelLabel = QLabel('<a href="parallel">Timelapse parallel processing/a>')
+        self.parallelLabel = QLabel('<a href="parallel">Timelapse parallel processing</a>')
         self.parallelLabel.linkActivated.connect(showHelpAdv)
         self.parallelCheck = QCheckBox()
         advForm.addRow(self.parallelLabel, self.parallelCheck)

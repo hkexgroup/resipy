@@ -1232,23 +1232,20 @@ class Mesh:
                 ylim=[min(self.node[:,1]), max(self.node[:,1])]
         if zlim is None:
             zlim=[min(self.node[:,2]), max(self.node[:,2])]
-        # why not truncate as well to electrode extent?
-        
-        # elm_x = self.elmCentre[:,0]
-        # elm_y = self.elmCentre[:,1]
-        # elm_z = self.elmCentre[:,2]
-        # ie = (elm_x > xlim[0]) & (elm_x < xlim[1]) &\
-        #      (elm_y > ylim[0]) & (elm_y < ylim[1]) &\
-        #      (elm_z > zlim[0]) & (elm_z < zlim[1])
+            
+        # catch 2d truncation in 3D meshes 
+        if ylim[0] == ylim[1]:
+            ylim[0] -= 1.0
+            ylim[1] += 1.0
              
         # we keep all the elements which have at least 1 node inside
         # the zone of interest
         ie = (self.node[self.connection,0] > xlim[0]).any(1) &\
-             (self.node[self.connection,1] > ylim[0]).any(1) &\
-             (self.node[self.connection,2] > zlim[0]).any(1) &\
-             (self.node[self.connection,0] < xlim[1]).any(1) &\
-             (self.node[self.connection,1] < ylim[1]).any(1) &\
-             (self.node[self.connection,2] < zlim[1]).any(1)
+              (self.node[self.connection,1] > ylim[0]).any(1) &\
+              (self.node[self.connection,2] > zlim[0]).any(1) &\
+              (self.node[self.connection,0] < xlim[1]).any(1) &\
+              (self.node[self.connection,1] < ylim[1]).any(1) &\
+              (self.node[self.connection,2] < zlim[1]).any(1)
                      
         nmesh = self.copy() # make a new mesh object with fewer elements 
         nmesh.df = nmesh.df[ie].reset_index(drop=True)
@@ -1256,7 +1253,7 @@ class Mesh:
         nmesh.numel = nmesh.df.shape[0]
         nmesh.elmCentre = self.elmCentre[ie,:]
         nmesh.connection = nmesh.connection[ie,:]
-        
+
         nmesh.__rmexcessNodes() # remove the excess nodes 
             
         return nmesh # return truncated mesh 
@@ -4870,7 +4867,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         interp_method = None 
         
     lineis2d = False 
-    if all(np.array(elec_y)==elec_y[0]):
+    if all(np.array(elec_y)==elec_y[0]) and 'buried' not in elec_type:
         # do 2d line in 3D mesh 
         lineis2d = True 
         if len(elec_x) > 40: #somewhat arbitary threshold ??
@@ -4884,8 +4881,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         interp_method = None 
         
     
-    if lineis2d and surface_refinement is None:
-        # cant use triangulation methods if there is no surface refinement
+    if all(np.array(elec_y)==elec_y[0]) and surface_refinement is None:
+        # cant use triangulation methods if there is no surface refinement and 
+        # there is no depth in the Y axis 
         interp_method = 'nearest'
             
         
