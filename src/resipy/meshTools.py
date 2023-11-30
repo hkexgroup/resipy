@@ -4873,13 +4873,21 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     if all(np.array(elec_y)==elec_y[0]):
         # do 2d line in 3D mesh 
         lineis2d = True 
+        if len(elec_x) > 40: #somewhat arbitary threshold ??
+            # then its a long line , use a cylinderical mesh 
+            if 'geom' not in kwargs.keys():
+                kwargs['geom'] = 'cy'
+            if 'flank_fac' not in kwargs.keys():
+                kwargs['flank_fac'] = 10 
         
     if whole_space:
         interp_method = None 
         
+    
     if lineis2d and surface_refinement is None:
         # cant use triangulation methods if there is no surface refinement
         interp_method = 'nearest'
+            
         
     # check for repeated electrodes? 
     check4repeatNodes(elec_x,elec_y,elec_z,elec_type)

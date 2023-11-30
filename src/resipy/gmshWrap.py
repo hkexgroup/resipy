@@ -539,15 +539,16 @@ def mshParse(fname, debug=True):
         return mshParseLegacy(fname, debug)
     
 #%% refinment fields 
-def addBallField(fh,nfield,x,y,z,r,thick=0):
+def addBallField(fh,nfield,x,y,z,r,thick=0,VIn='cl_factor',
+                 VOut='cln_factor'):
     fh.write('Field[%i] = Ball;\n'%nfield)
 
     # set radius and area of influence 
     fh.write('Field[%i].Radius = %f;\n'%(nfield,r))
     fh.write('Field[%i].Thickness = %f;\n'%(nfield,thick))
     # set characteristic lengths 
-    fh.write('Field[%i].VIn = cl*cl_factor;\n'%(nfield))
-    fh.write('Field[%i].VOut = cl*cln_factor;\n'%(nfield))
+    fh.write('Field[%i].VIn = cl*%s;\n'%(nfield,VIn))
+    fh.write('Field[%i].VOut = cl*%s;\n'%(nfield,VOut))
     # set ball origin 
     fh.write('Field[%i].XCenter = %f;\n'%(nfield,x))
     fh.write('Field[%i].YCenter = %f;\n'%(nfield,y))
@@ -1598,7 +1599,7 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
 def halfspace3d(elec_x, elec_y, elec_z = None,
                 fmd=-1, file_path='mesh3d.geo',
                 cl=-1, cl_factor=-1, cln_factor=1000, dp_len=-1, 
-                mesh_refinement=None, use_fields=False, dump=None,
+                mesh_refinement=None, use_fields=True, dump=None,
                 flank_fac = 12):
     """
     Writes a gmsh .geo for a 3D half space with no topography for a hemispherical 
@@ -1770,14 +1771,274 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
     fh.close()
     
     return node_pos
+
+def __cylinder25d(elec_x, elec_y, elec_z = None,
+                  fmd=-1, file_path='mesh3d.geo',
+                  cl=-1, cl_factor=-1, cln_factor=1000, dp_len=-1, 
+                  mesh_refinement=None, use_fields=False, dump=None,
+                  flank_fac = 10):
+    """
+    Create a cylindrical half space in the case of long 2D lines. 
+
+    """
+
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
+    
+    nelec = len(elec_x)
+        
+    no_pts = 0
+    nfield = 0 
+    no_lines = 0 
+    no_surf = 0 
+    node_pos = np.zeros(nelec,dtype=int)
+    dist = np.unique(find_dist(elec_x, np.zeros(nelec), elec_z)) 
+    
+    dmin = dist[1]
+    dmax = dist[-1]
+
+    outer_rad = dmax*flank_fac
+    
+    # create file 
+    fh = open(file_path,'w')
+    fh.write('//3D Half space (tetra) mesh for ResIPy which is a 2D line\n')
+    fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")
+    fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write('cl=%f;//electrode characteristic length\n'%float(cl))
+    fh.write('cl_factor=%f;//Fine region characteristic factor\n'%float(cl_factor))
+    fh.write('cln_factor=%f;//Neumann characteristic factor\n'%float(cln_factor))
+    fh.write('r=%f;\n'%float(outer_rad))
+    
+    # create electrodes
+    fh.write('//Start electrodes, include refinement sphere around the electrode\n')
+    template = "Point(%i) = {%f, %f, %f, cl};//electrode\n"
+    pts_cache = []
+    lns_cache = []
+    bur_cache = [] # buried electrodes 
+    sur_cache = [] # surface cache 
+    for i in range(len(elec_x)):
+        no_pts += 1 
+        fh.write(template%(no_pts,elec_x[i],elec_y[0],elec_z[i]))
+        node_pos[i] = no_pts
+        if elec_z[i] == 0:
+            pts_cache.append(no_pts)
+        else:
+            bur_cache.append(no_pts)
+        nfield += 1 
+        addBallField(fh,nfield,elec_x[i],elec_y[0],elec_z[i],
+                     dmin/4)
+    setFields(fh, nfield)
+    
+    for i in range(1,len(pts_cache)):
+        no_lines += 1 
+        fh.write("Line(%i) = {%i, %i};\n"%(no_lines,pts_cache[i-1],pts_cache[i]))
+        lns_cache.append(no_lines)
+        
+    template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//depth refinement point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[0],elec_y[0],-fmd))
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[-1],elec_y[0],-fmd))
+    
+    no_lines += 1 
+    fh.write("Line(%i) = {%i, %i};\n"%(no_lines,pts_cache[-1],no_pts))
+    lns_cache.append(no_lines)
+    
+    no_lines += 1 
+    fh.write("Line(%i) = {%i, %i};\n"%(no_lines,no_pts,no_pts-1))
+    lns_cache.append(no_lines)
+    
+    no_lines += 1 
+    fh.write("Line(%i) = {%i, %i};\n"%(no_lines,pts_cache[0],no_pts-1))
+    lns_cache.append(no_lines)
+    
+    no_surf +=1 
+    fh.write('Curve Loop(%i) = {'%no_surf)
+    for i in range(len(lns_cache)-1):
+        fh.write('%i, '%lns_cache[i])
+    fh.write('-%i};\n'%lns_cache[-1])
+    
+    fh.write('Plane Surface(%i) = {%i};\n'%(no_surf,no_surf))
+
+    # specify points below surface are in 2D mesh region         
+    for pt in bur_cache: 
+        fh.write('Point{%i} In Surface{1};\n'%pt)
+        
+    # add lines towards the right flanks of the survey 
+    right_pts = [0]*4 
+    template = "Point(%i) = {%f+r, %f, %f, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[-1],elec_y[0],0))
+    right_pts[0] = no_pts 
+    
+    template = "Point(%i) = {%f+r, %f-r, %f, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[-1],elec_y[0],0))
+    right_pts[1] = no_pts 
+    
+    template = "Point(%i) = {%f+r, %f+r, %f, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[-1],elec_y[0],0))
+    right_pts[2] = no_pts 
+    
+    template = "Point(%i) = {%f+r, %f, -r, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[-1],elec_y[0]))
+    right_pts[3] = no_pts 
+    
+    # add lines towards the left flanks of the survey 
+    left_pts = [0]*4 
+    template = "Point(%i) = {%f-r, %f, %f, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[0],elec_y[0],0))
+    left_pts[0] = no_pts 
+    
+    template = "Point(%i) = {%f-r, %f-r, %f, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[0],elec_y[0],0))
+    left_pts[1] = no_pts 
+    
+    template = "Point(%i) = {%f-r, %f+r, %f, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[0],elec_y[0],0))
+    left_pts[2] = no_pts 
+
+    template = "Point(%i) = {%f-r, %f, -r, cl*cln_factor};//outer boundary point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[0],elec_y[0]))
+    left_pts[3] = no_pts 
+    
+    
+    # start to construct the surfaces of the cylinder 
+    fh.write("//Following lines construct the shell of the halfspace cylinder\n")
+    curve_lines_0 = [0]*4 
+    curve_lines_1 = [0]*4 
+    top_surf_line = [0]*6 
+    right_surf_ln = [0]*4 
+    left_surf_lin = [0]*4 
+    
+    # add circles 
+    template = "Circle(%i) = {%i, %i, %i};\n"
+    no_lines +=1 
+    fh.write(template%(no_lines,right_pts[1],right_pts[0],right_pts[3]))
+    curve_lines_0[0] = no_lines 
+    right_surf_ln[2] = no_lines 
+    
+    no_lines +=1  
+    fh.write(template%(no_lines,right_pts[2],right_pts[0],right_pts[3]))
+    curve_lines_1[0] = no_lines 
+    right_surf_ln[3] = no_lines 
+    
+    no_lines +=1 
+    fh.write(template%(no_lines,left_pts[1],left_pts[0],left_pts[3]))
+    curve_lines_0[2] = no_lines 
+    left_surf_lin[2] = no_lines 
+
+    no_lines +=1  
+    fh.write(template%(no_lines,left_pts[2],left_pts[0],left_pts[3]))
+    curve_lines_1[2] = no_lines 
+    left_surf_lin[3] = no_lines 
+    
+    
+    # add more lines to form top surface 
+    template = "Line(%i) = {%i, %i};\n"
+    no_lines +=1  
+    fh.write(template%(no_lines,right_pts[2],left_pts[2]))
+    curve_lines_1[1] = no_lines
+    top_surf_line[0] = no_lines 
+
+    no_lines +=1  
+    fh.write(template%(no_lines,right_pts[1],left_pts[1]))
+    curve_lines_0[1] = no_lines
+    top_surf_line[3] = no_lines 
+
+    no_lines +=1  
+    fh.write(template%(no_lines,right_pts[0],right_pts[1]))
+    right_surf_ln[1] = no_lines 
+    top_surf_line[2] = no_lines 
+
+    no_lines +=1  
+    fh.write(template%(no_lines,right_pts[0],right_pts[2]))
+    right_surf_ln[0] = no_lines 
+    top_surf_line[1] = no_lines 
+    
+    no_lines +=1  
+    fh.write(template%(no_lines,left_pts[0],left_pts[1]))
+    left_surf_lin[1] = no_lines 
+    top_surf_line[4] = no_lines 
+
+    no_lines +=1  
+    fh.write(template%(no_lines,left_pts[0],left_pts[2]))
+    left_surf_lin[0] = no_lines 
+    top_surf_line[5] = no_lines 
+    
+    # add line at base of cylinder 
+    template = "Line(%i) = {%i, %i};\n"
+    no_lines +=1  
+    fh.write(template%(no_lines,right_pts[3],left_pts[3]))
+    curve_lines_0[3] = no_lines 
+    curve_lines_1[3] = no_lines 
+    
+    # add the curved surfaces 
+    template = "Curve Loop(%i) = {%i, -%i, -%i, %i};//cylinder half space surface\n"
+    no_surf += 1 
+    fh.write(template%(no_surf,curve_lines_0[0],curve_lines_0[1],curve_lines_0[2],curve_lines_0[3]))
+    fh.write("Surface(%i) = {%i};\n"%(no_surf,no_surf))
+    sur_cache.append(no_surf)
+    no_surf += 2 # i dont know why but open cascade seems to add 2 surfaces in the background per curve loop 
+    fh.write(template%(no_surf,curve_lines_1[0],curve_lines_1[1],curve_lines_1[2],curve_lines_1[3]))
+    fh.write("Surface(%i) = {%i};\n"%(no_surf,no_surf))
+    sur_cache.append(no_surf)
+    
+    # add end on surfaces 
+    template = "Curve Loop(%i) = {%i, %i, %i, %i};//cylinder end on surface\n"
+    no_surf += 2 
+    fh.write(template%(no_surf,right_surf_ln[0],right_surf_ln[1],right_surf_ln[2],right_surf_ln[3]))
+    fh.write("Plane Surface(%i) = {%i};\n"%(no_surf,no_surf))
+    sur_cache.append(no_surf)
+    no_surf += 2 
+    fh.write(template%(no_surf,left_surf_lin[0],left_surf_lin[1],left_surf_lin[2],left_surf_lin[3]))
+    fh.write("Plane Surface(%i) = {%i};\n"%(no_surf,no_surf))
+    sur_cache.append(no_surf)
+    
+    #add top surface 
+    no_surf += 2 
+    fh.write("Curve Loop(%i) = {"%no_surf)
+    for i in range(5):
+        fh.write("%i ,"%top_surf_line[i])
+    fh.write("%i};\n"%top_surf_line[-1])
+    fh.write("Plane Surface(%i) = {%i};\n"%(no_surf,no_surf))
+    sur_cache.append(no_surf)
+    
+    # put the electrodes into the top surface 
+    fh.write("//Add the lines of the 2D survey to the top surface of the mesh\n")
+    for i in range(len(lns_cache)-3):
+        line = lns_cache[i]
+        fh.write("Line{%i} In Surface {%i};\n"%(line,no_surf))
+        
+    # make volume 
+    fh.write("//Combine surfaces together to make the meshing volume\n")
+    fh.write("Surface Loop(1) = {")
+    for i in range(len(sur_cache)-1):
+        fh.write("%i ,"%sur_cache[i])
+    fh.write("%i};\n"%sur_cache[-1])
+    fh.write("Volume(1) = {1};\n")
+    
+    # finally add the 2d surface into the volume 
+    fh.write("Surface{1} In Volume{1};\n")
+    
+    fh.close()
+    
+    return node_pos 
     
 def halfspace3dline2d(elec_x, elec_y, elec_z = None,
                       fmd=-1, file_path='mesh3d.geo',
                       cl=-1, cl_factor=-1, cln_factor=1000, dp_len=-1, 
                       mesh_refinement=None, use_fields=False, dump=None,
-                      flank_fac = 12):
+                      flank_fac = 12, geom='hemisphere'):
     """
-    Writes a gmsh .geo for a 3D half space with no topography for a hemispherical 
+    Writes a gmsh .geo for a 3D half space with no topography for a 2D line in a 
+    3D half space problem. Either a hemispherical or cylindrical mesh can be used. 
     mesh for a survey setup that is a single 2D line. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then 
     its assumed that the electrode is buried. 
@@ -1813,6 +2074,8 @@ def halfspace3dline2d(elec_x, elec_y, elec_z = None,
     flank_fac: float, int, optional
         Defines how far away the outer radius of the of the mesh. The radius is 
         flank_factor * dp_len. 
+    geom: str, optional 
+        Change from hemisphere to make a cylindrical mesh!
     
     Returns
     ----------
@@ -1863,8 +2126,13 @@ def halfspace3dline2d(elec_x, elec_y, elec_z = None,
     if fmd < abs(np.min(elec_z)):
         warnings.warn('depth of fine mesh is shallower than lowest electrode, adjusting...')
         fmd = abs(np.min(elec_z)) + (dp_len*2)
-    
-    cln_factor=1000
+        
+    if geom != 'hemisphere':
+        node_pos = __cylinder25d(elec_x, elec_y, elec_z, fmd, file_path,cl,
+                                 cl_factor,cln_factor,dp_len,mesh_refinement,
+                                 use_fields,dump, flank_fac)
+        return node_pos 
+
     outer_rad = dmax*flank_fac
     
     # create file 
