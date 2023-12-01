@@ -4489,9 +4489,9 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
             cmd_line = [wPath + winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
     
     elif platform.system() == 'Linux':
-        if platform.machine() == 'aarch64':
-            cmd_line = [ewd + '/gmsh_aarch64', file_name + '.geo', opt,'-nt','%i'%ncores]
-        elif platform.machine() == 'armv7l':
+        #if platform.machine() == 'aarch64':
+        #    cmd_line = [ewd + '/gmsh_aarch64', file_name + '.geo', opt,'-nt','%i'%ncores]
+        if platform.machine() in ['armv7l', 'aarch64']:
             cmd_line = [ewd + '/gmsh_armv7l', file_name + '.geo', opt,'-nt','%i'%ncores]
         elif os.path.isfile(os.path.join(ewd,'gmsh_linux')):
             cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', opt,'-nt','%i'%ncores] # using linux version if avialable (can be more performant)
