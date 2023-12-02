@@ -815,7 +815,7 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False,
     pnew = np.array([xnew,ynew]).T # new points 
 
     tree = cKDTree(pknown)#tree object 
-    dist,idx = tree.query(pnew,n_jobs=num_threads)# map known points to new points 
+    dist,idx = tree.query(pnew)# map known points to new points 
     
     if return_idx:
         return zknown[idx], idx
@@ -868,7 +868,7 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False,
     pknown = np.array([xknown,yknown,zknown]).T # known points 
     pnew = np.array([xnew,ynew,znew]).T # new points 
     tree = cKDTree(pknown)#tree object 
-    dist,idx = tree.query(pnew,n_jobs=num_threads)# map known points to new points 
+    dist,idx = tree.query(pnew)# map known points to new points 
     
     if return_idx:
         return iknown[idx], idx

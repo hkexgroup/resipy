@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.4.5' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.4.6' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -2813,8 +2813,8 @@ class Project(object): # Project master class instanciated by the GUI
                 elif typ == 'tetra':
                     print('Creating tetrahedral mesh...', end='')    
                     if cl == -1:
-                        dist = cdist(self.elec[~self.elec['remote']][['x','y']].values)/2 # half the minimal electrode distance
-                        cl = np.min(dist[dist != 0])
+                        dist = cdist(self.elec[~self.elec['remote']][['x','y']].values) # half the minimal electrode distance
+                        cl = np.min(dist[dist != 0])/4 
                     mesh = mt.tetraMesh(elec_x, elec_y, elec_z,elec_type,
                                  path=os.path.join(self.apiPath, 'exe'),
                                  surface_refinement=surface,
@@ -2907,6 +2907,7 @@ class Project(object): # Project master class instanciated by the GUI
         # define num_xz_poly or num_xy_poly
         elec = self.elec[~self.elec['remote']][['x','y','z']].values
         elec_x, elec_y, elec_z = elec[:,0], elec[:,1], elec[:,2]
+        
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.param['num_xz_poly'] = 5
             if all(self.elec['buried']): # we don't know if there is a surface
@@ -2924,6 +2925,20 @@ class Project(object): # Project master class instanciated by the GUI
             [xmin, zmin],
             [xmin, zmax]])
             self.param['xz_poly_table'] = xz_poly_table
+        elif all(np.array(elec_y)==elec_y[0]): #catch 2d line case 
+            self.param['num_xy_poly'] = 5
+            xmin, xmax = np.min(elec_x), np.max(elec_x)
+            ymin, ymax = np.min(elec_y)-(self.fmd/5), np.max(elec_y)+(self.fmd/5)
+            zmin, zmax = np.min(elec_z)-self.fmd, np.max(elec_z)
+            xy_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['zmin'] = zmin
+            self.param['zmax'] = zmax
+            self.param['xy_poly_table'] = xy_poly_table
         else:
             self.param['num_xy_poly'] = 5
             xmin, xmax = np.min(elec_x), np.max(elec_x)
@@ -3769,6 +3784,9 @@ class Project(object): # Project master class instanciated by the GUI
                 dump('----------------- Computing d-d0+f(m0) ---------------\n')
                 # as per v3.2 of R3t we need to compute MANUALLY d-d0+f(m0)
                 # this is done automatically in R2 and cR2
+                # unfortunatley R3t does not output the transfer resistances of the final model 
+                # (only apparent resistivities) , therefore forward modelling the baseline 
+                # resistivities seems like the best option 
                 self.sequence = self.surveys[0].df[['a','b','m','n']].values
                 surveysBackup = self.surveys.copy()
                 # res0Backup = self.mesh.df['res0'].values.copy() # might want to reset res0 
@@ -5247,7 +5265,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
-        fmd = self.fmd#.copy()
+        #fmd = self.fmd#.copy()
         elec = self.elec.copy()
         if self.typ[-1]=='t' and not self.hasElecString():
             #need to add elec strings to labels if in 3D
@@ -5279,6 +5297,15 @@ class Project(object): # Project master class instanciated by the GUI
         # self.zlim[0] = np.min(elec['z']) - self.fmd
         if iplot is True:
             self.showPseudo()
+            
+        # save results with noise 
+        if noise > 0 or noiseIP > 0:
+            outputname = os.path.join(fwdDir, self.typ + '_forward_w_noise.dat')
+            if self.typ[0] == 'c':
+                self.surveys[0].write2protocol(outputname,ip=True)
+            else: 
+                self.surveys[0].write2protocol(outputname)
+                
         dump('Forward modelling done.')
         
     def saveForwardModelResult(self,fname):

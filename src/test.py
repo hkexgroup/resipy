@@ -543,7 +543,8 @@ k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 # k.showPseudo(threed=True) # only tested in pyvista setup   
-k.createMesh(cl=2, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
+k.createMesh(cl=1, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
+# k.createMesh(cl=0.1,cl_factor=10,cln_factor=1000)
 
 k.createSequence()
 #k.err = True
@@ -726,4 +727,6 @@ timings['dc-2d-pseudo3d'] = time.time() - t0
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
+
+plt.close('all') # clean up desktop 
 

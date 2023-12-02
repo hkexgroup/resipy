@@ -1874,7 +1874,7 @@ class Survey(object):
         return K 
         
         
-    def _computePseudoDepth(self):
+    def _computePseudoDepth(self,flag3d=False):
         """Compute pseudo-depths. Now returns pseudo depths with respect to the 
         electrode elevations. 
         
@@ -1887,7 +1887,6 @@ class Survey(object):
         elecm = self.elec[['x','y','z']].values.astype(float).copy() # electrode matrix - should be array of floats so np.inf work properly
         buried = self.elec['buried'].values 
         remote = self.elec['remote'].values
-        flag3d = any(elecm[:,1]!=0)
         
         ### first determine if measurements are nested ###
         #find mid points of AB 
@@ -2228,7 +2227,7 @@ class Survey(object):
         elecz = self.elec['z'].values
         elecz = elecz[np.invert(self.elec['remote'].values)]
         
-        dp_x,dp_y,dp_z = self._computePseudoDepth() # get dipole depths 
+        dp_x,dp_y,dp_z = self._computePseudoDepth(True) # get dipole depths 
         #Nb pseudo depths are returned as absolute values now 
 
         points = np.c_[dp_x,dp_y,dp_z]# convert to 3xn matrix. 
