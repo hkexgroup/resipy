@@ -407,7 +407,7 @@ class App(QMainWindow):
                     if (k.typ == 'R2') | (k.typ == 'cR2'):
                         self.m2DRadio.setChecked(True)
                     else:
-                        self.m3DRadio.setChecked(True)
+                        self.m3DRadio.setChecked(False)
                     if k.iForward:
                         self.fwdRadio.setChecked(True)
                     else:
@@ -741,6 +741,7 @@ class App(QMainWindow):
         self.m3DRadio = QRadioButton('3D')
         self.m3DRadio.setChecked(False)
         self.m3DRadio.toggled.connect(dimSurvey)
+        self.m3DRadio.setEnabled(False)  # deactivate 3D
         self.dimLayout = QHBoxLayout()
         self.dimLayout.addWidget(self.m2DRadio)
         self.dimLayout.addWidget(self.m3DRadio)
@@ -5543,8 +5544,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #interactive vtk widget with pyvista
         self.frame = QFrame()
         vlayout = QVBoxLayout()
-        self.vtkWidget = QtInteractor(self.frame)
-        vlayout.addWidget(self.vtkWidget.interactor)
+        if pvfound:
+            self.vtkWidget = QtInteractor(self.frame)
+            vlayout.addWidget(self.vtkWidget.interactor)
         self.frame.setLayout(vlayout)
         self.mSlice = None
         self.mMesh = None
@@ -6836,7 +6838,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.project.surveys = []
         try:                
             self.loadingWidget('Loading data, please wait...', False) # for large datasets
-            self.ipCheck.setEnabled(True)
+            #self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(True)
             self.mergElecCheck.setEnabled(True)
             self.fname = fname
@@ -7035,7 +7037,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.batchCheck.setEnabled(False)
             self.tabImporting.setTabEnabled(2,False) # no custom parser needed
             self.nbElecEdit.setEnabled(True)
-            self.ipCheck.setEnabled(True)
+            #self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(False)
             self.mergElecCheck.setEnabled(False)
             if pvfound: # 3D pseudo-sections?

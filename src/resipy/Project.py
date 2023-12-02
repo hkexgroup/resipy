@@ -187,6 +187,8 @@ def systemCheck(dump=print):
     dump("Processor info: %s"%platform.processor())
     cpu_cores = psutil.cpu_count(logical=True)
     physical_cores = psutil.cpu_count(logical=False)
+    if isinstance(physical_cores, int) is False:
+        physical_cores = 1  # can be the case for raspberrypi
 
     try: # for Apple silicon
         max_freq = max(psutil.cpu_freq())
@@ -1828,7 +1830,12 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     cmd = [wPath + winetxt, exePath]
             else:
-                cmd = ['wine',exePath]
+                #if platform.machine() == 'aarch64':
+                #    cmd = [exePath.replace('.exe', '_aarch64')]
+                if platform.machine() in ['armv7l', 'aarch64']:
+                    cmd = [exePath.replace('.exe', '_armv7l')]
+                else:
+                    cmd = ['wine',exePath]
     
             if OS == 'Windows':
                 startupinfo = subprocess.STARTUPINFO()
@@ -3418,8 +3425,14 @@ class Project(object): # Project master class instanciated by the GUI
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
                     cmd = [wPath + winetxt, exePath]
-            else:
-                cmd = ['wine',exePath]
+            else:  # linux here
+                # check if running on raspberrypi
+                #if platform.machine() == 'aarch64':
+                #    cmd = [exePath.replace('.exe', '_aarch64')]
+                if platform.machine() in ['armv7l', 'aarch64']:
+                    cmd = [exePath.replace('.exe', '_armv7l')]
+                else:
+                    cmd = ['wine',exePath]
     
             if OS == 'Windows':
                 startupinfo = subprocess.STARTUPINFO()
@@ -3562,7 +3575,13 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 cmd = [wPath + winetxt, exePath]
         else:
-            cmd = ['wine',exePath]
+            # check if running on raspberrypi
+            if platform.machine == 'aarch64':
+                cmd = [exePath.replace('.exe', '_aarch64')]
+            if platform.machine == 'arm':
+                cmd = [exePath.replace('.exe', '_arm')]
+            else:
+                cmd = ['wine',exePath]
 
         if OS == 'Windows':
             startupinfo = subprocess.STARTUPINFO()
