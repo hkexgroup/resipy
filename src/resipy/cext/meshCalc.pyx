@@ -200,12 +200,12 @@ cdef void sortInt(long[:] arr, int n) nogil:
                 j -= 1
         arr[j + 1] = key 
 
-cdef long long mergeInts(int a, int b, int c, int pad) nogil: # merge 3 ints 
-    cdef long long int x = a*10**pad + b # merge a and b
-    return x*10**pad + c # merge c 
+cdef long long mergeInts(int a, int b, int c, int pad): # merge 3 ints 
+    cdef long long int x = np.floor(a*10**pad) + b # merge a and b
+    return x*int(np.floor(10**pad)) + c # merge c 
 
-cdef long long mergeInt(int a, int b, int pad) nogil: #merge 2 ints 
-    return a*10**pad + b # merge a and b
+cdef long long mergeInt(int a, int b, int pad): #merge 2 ints 
+    return a* int(np.floor(pow(10, pad))) + b # merge a and b
 
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
@@ -1344,7 +1344,7 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
                     break
 
     #pure python code 
-    combof = np.asarray(combo,dtype=np.int64).flatten()
+    combof = np.asarray(combo,dtype=int).flatten()
     uni, idx, counts = np.unique(combof, 
                                  return_index=True, 
                                  return_counts=True)
