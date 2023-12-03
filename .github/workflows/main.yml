@@ -92,16 +92,16 @@ jobs:
 
       - name: Set up environment
         run: |
-          brew reinstall python@3.7
+          brew reinstall python@3.10
           cd ..
-          /usr/local/bin/python3.7 -m pip install virtualenv
-          /usr/local/bin/python3.7 -m virtualenv -p /usr/local/bin/python3.7 pyenv
+          /usr/local/bin/python3.10 -m pip install virtualenv
+          /usr/local/bin/python3.10 -m virtualenv -p /usr/local/bin/python3.10 pyenv
           source pyenv/bin/activate
           cd resipy
-          /usr/local/bin/python3.7 -m pip install setuptools
-          /usr/local/bin/python3.7 -m pip install -r requirements-gui.txt
-          /usr/local/bin/python3.7 -m pip install pyinstaller
-          /usr/local/bin/python3.7 -m pip install pyvistaqt==0.6 pyvista==0.28 vtk==8.1.2
+          /usr/local/bin/python3.10 -m pip install setuptools
+          /usr/local/bin/python3.10 -m pip install -r requirements-gui.txt
+          /usr/local/bin/python3.10 -m pip install pyinstaller
+          /usr/local/bin/python3.10 -m pip install pyvistaqt pyvista vtk
 
       - name: Run build
         run: |
