@@ -5,7 +5,7 @@ Below is a gallery of examples
 
 
 
-.. toctree::
+.. nbgallery::
 
     nb_01getting-started
     nb_02dc-topo
