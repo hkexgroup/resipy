@@ -290,11 +290,11 @@ class Mesh:
         self.numel = node_data.shape[0] # numel 
         self.node = np.array([node_x,node_y,node_z]).T 
         
-        self.dint = 'int64' # connection matrix needs to be in long format 
+        self.dint = np.int64 # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
             self.dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer
         elif platform.machine() == 'armv7l':
-            self.dint = 'int64'
+            self.dint = np.int64
         self.connection = np.asarray(node_data,dtype=self.dint) #connection matrix
         
         self.cell_type = cell_type # cellType
@@ -2315,8 +2315,8 @@ class Mesh:
         # triangles on the edge of the mesh will be used only once
         
         tmesh.computeNeigh()
-        fcon, idx = mc.faces3d(np.asarray(tmesh.connection, dtype=np.longlong), 
-                               np.asarray(tmesh.neigh_matrix, dtype=np.long))
+        fcon, idx = mc.faces3d(np.asarray(tmesh.connection,dtype=self.dint), 
+                               np.asarray(tmesh.neigh_matrix,dtype=self.dint))
         
 
         node_x = tmesh.node[:,0]
@@ -2706,7 +2706,7 @@ class Mesh:
     def addRegion3D(self, clipped):
         if self.ndims != 3:
             raise Exception('Only use case for this function is with 3D meshes')
-        idx = np.unique(np.asarray(clipped.cell_arrays['elm_id'], dtype=int))-1
+        idx = np.unique(np.asarray(clipped.cell_arrays['elm_id'],dtype=self.dint))-1
         self.df.loc[idx, 'region'] = np.max(self.df['region']) + 1 
         
         in_elem = np.array([False]*self.numel,dtype=bool)
@@ -3013,7 +3013,7 @@ class Mesh:
         if len(np.unique(node_in_mesh)) != len(new_x):
             warnings.warn("The number of new electrode nodes does not match the number of electrodes, which means a duplicated node is present! Please make mesh finer.")   
      
-        return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
+        return np.array(node_in_mesh,dtype=self.dint) # note this is the node position with indexing starting at 0. 
 
     #%% write mesh to file 
     def findIdirichlet(self):
@@ -5903,7 +5903,7 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
     if node_pos is not None:
-        mesh.setElecNode(np.array(node_pos, dtype=int)) # add electrode nodes to mesh provided by the user
+        mesh.setElecNode(np.array(node_pos,dtype=self.dint)) # add electrode nodes to mesh provided by the user
     
     return mesh
 
