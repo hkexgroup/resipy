@@ -20,7 +20,7 @@ pages:
   - pip install SALib
   - ls
   - cd doc
-  - sphinx-build -M html . _build
+  - ./build-doc.sh
   - cd ..
   - mv doc/_build/html/ public/
   - ls public
