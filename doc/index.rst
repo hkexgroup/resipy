@@ -16,7 +16,7 @@ ResIPy Python API and standalone GUI
    gui
    gui-in-action
    api
-   auto_examples/index
+   gallery/index
    
 
 
