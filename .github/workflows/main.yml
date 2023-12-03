@@ -25,7 +25,7 @@ jobs:
           python3 -m virtualenv -p python3 pyenv
           source pyenv/bin/activate
           cd resipy
-          pip3 install setuptools==49.0.0
+          pip3 install setuptools==65.6.3
           pip3 install -r requirements-gui.txt
           pip3 install pyinstaller
 
@@ -61,7 +61,7 @@ jobs:
           python -m virtualenv -p python pyenv
           pyenv\Scripts\activate
           cd resipy
-          pip install setuptools==49.0.0
+          pip install setuptools==65.6.3
           pip install -r requirements-gui.txt
           pip install pyinstaller
 
