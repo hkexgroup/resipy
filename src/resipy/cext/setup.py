@@ -1,5 +1,5 @@
 #cythonize meshCalc.pyx
-from distutils.core import setup, Extension 
+from setuptools import setup, Extension 
 from Cython.Build import cythonize
 import numpy as np
 import platform
