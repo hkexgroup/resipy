@@ -1281,6 +1281,10 @@ class Project(object): # Project master class instanciated by the GUI
                        name=None, parser=None):
         """Create a 3D survey based on 2D regularly spaced surveys.
         
+        Note: If one electrode has similar position between multiple lines (shared
+        electrode), ResIPy will keep online one position of the electrode
+        and share its label accross the lines.
+
         Parameters
         ----------
         fname : list of str
@@ -1295,12 +1299,6 @@ class Project(object): # Project master class instanciated by the GUI
             Type of the survey to choose which parser to use.
         name : str, optional
             Name of the merged 3D survey.
-            
-        Note
-        ----
-        If one electrode has similar position between multiple lines (shared
-        electrode), ResIPy will keep online one position of the electrode
-        and share its label accross the lines.
         """
         if isinstance(fname, list): # it's a list of filename
             fnames = fname
@@ -2550,7 +2548,7 @@ class Project(object): # Project master class instanciated by the GUI
         """Filter measurements by apparent resistivity for surface surveys 
         
         Parameters
-        -----------
+        ----------
         vmin : float, optional
             Minimum value.
         vmax : float, optional
@@ -2573,7 +2571,7 @@ class Project(object): # Project master class instanciated by the GUI
         """Filter measurements by transfer resistance. 
         
         Parameters
-        -----------
+        ----------
         vmin : float, optional
             Minimum value.
         vmax : float, optional
@@ -2595,7 +2593,7 @@ class Project(object): # Project master class instanciated by the GUI
         """Filter measurements by contact resistance if avialable. 
         
         Parameters
-        -----------
+        ----------
         vmin : float, optional
             Minimum value.
         vmax : float, optional
@@ -4259,8 +4257,8 @@ class Project(object): # Project master class instanciated by the GUI
         index: int, optional
             meshResults index. In case of multi-file inversion/modeling (e.g., timelapse)
             
-        Return
-        ------
+        Returns
+        -------
         volume: float
             The volume of selected mesh region in cubic meters
         """
@@ -4829,7 +4827,7 @@ class Project(object): # Project master class instanciated by the GUI
         background constrained inversion.
 
         Parameters
-        -------------
+        ----------
         res0: array like
             Array of resistivity values, ideally from a previous inversion. The
             length of this array should be the same as the number of elements.
@@ -5964,7 +5962,7 @@ class Project(object): # Project master class instanciated by the GUI
         elec values set for the first survey in a sequence.
 
         Parameters
-        -----------
+        ----------
         yDominant: bool, optional
             If electrodes are prodimently spaced in the y direction then set yDominant
             to True.
@@ -6164,7 +6162,7 @@ class Project(object): # Project master class instanciated by the GUI
         """Save vtk files of inversion results to a specified directory.
 
         Parameters
-        ------------
+        ----------
         dirname: str
             Directory in which results will be saved. Default is the working directory.
         """
