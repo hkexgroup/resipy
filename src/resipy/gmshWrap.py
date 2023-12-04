@@ -1729,13 +1729,23 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
         setFields(fh, nfield)
     fh.write("//End of electrodes\n")
     
-    if all(np.array(elec_z)==0):
-        fh.write("//Subsurface refinement fields\n")
-        template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//refienement coordinate\n"
-        for i in range(nelec):
-            no_pts += 1 
-            fh.write(template%(no_pts,elec_x[i],elec_y[i],-fmd))
-            fh.write("Point{%i} In Volume{1};//specify refinement in volume\n"%no_pts)
+    ref_x = [min(elec_x), min(elec_x), max(elec_x), max(elec_x), xmean]
+    ref_y = [min(elec_y), max(elec_y), min(elec_y), max(elec_y), ymean]
+
+    # add some refinement 
+    # if all(np.array(elec_z)==0):
+    skip_refinement = False 
+    for i in range(nelec):
+        if elec_z[i] == -fmd:
+            skip_refinement = True 
+    fh.write("//Subsurface refinement fields\n")
+    template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//refienement coordinate\n"
+    for i in range(len(ref_x)):
+        if skip_refinement:
+            continue 
+        no_pts += 1 
+        fh.write(template%(no_pts,ref_x[i],ref_y[i],-fmd))
+        fh.write("Point{%i} In Volume{1};//specify refinement in volume\n"%no_pts)
         
         
     # check if any mesh refinement is requested 
