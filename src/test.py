@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jan 10 11:34:56 2019
-
+This script should be used to test all of ResIPy's functionalities. Failure to
+run indicates a broken commit/update to the code. 
 @author: jkl
 
 """

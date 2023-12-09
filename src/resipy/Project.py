@@ -38,7 +38,7 @@ from resipy.Survey import Survey
 from resipy.parsers import geomParser
 from resipy.r2in import write2in
 import resipy.meshTools as mt
-from resipy.meshTools import cropSurface
+#from resipy.meshTools import cropSurface
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
@@ -507,6 +507,8 @@ class Project(object): # Project master class instanciated by the GUI
 
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
+            for s in self.surveys:
+                s.computeKborehole() # recalculate K 
             
     
     def mergeElec(self, dist=-1):
@@ -608,6 +610,10 @@ class Project(object): # Project master class instanciated by the GUI
                      self.elec = self.elec[i2keep].reset_index(drop=True)
                 else: # if not just renamed its label
                     self.elec = self.elec.replace(to_replace=dico)
+            
+            for survey in self.surveys: 
+                survey.ndata = len(survey.df)
+                survey.setSeqIds() 
                 
                 
             
@@ -1311,7 +1317,8 @@ class Project(object): # Project master class instanciated by the GUI
 
         surveys = []
         for fname in fnames:
-            surveys.append(Survey(fname, ftype=ftype, parser=parser))
+            surveys.append(Survey(fname, ftype=ftype, parser=parser,compRecip=False))
+            print('Imported datafile: %s'%fname)
         survey0 = surveys[0]
         
         # check this is a regular grid (actually unregular grid works too
@@ -1339,10 +1346,14 @@ class Project(object): # Project master class instanciated by the GUI
         
         survey0.elec = elec
         survey0.df = dfm
+        survey0.ndata = len(dfm)
         survey0.dfOrigin = dfm # for raw phase plot
         survey0.dfReset = dfm # for reseting filters on res
         survey0.dfPhaseReset = dfm # for reseting filters on IP
         survey0.name = '3Dfrom2Dlines' if name is None else name
+        survey0.setSeqIds()
+        survey0.computeReciprocal() # compute reciprocals for survey 
+        
         self.surveys = [survey0]
         self.elec = None
         self.setElec(elec)

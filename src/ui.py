@@ -6622,6 +6622,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.recipErrorBottomTabs.setTabEnabled(1, False)
 
     def plotManualFiltering(self, index=0):
+        if self.regular3DCheck.isChecked():
+            # cant run manual filtering if 3D 
+            return 
+        # if self.pseudo3DCheck.isChecked():
+        #     return 
         attrText = self.filterAttrCombo.currentText()
         dico = {'App. Resistivity':'app',
                 'Transfer Resistance':'resist',
@@ -6754,8 +6759,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if (pvfound 
             & ((self.project.typ == 'R3t') | (self.project.typ == 'cR3t')) 
             & (self.boreholeCheck.isChecked() is False)):
+            t0 = time.time()
             self.pseudoPlotter.clear()
             self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams)
+            t1 = time.time()
+            dt = t1 - t0 
+            pdebug('Time taken to plot 3D pseudo section: %f s'%dt)
         elif self.pseudo3DCheck.isChecked():
             self.pseudoPlotter.clear()
             self.project.pseudo3DSurvey.showPseudo(ax=self.pseudoPlotter, threed=True, vmin=self.pParams['vmin'],

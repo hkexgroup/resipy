@@ -5,9 +5,7 @@ Created on Fri Jun  1 11:21:54 2018
 
 @author: ResIPy's core developers
 """
-import sys
-import os
-import platform
+import sys, os, platform, time 
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -39,6 +37,12 @@ try:#import pyvista if avaiable
 except ModuleNotFoundError:
     pyvista_installed = False
     # warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
+    
+try:
+    from resipy.cext import fastRecip
+    fastrecip_installed = True 
+except: 
+    fastrecip_installed = False 
     
 #replacement for numpy polyfit function which works on open blas 
 def polyfit(x,y,deg=1):
@@ -134,6 +138,31 @@ def bisectionSearch(arr, var):
         else:
             return m
     return -1
+
+def fixSequence(sequence):
+    """
+    Make sequence consequetive 
+
+    Parameters
+    ----------
+    sequence : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    uid = np.unique(sequence.flatten())
+    cid = np.arange(len(uid))+1
+    newseq = sequence.copy()
+    for i in range(len(uid)):
+        if uid[i] != cid[i]:
+            replaceidx = sequence==uid[i]
+            newseq[replaceidx] = cid[i] 
+            # print(uid[i],cid[i])
+    return newseq 
+    
 
 class Survey(object):
     """Class that handles geophysical data and some basic functions. One 
@@ -249,6 +278,9 @@ class Survey(object):
             # assign dataframe and check the types of a,b,m,n (all labels must be string)
             self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
             self.ndata = self.df.shape[0]
+            
+            # set sequence according to if electrode labels present or not 
+            self.setSeqIds() 
 
             # add error measured to the error columns (so they can be used if no error model are fitted)
             if 'magErr' in self.df.columns:
@@ -277,7 +309,7 @@ class Survey(object):
                     self.checkTxSign()
 
             # convert apparent resistivity to resistance and vice versa
-            self.computeK()
+            self.computeKborehole()
             if 'resist' in self.df.columns:
                 self.df['app'] = self.df['K']*self.df['resist']
             elif 'app' in self.df.columns:
@@ -296,6 +328,10 @@ class Survey(object):
             if 'label' not in elec.columns:
                 elec['label'] = np.arange(elec.shape[0]).astype(str)
             self.elec = elec
+            
+            # house keeping 
+            self.setSeqIds()
+            self.computeKborehole()
         
         else:
             raise ValueError('No fname supplied, no df and elec supplied. Returned.')
@@ -363,8 +399,6 @@ class Survey(object):
             self.df.shape[0], self.elec.shape[0])
         return out
     
-    
-    
     def hasElecString(self):
         """Determine if a electrode strings are present in the electrode labels 
 
@@ -382,6 +416,66 @@ class Survey(object):
                 if len(l.split()) == 1:
                     return False
         return True
+    
+    def hasLineNumbers(self):
+        if len(self.df) == 0:
+            return False 
+        if len(self.df['a'].values[0].split()) <= 1:
+            return False 
+        return True 
+    
+    def setSeqIds(self):
+        """
+        Convert electrode labels to indexable integers, sets the class wide 
+        parameter 'sequence'
+        """
+        def labeltoint(s):
+            # returns electrode line and number (in that order)
+            t = s.split()
+            l = int(t[0])
+            n = int(t[1])
+            return l,n 
+        
+        if self.ndata == 0:
+            self.sequence = None 
+            self.isequence = None 
+            return 
+        
+        if self.hasLineNumbers(): 
+            an = np.zeros((self.ndata,4),dtype=int) # array of electrode numbers 
+            al = np.zeros((self.ndata,4),dtype=int) # array of electrode lines 
+            aa = np.zeros((self.ndata,4),dtype=int) # array of additonal numbers 
+            cache = {}
+            for a,char in enumerate(['a','b','m','n']):
+                for i in range(self.ndata):
+                    l,n = labeltoint(self.df[char].values[i])
+                    if l not in cache.keys():
+                        cache[l] = 0 
+                    if n > cache[l]:
+                        cache[l] = n 
+                    an[i,a] = n         
+                    al[i,a] = l 
+            c = 0 
+            keys = np.unique(list(cache.keys()))
+            for i in range(1,len(keys)):
+                line = keys[i]
+                c += cache[keys[i-1]]
+                idx = al == line 
+                aa[idx] = c 
+                
+            self.sequence = an + aa
+            
+        else:
+            self.sequence = np.zeros((self.ndata,4),dtype=int)
+            for a,char in enumerate(['a','b','m','n']):
+                for i in range(self.ndata):
+                    self.sequence[i,a] = int(self.df[char].values[i])
+           
+        # now need a sequence which is ordered normally with no gaps 
+        # its used for indexing purposes 
+        self.isequence = fixSequence(self.sequence) 
+
+        # end 
         
     
     def checkTxSign(self):
@@ -436,6 +530,8 @@ class Survey(object):
         
         # we need to redo the reciprocal analysis if we've removed duplicates and ...
         if ndup > 0 or np.sum(ie) > 0:
+            self.ndata = len(self.df)
+            self.setSeqIds()
             self.computeReciprocal()
         
         # remove dummy for 2D case
@@ -540,11 +636,18 @@ class Survey(object):
                                  'Reset the filters and redo the filterings, first reciprocity then phase.')
             return
         else:
-            self.ndata = len(i2keep)
+            # self.ndata = len(i2keep)
             if 'irecip' in self.df.columns:
                 # get a list of measurement that would be affected by the removal
                 recip2reset = self.df[~i2keep]['irecip'].values*-1
             self.df = self.df[i2keep]
+            if 'index' in self.df.columns: 
+                self.df.reset_index(drop=True, inplace=True)
+            else:
+                self.df.reset_index(inplace=True)
+            self.ndata = len(self.df)
+            self.setSeqIds()
+            self.dfPhaseReset = self.df.copy()
             if 'irecip' in self.df.columns:
                 ie = np.in1d(self.df['irecip'].values, recip2reset)
                 self.df.loc[ie, 'irecip'] = 0 # as their reciprocal is deleted, we set it to 0
@@ -564,96 +667,40 @@ class Survey(object):
         print('removeUnpaired:', end='')
         self.filterData(i2keep)
         return np.sum(~i2keep)
-
-
-    # def computeReciprocal2(self):
-    #     """Compute reciprocal measurements.
-        
-    #     Notes
-    #     -----
-    #     The methods create an array where all positive index are normal
-    #     measurements and the reciprocal measurements are their negative
-    #     counterparts. This array is stored in the main dataframe `Survey.df`
-    #     in the columns `irecip`. Measurements with `ìrecip=0` are measurements
-    #     without reciprocal.
-    #     """
-    #     resist = self.df['resist'].values
-    #     phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
-    #     ndata = self.ndata
-    #     array = self.df[['a','b','m','n']].values
-        
-    #     R = np.copy(resist)
-    #     M = np.copy(phase)
-    #     ndata = len(R)
-    #     Ri = np.zeros(ndata)
-    #     reciprocalErr = np.zeros(ndata)*np.nan
-    #     reciprocalErrRel = np.zeros(ndata)*np.nan
-    #     reciprocalMean = np.zeros(ndata)*np.nan
-    #     reci_IP_err = np.zeros(ndata)*np.nan
-    #     # search for reciprocal measurement
-    #     count=1
-    #     notfound=0
-    #     for i in range(0,ndata):
-    #         rev1=[2,3,0,1]
-    #         rev2=[3,2,0,1]
-    #         rev3=[2,3,1,0]
-    #         rev4=[3,2,1,0]
-    #         index1=(array[:,:] == array[i,rev1]).all(1)
-    #         index2=(array[:,:] == array[i,rev2]).all(1)
-    #         index3=(array[:,:] == array[i,rev3]).all(1)
-    #         index4=(array[:,:] == array[i,rev4]).all(1)
-    #         index=index1|index2|index3|index4
-            
-    #         if len(index[index]) == 1:
-    #             reciprocalErr[index] = np.abs(R[i])-np.abs(R[index])
-    #             reciprocalErrRel[index] = (np.abs(R[i])-np.abs(R[index]))/np.abs(R[i]) # in percent
-    #             # flag first reciprocal found like this we can
-    #             # delete the second one when we find it
-    #             # (no loss of information)
-    #             reci_IP_err[index] = M[i]-M[index]
-    #             if Ri[i] == 0: # only if Ri == 0 otherwise we will
-    #                 # overwrite all the data
-    #                 Ri[i] = count # flag the first found
-    #             if Ri[index] == 0:
-    #                 Ri[index] = -count # flag its reciprocal
-    #             # replace reciprocalMean by one measurements if the other one
-    #             # is bad (NaN or Inf). Hopefully, the error model will find an
-    #             # error to go with
-    #             ok1 = ~(np.isnan(R[i]) | np.isinf(R[i]))
-    #             ok2 = ~(np.isnan(R[index]) | np.isinf(R[index]))
-    #             if ok1 & ok2:
-    #                 reciprocalMean[i]=np.mean([np.abs(R[i]),np.abs(R[index])])
-    #             elif ok1 & ~ok2:
-    #                 reciprocalMean[i] = np.abs(R[i])
-    #             elif ~ok1 & ok2:
-    #                 reciprocalMean[i] = np.abs(R[index])
-    #         else:
-    #             #print("no reciprocal found for "+str(array[i,:]))
-    #             notfound=notfound+1
-    #         count=count+1
-    #     if self.debug:
-    #         print(str(notfound)+'/'+str(ndata)+' reciprocal measurements NOT found.')
-    #     reciprocalMean = np.sign(resist)*reciprocalMean # add sign
-    #     ibad = np.array([np.abs(a) > 0.2 if ~np.isnan(a) else False for a in reciprocalErrRel])
-    #     if self.debug:
-    #         print(str(np.sum(ibad)) + ' measurements error > 20 %')
-        
-    #     irecip = Ri        
-        
-    #     self.df['irecip'] = irecip
-    #     self.df['reciprocalErrRel'] = reciprocalErrRel
-    #     self.df['recipError'] = reciprocalErr
-    #     self.df['recipMean'] = reciprocalMean
-    #     self.df['reci_IP_err'] = reci_IP_err
-    #     # in order to compute error model based on a few reciprocal measurements
-    #     # we fill 'recipMean' column with simple resist measurements for lonely
-    #     # quadrupoles (which do not have reciprocals)
-    #     inotRecip = irecip == 0
-    #     self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
-        
-    #     return Ri
     
-    def computeReciprocal3(self): # pandas way
+    def computeReciprocal(self,alg='Bisection Search'):
+        """
+        Compute Reciprocals and store them in self.df (the dataframe)
+
+        Parameters
+        ----------
+        alg : str, optional
+            Algorithm used to compute reciprocals. The default is 'Bisection Search'.
+
+        """
+        possible_algs = ['Pandas Merge','Array Expansion','Bisection Search']
+        infos = ['Uses Pandas merge function to efficiently search for reciprocals',
+                 'Creates expansive arrays to find reciprocals using numpy (can be RAM intense for large Surveys)',
+                 'Uses an efficient bisection search algorithm to find reciprocals']
+        
+        if alg not in possible_algs:
+            print('Selected Reciprocal error calculation not recognised, possible algorithms include:')
+            for i, palg in enumerate(possible_algs):
+                print(palg,' : ',infos[i])
+            raise Exception('Reciprocal error algorithm not recognised')
+            
+        ## need to put something in here in case the cython module can't be found 
+        if not fastrecip_installed: 
+            alg = 'Pandas Merge' 
+            
+        if alg == 'Bisection Search':
+            self.computeReciprocalC()
+        elif alg == 'Pandas Merge':
+            self.computeReciprocalP()
+        else: 
+            self.computeReciprocalN()
+    
+    def computeReciprocalP(self): # pandas way
         """Compute reciprocal measurements using `pandas.merge()`.
         TODO
         Notes
@@ -665,12 +712,10 @@ class Survey(object):
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        array = self.isequence - 1 
         
         R = np.copy(resist)
         M = np.copy(phase)
-        ndata = len(R)
         Ri = np.zeros(ndata, dtype=int)
         reciprocalErr = np.zeros(ndata)*np.nan
         reciprocalErrRel = np.zeros(ndata)*np.nan
@@ -741,7 +786,7 @@ class Survey(object):
         return Ri
     
     
-    def computeReciprocal2(self): # fast vectorize version
+    def computeReciprocalN(self): # fast vectorize version
         """Compute reciprocal measurements.
         
         Notes
@@ -753,8 +798,7 @@ class Survey(object):
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        array = self.isequence - 1 
         
         R = np.copy(resist)
         M = np.copy(phase)
@@ -823,8 +867,8 @@ class Survey(object):
         
         return Ri
     
-    def computeReciprocal(self): # fast vectorize version
-        """Compute reciprocal measurements.
+    def computeReciprocalC(self): # fast vectorize version
+        """Compute reciprocal measurements. using a bisection seach in cython! 
         
         Notes
         -----
@@ -834,8 +878,7 @@ class Survey(object):
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        array = self.isequence - 1 
         
         #define inputs         
         R = np.copy(resist)
@@ -980,8 +1023,8 @@ class Survey(object):
         """Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
         measurements added for speed).
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        # lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.isequence - 1 
         elecpos = self.elec['x'].values
         AB = np.abs(elecpos[array[:,0]]- elecpos[array[:,1]])
         MN = np.abs(elecpos[array[:,2]] - elecpos[array[:,3]])
@@ -1005,8 +1048,9 @@ class Survey(object):
         reciprocalErrRel = np.abs(self.df['reciprocalErrRel'].replace(np.nan, 0))
         igood = reciprocalErrRel < (percent/100) # good indexes to keep 
         df_temp = self.df.copy()
-        self.df = df_temp[igood] #keep the indexes where the error is below the threshold
-        self.dfPhaseReset = self.df.copy()
+        # self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+        # self.dfPhaseReset = self.df.copy()
+        self.filterData(igood)
         if debug:
             numRemoved = len(df_temp)-len(self.df)
             msgDump = "%i measurements with greater than %3.1f%% reciprocal error removed!" % (numRemoved, percent)
@@ -1029,8 +1073,9 @@ class Survey(object):
             dev = self.df['dev'].replace(np.nan, 0)
             igood = dev < (percent)
             df_temp = self.df.copy()
-            self.df = df_temp[igood] #keep the indexes where the error is below the threshold
-            self.dfPhaseReset = self.df.copy()
+            # self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+            # self.dfPhaseReset = self.df.copy()
+            self.filterData(igood)
             if debug:
                 numRemoved = len(df_temp)-len(self.df)
                 msgDump = "%i measurements with greater than %3.1f%% stacking error removed!" % (numRemoved, percent)
@@ -1062,8 +1107,9 @@ class Survey(object):
             if vmax is None:
                 vmax = np.max(resInvError)
             ikeep = (resInvError >= vmin) & (resInvError <= vmax)
-            self.df = df[ikeep]
-            self.df.reset_index()
+            # self.df = df[ikeep]
+            # self.df.reset_index()
+            self.filterData(ikeep) # use the filter data function to ensure that the sequence is reset 
             
             if debug:
                 numRemoved = len(df)-len(self.df)
@@ -1094,8 +1140,9 @@ class Survey(object):
          if vmax is None:
              vmax = np.max(cR)
          ikeep = (cR >= vmin) & (cR <= vmax)
-         self.df = df[ikeep]
-         self.df.reset_index()
+         # self.df = df[ikeep]
+         # self.df.reset_index()
+         self.filterData(ikeep)
          
          if debug:
              numRemoved = len(df)-len(self.df)
@@ -1110,7 +1157,8 @@ class Survey(object):
         merged when called this method.
         """
         self.df = pd.merge(self.df, self.filterDataIP[['a','b','m','n']].copy(), how='inner', on=['a','b','m','n'])
-
+        self.ndata = len(self.df)
+        self.setSeqIds()
     
     @staticmethod
     def logClasses3(datax, datay, func, class1=None): # pragma: no cover
@@ -1789,9 +1837,10 @@ class Survey(object):
         """Compute geomatrix factor (assuming flat 2D surface) and store it
         in self.df['K'].
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        array = self.isequence - 1 
         elec = self.elec[['x','y','z']].values
+        
+        print(max(array.flatten()))
         
         aposx = elec[:,0][array[:,0]]
         aposy = elec[:,1][array[:,0]]
@@ -1827,8 +1876,9 @@ class Survey(object):
         surface. Gl = ground level. 
         """
       
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        # lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        # array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        array = self.isequence - 1 
         elec = self.elec[['x','y','z']].values 
     
         if Gl is None: 
@@ -1871,6 +1921,7 @@ class Survey(object):
         k = (1/rAM)+(1/rA_M)-(1/rAN)-(1/rA_N)-(1/rBM)-(1/rB_M)+(1/rBN)+(1/rB_N)
         K = 4*np.pi/k
         
+        self.df['K'] = K 
         return K 
         
         
@@ -1882,8 +1933,7 @@ class Survey(object):
         -------
         xpos, ypos, zpos all arrays containing position of the pseudo-section.
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0]))) 
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        array = self.isequence - 1 
         elecm = self.elec[['x','y','z']].values.astype(float).copy() # electrode matrix - should be array of floats so np.inf work properly
         buried = self.elec['buried'].values 
         remote = self.elec['remote'].values
@@ -1928,8 +1978,7 @@ class Survey(object):
         paddy[np.isinf(paddy)] = 0 
         pmiddlex = np.min([elecx[array[:,2]], elecx[array[:,3]]], axis=0) + paddx
         pmiddley = np.min([elecy[array[:,2]], elecy[array[:,3]]], axis=0) + paddy
-
-        
+    
         # for non-nested measurements
         xposNonNested  = np.min([cmiddlex, pmiddlex], axis=0) + np.abs(cmiddlex-pmiddlex)/2
         yposNonNested  = np.min([cmiddley, pmiddley], axis=0) + np.abs(cmiddley-pmiddley)/2
@@ -1942,7 +1991,7 @@ class Survey(object):
             zposNonNested = 0.25*pcdist
         else: # for 3D arrays where there are mid-line measurements, this works closer to inversion results
             zposNonNested = np.sqrt(2)/2*pcdist 
-        
+
         # for nested measurements use formula of Dalhin 2006
         xposNested = np.zeros(len(pmiddlex))
         yposNested = np.zeros(len(pmiddlex))
@@ -2007,7 +2056,7 @@ class Survey(object):
         else: 
             # positions will be plotted in terms of pseudo depth, so correct 
             zpos[special] = max(elecm[:,2]) - zpos[special]
-        
+
         return xpos,ypos,zpos 
     
         
@@ -2045,7 +2094,7 @@ class Survey(object):
             self.checkTxSign()
         
         if geom and column=='resist': # compute and applied geometric factor
-            self.computeK()
+            # self.computeK()
             resist = resist*self.df['K']
             
         label = r'$\rho_a$ [$\Omega.m$]' # default label 
@@ -2177,7 +2226,7 @@ class Survey(object):
         if not pyvista_installed:
             print('pyvista not installed, cannot show 3D pseudo section')
             return
-
+        
         #TODO contour is not working! # using Delaunay 3D instead.
         # if contour:
         #     contour = False
@@ -2206,7 +2255,7 @@ class Survey(object):
             self.checkTxSign()
             
         if geom: # compute and applied geometric factor
-            self.computeK()
+            self.computeKborehole()
             resist = resist*self.df['K']
             resist[np.isinf(resist)] = np.nan # sometimes inf are generated
             # let's set them to nan to prevent colorscale to be meaningless
@@ -2226,7 +2275,7 @@ class Survey(object):
             
         elecz = self.elec['z'].values
         elecz = elecz[np.invert(self.elec['remote'].values)]
-        
+
         dp_x,dp_y,dp_z = self._computePseudoDepth(True) # get dipole depths 
         #Nb pseudo depths are returned as absolute values now 
 
@@ -2234,7 +2283,7 @@ class Survey(object):
 
         pvpont = pv.PolyData(points)
         pvpont[label] = resist
-        
+
         if not contour:
             ax.add_mesh(pvpont, point_size=10.,
                         #render_points_as_spheres=True,
@@ -2256,19 +2305,6 @@ class Survey(object):
                         #opacity=alpha,
                         scalar_bar_args={'color':tcolor,# 'interactive':True,
                                          'vertical':False})            
-            
-            # warnings.warn('3D contours are currently not stable!')
-            # ax.add_mesh(pvpont.outline())
-            # levels = np.linspace(vmin, vmax, 13)[1:-1]
-            # contrmesh = pvpont.contour(isosurfaces=levels)
-            # #TODO somehow this does create an empty mesh
-            # ax.add_mesh(contrmesh,
-            #             #cmap=color_map, #matplotlib colormap 
-            #             clim=[vmin,vmax], #color bar limits 
-            #             #show_scalar_bar=color_bar,#plot the color bar? 
-            #             #opacity=alpha,
-            #             scalar_bar_args={'color':tcolor,# 'interactive':True,
-            #                              'vertical':False})
                                  
         try:
             self._showElecStrings3D(ax=ax, strIdx = strIdx, 
@@ -2501,15 +2537,16 @@ class Survey(object):
         darkMode : bool, optional
             If true, electrodes wil be plotted in white, else black
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        self.ndata = len(self.df)
+        self.setSeqIds()
+        array = self.isequence - 1 
         if len(array) == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
         
         percFact = 1
         if label is None:
             if attr == 'app':
-                self.computeK()
+                # self.computeK() # k is already computed 
                 self.df['app'] = self.df['K']*self.df['resist']
                 label = r'Apparent Resistivity [$\Omega.m$]'
             elif attr == 'resist':
@@ -2678,7 +2715,7 @@ class Survey(object):
             Print output to screen. Default is True.
         """
         df = self.df.copy()
-        self.computeK()
+        # self.computeK()
         appRes = self.df['K']*self.df['resist']
         if vmin is None:
             vmin = np.min(appRes)
