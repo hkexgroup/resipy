@@ -12,7 +12,11 @@ if platform.system() == 'Linux': #open mp support on linux
             ["meshCalc.pyx"],
             extra_compile_args=["-fopenmp"],
             extra_link_args=['-fopenmp'],
-        )
+        ),
+        Extension(
+        	"fastRecip",
+        	["fastRecip.pyx"]
+        	)
     ]
 elif platform.system() == 'Windows': #open mp support on windows
     ext_modules = [
@@ -21,7 +25,11 @@ elif platform.system() == 'Windows': #open mp support on windows
             ["meshCalc.pyx"],
             extra_compile_args=['/openmp'],
             #extra_link_args=['/openmp'],
-        )
+        ),
+        Extension(
+        	"fastRecip",
+        	["fastRecip.pyx"]
+        	)
     ]
 else: # macOS
     '''IMPORTANT

@@ -39,7 +39,7 @@ except ModuleNotFoundError:
     # warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
     
 try:
-    from resipy.cext import fastRecip
+    from resipy.cext.fastRecip import fastReciprocals
     fastrecip_installed = True 
 except: 
     fastrecip_installed = False 
@@ -109,44 +109,14 @@ def polyfit(x,y,deg=1):
         
     return coef 
 
-def sortInt(arr, n): 
-    #adapted from https://www.geeksforgeeks.org/insertion-sort/
-    #sorts array in place
-    for i in range(1, n): 
-        key = arr[i] 
-        j = i-1
-        while j >= 0 and key < arr[j] : 
-                arr[j + 1] = arr[j] 
-                j -= 1
-        arr[j + 1] = key 
-
-def mergeInt(a, b, pad): #merge 2 ints 
-    return a*10**pad + b # merge a and b
-
-def bisectionSearch(arr, var):
-    """Efficent search algorithm for sorted array of postive ints 
-    """
-    L = 0
-    n = len(arr)
-    R = n-1
-    while L <= R:
-        m = int((L+R)/2)
-        if arr[m]<var:
-            L = m+1
-        elif arr[m]>var:
-            R = m-1
-        else:
-            return m
-    return -1
-
 def fixSequence(sequence):
     """
-    Make sequence consequetive 
+    Make sequence consecutive. 
 
     Parameters
     ----------
-    sequence : TYPE
-        DESCRIPTION.
+    sequence : nd array 
+        N by 4 array which is the measurement sequence. 
 
     Returns
     -------
@@ -472,7 +442,7 @@ class Survey(object):
                     self.sequence[i,a] = int(self.df[char].values[i])
            
         # now need a sequence which is ordered normally with no gaps 
-        # its used for indexing purposes 
+        # its used for indexing the electrode dataframe  
         self.isequence = fixSequence(self.sequence) 
 
         # end 
@@ -646,7 +616,9 @@ class Survey(object):
             else:
                 self.df.reset_index(inplace=True)
             self.ndata = len(self.df)
-            self.setSeqIds()
+            self.setSeqIds() # not super efficient, but works 
+            # self.sequence = self.sequence.copy()[i2keep,:]
+            # self.isequence = self.isequence.copy()[i2keep,:]
             self.dfPhaseReset = self.df.copy()
             if 'irecip' in self.df.columns:
                 ie = np.in1d(self.df['irecip'].values, recip2reset)
@@ -668,14 +640,14 @@ class Survey(object):
         self.filterData(i2keep)
         return np.sum(~i2keep)
     
-    def computeReciprocal(self,alg='Bisection Search'):
+    def computeReciprocal(self,alg='Pandas Merge'):
         """
         Compute Reciprocals and store them in self.df (the dataframe)
 
         Parameters
         ----------
         alg : str, optional
-            Algorithm used to compute reciprocals. The default is 'Bisection Search'.
+            Algorithm used to compute reciprocals. The default is 'Pandas Merge'.
 
         """
         possible_algs = ['Pandas Merge','Array Expansion','Bisection Search']
@@ -702,12 +674,10 @@ class Survey(object):
     
     def computeReciprocalP(self): # pandas way
         """Compute reciprocal measurements using `pandas.merge()`.
-        TODO
+        
         Notes
         -----
-        The method first sorts the dipole AB and MN. Then creates a reciprocal
-        quadrupole matrix. These matrices are then used with
-        numpy.equal to produce a 2D matrix from which reciprocal are extracted.
+        Someone want to explain exactly how this code works? 
         """
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
@@ -787,7 +757,7 @@ class Survey(object):
     
     
     def computeReciprocalN(self): # fast vectorize version
-        """Compute reciprocal measurements.
+        """Compute reciprocal measurements using numpy array expansion. 
         
         Notes
         -----
@@ -875,114 +845,33 @@ class Survey(object):
         The method first sorts the dipole AB and MN. Then efficiently searches
         for reciprocal pairs with a bisection search. 
         """
-        resist = self.df['resist'].values
-        phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
+        resist = np.asarray(self.df['resist'].values,dtype=float)
+        phase = np.asarray(-self.kFactor*self.df['ip'].values,dtype=float) #converting chargeability to phase shift
         ndata = self.ndata
-        array = self.isequence - 1 
+        array = np.asarray(self.isequence - 1, dtype=int)
         
-        #define inputs         
-        R = np.copy(resist)
-        M = np.copy(phase)
-        
-        ndata = array.shape[0]
-        pad = len(str(np.max(array)))
-        ab = array[:,0:2]
-        mn = array[:,2:4]
-    
-        #define outputs 
-        Ri = np.zeros(ndata,dtype=np.int_) 
-        reciprocalErr = np.zeros(ndata)*np.nan
-        reciprocalErrRel = np.zeros(ndata)*np.nan
-        reciprocalMean = np.zeros(ndata)*np.nan
-        reci_IP_err = np.zeros(ndata)*np.nan
-    
-        AB = np.zeros(ndata,dtype=np.int_) # AB combination 
-        MN = np.zeros(ndata,dtype=np.int_) # MN combination 
-        comboF = np.zeros(ndata,dtype=np.int_) # forward combination
-        comboR = np.zeros(ndata,dtype=np.int_) # reverse combination 
-        
-        #### efficient method to calculate inormal and irecip ####
-        
-        #merge integers to create unique codes 
-        for i in range(ndata):
-            sortInt(ab[i,:],2) # sort ints 
-            sortInt(mn[i,:],2)
-            AB[i] = mergeInt(ab[i,0], ab[i,1],pad)
-            MN[i] = mergeInt(mn[i,0], mn[i,1],pad)
-            comboF[i] = mergeInt(AB[i], MN[i], pad*2)
-            comboR[i] = mergeInt(MN[i], AB[i], pad*2)
-
-        idxcr = np.argsort(comboR).astype(np.int_) # sort arrays for efficient lookup 
-        sortR = comboR[idxcr]
-        
-        RealIndex = np.zeros(ndata,dtype=np.int_) - 1
-        ifwd = np.zeros(ndata,dtype=np.int_) 
-        inormal = np.zeros(ndata,dtype=np.int_) - 1
-        irecip = np.zeros(ndata,dtype=np.int_) - 1
-        
-        for i in range(ndata):
-            o = bisectionSearch(sortR,comboF[i]) # only works on a sorted array   
-            if o != -1:#then a match has been found! 
-                RealIndex[i] = idxcr[o] # lookup scheduled index 
-                if ifwd[i] == 0: # not assigned to the forward direction yet
-                    ifwd[i] = 1
-                    ifwd[RealIndex[i]] = -1
-                    inormal[i] = i
-                    irecip[i] = RealIndex[i]
-    
-            else: # there is no pairing 
-                ifwd[i] = 1
-            
-        #create inormal and irecip as above
-        inormal= inormal[inormal>-1]#truncate arrays 
-        irecip = irecip[irecip>-1]
-
-        #### rest of function is same as above #### 
-        val = np.arange(ndata) + 1
-        Ri[inormal] = val[inormal]
-        Ri[irecip] = -val[inormal]
-        
-        reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
-        reci_IP_err[inormal] = M[irecip] - M[inormal]
-        reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
-        reci_IP_err[irecip] = M[inormal] - M[irecip]
-        
-        # compute reciprocal mean with all valid values
-        ok1 = ~(np.isnan(R[inormal]) | np.isinf(R[inormal]))
-        ok2 = ~(np.isnan(R[irecip]) | np.isinf(R[irecip]))
-        
-        ie = ok1 & ok2 # both normal and recip are valid
-        reciprocalMean[inormal[ie]] = np.mean(np.c_[np.abs(R[inormal]),np.abs(R[irecip])], axis=1)
-        reciprocalMean[irecip[ie]] = np.mean(np.c_[np.abs(R[inormal]),np.abs(R[irecip])], axis=1)
-        
-        ie = ok1 & ~ok2 # only use normal
-        reciprocalMean[inormal[ie]] = np.abs(R[inormal[ie]])
-        
-        ie =  ~ok1 & ok2 # only use reciproal
-        reciprocalMean[inormal[ie]] = np.abs(R[irecip[ie]])
-        
-        reciprocalErrRel = reciprocalErr / reciprocalMean
-        
-        reciprocalMean = np.sign(resist)*reciprocalMean # add sign
+        # print(type(phase))
+        unpackme = fastReciprocals(array, resist, phase)
+        irecip = unpackme[0] 
+        reciprocalErr = unpackme[1] 
+        reciprocalErrRel = unpackme[2] 
+        reciprocalMean = unpackme[3] 
+        reciprocalPhase = unpackme[4] 
+        # ifwd = unpackme[5] 
         
         ibad = np.array([np.abs(a) > 0.2 if ~np.isnan(a) else False for a in reciprocalErrRel])
         if self.debug:
-            print('{:d}/{:d} reciprocal measurements found.'.format(np.sum(Ri != 0), len(Ri)))
-            if np.sum(Ri != 0) > 0: # no need to display that if there is no reciprocal
+            print('{:d}/{:d} reciprocal measurements found.'.format(np.sum(irecip != 0), ndata))
+            if np.sum(irecip != 0) > 0: # no need to display that if there is no reciprocal
                 print('{:d} measurements error > 20 %'.format(np.sum(ibad)))        
                 
-        self.df['irecip'] = Ri
+        self.df['irecip'] = irecip
         self.df['reciprocalErrRel'] = reciprocalErrRel
         self.df['recipError'] = reciprocalErr
         self.df['recipMean'] = reciprocalMean
-        self.df['reci_IP_err'] = reci_IP_err
-        # in order to compute error model based on a few reciprocal measurements
-        # we fill 'recipMean' column with simple resist measurements for lonely
-        # quadrupoles (which do not have reciprocals)
-        inotRecip = Ri == 0
-        self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
+        self.df['reci_IP_err'] = reciprocalPhase
         
-        return Ri
+        return irecip 
     
     
     

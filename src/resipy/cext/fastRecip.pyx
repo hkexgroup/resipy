@@ -3,7 +3,7 @@ cimport cython  #import relevant modules
 import numpy as np
 cimport numpy as np
 from cpython cimport array 
-from libc.stdlib cimport malloc, free
+# from libc.stdlib cimport malloc, free
 
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)
@@ -11,10 +11,6 @@ cdef extern from "math.h" nogil:
     cpdef double atan(double x)
 cdef extern from 'math.h' nogil: # get c square root function
     cpdef double sqrt(double x)
-    
-# nnls function for Cr estimation 
-cdef extern from "nnls.h" nogil:
-    int nnls(double *a, int m, int n, double *b, double *x, double *rnorm)
     
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
 @cython.wraparound(False)        
@@ -111,7 +107,7 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
         raise Exception('conf should be 4 by N matrix')
     if ndata != r.shape[0]:
         raise Exception('Number of resistance measurements doesnt match configuration length')
-    if ndata != m.shape[0]:
+    if ndata != p.shape[0]:
         raise Exception('Number of phase measurements doesnt match configuration length')
 
     # setup arrays for managing internal workings of function 
@@ -131,7 +127,7 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
     cdef np.ndarray[long, ndim=1] ifwd = np.zeros(ndata,dtype=int)
     cdef long[:] ifwdv = ifwd # flag for forward and reverse direction 
     cdef double re, rer, rm # recip error, relative error, reciprocal mean  
-    cdef double me # phase error 
+    cdef double pe # phase error 
 
     # outputs of function (so need to be in python/numpy type format)
     cdef np.ndarray[long, ndim=1] irecip = np.zeros(ndata,dtype=int) # index of reciprocal measurement  
