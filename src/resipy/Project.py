@@ -2100,6 +2100,8 @@ class Project(object): # Project master class instanciated by the GUI
         survey. Or `R2._filterSimilarQuads()` to filter quadrupoles amongs all
         `R2.surveys`.
         """
+        if self.typ[-1] == 't':
+            kwargs['flag3d'] = True 
         if index == -1:
             for s in self.surveys:
                 s.iselect = np.zeros(s.df.shape[0], dtype=bool)

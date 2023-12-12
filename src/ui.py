@@ -6623,11 +6623,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.recipErrorBottomTabs.setTabEnabled(1, False)
 
     def plotManualFiltering(self, index=0):
-        if self.regular3DCheck.isChecked():
-            # cant run manual filtering if 3D 
-            return 
-        # if self.pseudo3DCheck.isChecked():
-        #     return 
+
         attrText = self.filterAttrCombo.currentText()
         dico = {'App. Resistivity':'app',
                 'Transfer Resistance':'resist',

@@ -2401,7 +2401,8 @@ class Survey(object):
         
     
     def filterManual(self, attr='app', ax=None, log=False,
-                     label=None, vmin=None, vmax=None, elec=True, darkMode=False):
+                     label=None, vmin=None, vmax=None, elec=True, 
+                     darkMode=False, flag3d=False):
         """Manually filters the data visually. The points manually selected are
         flagged in the `Survey.iselect` vector and can subsequently be removed
         by calling `Survey.filterData(~Survey.iselect)`.
@@ -2425,11 +2426,13 @@ class Survey(object):
             If `True`, the electrodes are shown and can be used for filtering.
         darkMode : bool, optional
             If true, electrodes wil be plotted in white, else black
+        flag3d: bool, optional
+            If true, function exits before 
         """
-        self.ndata = len(self.df)
-        self.setSeqIds()
+        # self.ndata = len(self.df)
+        # self.setSeqIds()
         array = self.isequence - 1 
-        if len(array) == 0:
+        if self.ndata == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
         
         percFact = 1
@@ -2490,7 +2493,12 @@ class Survey(object):
                 elecKilled.set_ydata(np.zeros(len(elecpos))[self.eselect])
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
-            killed.figure.canvas.draw()                                
+            killed.figure.canvas.draw()           
+
+        # in the ui we dont manually interact with the pseudo section, so the following is redundant 
+        if flag3d:
+            return 
+                     
         if ax is None:
             fig, ax = plt.subplots()
         else:
