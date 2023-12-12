@@ -4812,7 +4812,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.helpSection2.setHtml(r2help[arg])
 
 
-        self.parallelLabel = QLabel('<a href="parallel">Timelapse parallel processing</a>')
+        self.parallelLabel = QLabel('<a href="parallel">Batch/Timelapse parallel processing</a>')
         self.parallelLabel.linkActivated.connect(showHelpAdv)
         self.parallelCheck = QCheckBox()
         advForm.addRow(self.parallelLabel, self.parallelCheck)
@@ -5413,6 +5413,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 modErr = self.modErrCheck.isChecked()
                 parallel = self.parallelCheck.isChecked()
                 modelDOI = self.modelDOICheck.isChecked()
+
                 kwargs = {'dump': logTextFunc, # keyword arguments for project.invert
                           'iplot': False,
                           'modErr': modErr, 

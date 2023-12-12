@@ -5425,6 +5425,8 @@ class Project(object): # Project master class instanciated by the GUI
             Remove the working directory used for the error modelling. Default
             is True.
         """
+        time.sleep(0.05)
+        print('doing error modelling...')
         node_elec = None # we need this as the node_elec with topo and without might be different
         if all(self.elec['z'].values == 0) is False: # so we have topography
             print('New mesh created with flat topo...', end='')
@@ -5536,7 +5538,7 @@ class Project(object): # Project master class instanciated by the GUI
             shutil.rmtree(fwdDir)
 
         self.fwdErrModel = True # class now has a forward error model.
-
+        time.sleep(0.05)
 
 
     def showIter(self, index=-2, ax=None, modelDOI=False, cropMaxDepth=False):
