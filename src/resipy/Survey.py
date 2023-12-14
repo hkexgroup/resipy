@@ -74,6 +74,13 @@ def polyfit(x,y,deg=1):
     """
     x = np.asarray(x,dtype=float)
     y = np.asarray(y,dtype=float)
+    
+    if any(np.isnan(x)) or any(np.isinf(x)) or any(np.isnan(y)) or any(np.isinf(y)):
+        # fit to just real numbers 
+        keep_idx = ~np.isnan(x) & ~np.isinf(x) & ~np.isnan(y) & ~np.isinf(y)
+        x = x[keep_idx]
+        y = y[keep_idx]
+        
 
     # check arguments.
     if deg < 0:
@@ -465,7 +472,7 @@ class Survey(object):
         print('WARNING: change sign of ', np.sum(ie), ' Tx resistance.')
         
 
-    def filterDefault(self):
+    def filterDefault(self,recompute_recip=True):
         """Remove NaN, Inf and duplicates values in the data frame.
         """
         if self.debug:
@@ -502,7 +509,8 @@ class Survey(object):
         if ndup > 0 or np.sum(ie) > 0:
             self.ndata = len(self.df)
             self.setSeqIds()
-            self.computeReciprocal()
+            if recompute_recip: 
+                self.computeReciprocal()
         
         # remove dummy for 2D case
 #        if self.elec[:,1].sum() == 0: # it's a 2D case
@@ -569,6 +577,8 @@ class Survey(object):
         
         data = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
         self.df = pd.concat([self.df, data]).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
+        self.ndata = len(self.df)
+        self.setSeqIds() # need to recompute sequence 
         if ftype == 'BGS Prime':
             self.checkTxSign()
         if ftype == 'Syscal':
@@ -576,8 +586,7 @@ class Survey(object):
                 self.checkTxSign()
             
         self.dfOrigin = self.df.copy()
-        self.ndata = len(self.df)
-        self.filterDefault() # we assume the user input reciprocal data not another
+        self.filterDefault(False) # we assume the user input reciprocal data not another
         self.computeReciprocal()
         
         # backing up data
@@ -640,14 +649,19 @@ class Survey(object):
         self.filterData(i2keep)
         return np.sum(~i2keep)
     
-    def computeReciprocal(self,alg='Pandas Merge'):
+    def computeReciprocal(self,alg='Bisection Search'):
         """
         Compute Reciprocals and store them in self.df (the dataframe)
 
         Parameters
         ----------
         alg : str, optional
-            Algorithm used to compute reciprocals. The default is 'Pandas Merge'.
+            Algorithm used to compute reciprocals. The default is 'Bisection Search'.
+            
+        Notes
+        -----
+        If the relevant cython code cannot be found then the function falls 
+        back to using the pandas merge approach. 
 
         """
         possible_algs = ['Pandas Merge','Array Expansion','Bisection Search']

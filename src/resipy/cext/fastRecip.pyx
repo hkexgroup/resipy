@@ -76,8 +76,8 @@ cdef void sortInt(long[:] arr, int n) nogil:
                 j -= 1
         arr[j + 1] = key 
 
-cdef long long mergeInt(int a, int b, int pad) nogil: #merge 2 ints 
-    return a*10**pad + b # merge a and b
+cdef long long mergeInt(int a, int b, int pad): #merge 2 ints 
+    return np.floor(a*10**pad + b) # merge a and b
     
 
 def fastReciprocals(long[:,:] conf, double[:] r, double[:] p): 

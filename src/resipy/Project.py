@@ -1284,7 +1284,7 @@ class Project(object): # Project master class instanciated by the GUI
 
 
     def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
-                       name=None, parser=None):
+                       name=None, parser=None, dump=None):
         """Create a 3D survey based on 2D regularly spaced surveys.
         
         Note: If one electrode has similar position between multiple lines (shared
@@ -1314,11 +1314,14 @@ class Project(object): # Project master class instanciated by the GUI
                 # this filter out hidden file as well
             else:
                 raise ValueError('fname should be a directory path or a list of filenames')
-
+        if dump is None:
+            def dump(x):
+                print(x)
+                
         surveys = []
         for fname in fnames:
             surveys.append(Survey(fname, ftype=ftype, parser=parser,compRecip=False))
-            print('Imported datafile: %s'%fname)
+            dump('Imported datafile: %s'%fname)
         survey0 = surveys[0]
         
         # check this is a regular grid (actually unregular grid works too
@@ -3009,6 +3012,7 @@ class Project(object): # Project master class instanciated by the GUI
             flag_3D = False
         self.mesh = mt.readMesh(file_path, node_pos=node_pos, 
                                           order_nodes=order_nodes)
+        self.meshParam = {'typ':'imported'}
 
         # recover region based on resistivity
         if file_path[-4:] == '.vtk':
@@ -3782,8 +3786,8 @@ class Project(object): # Project master class instanciated by the GUI
 
         # compute modelling error if selected
         if modErr is True and self.fwdErrModel is False: #check no error model exists
-            dump('Computing error model... ')
-            self.computeModelError()
+            # dump('Computing error model... ')
+            self.computeModelError(dump=dump)
             dump('done\n')
             errTot = True
         elif modErr is True and self.fwdErrModel:
@@ -5355,7 +5359,7 @@ class Project(object): # Project master class instanciated by the GUI
     def createModelErrorMesh(self, **kwargs):
         """Create an homogeneous mesh to compute modelling error.
 
-        Same arguments as `R2.createMesh()`.
+        Same arguments as `Project.createMesh()`.
         """
         # backup
         elecZ = self.elec['z'].values.copy()
@@ -5417,7 +5421,7 @@ class Project(object): # Project master class instanciated by the GUI
             s.addPerError(percent)
             
 
-    def computeModelError(self, rmTree=True):
+    def computeModelError(self, rmTree=False, dump=None):
         """Compute modelling error associated with the mesh.
         This is computed on a flat triangular or tetrahedral mesh.
 
@@ -5427,16 +5431,25 @@ class Project(object): # Project master class instanciated by the GUI
             Remove the working directory used for the error modelling. Default
             is True.
         """
-        time.sleep(0.05)
-        print('doing error modelling...')
+        if dump is None:
+            def dump(x):
+                print(x, end='')
+                
+        dump('Doing error modelling...\n')
         node_elec = None # we need this as the node_elec with topo and without might be different
-        if all(self.elec['z'].values == 0) is False: # so we have topography
-            print('New mesh created with flat topo...', end='')
+        if any(self.elec['z'].values != self.elec['z'].values[0]): # so we have topography
+            dump('Creating mesh with flat topo...\n\n')
             meshParams = self.meshParams.copy()
             if '3' in self.typ:#change interp method 
                 meshParams['interp_method'] = None # dont do any interpolation 
             if 'geom_input' in meshParams: # dont use geometry from here because it'll likley be incompatible on the flat mesh
                 meshParams['geom_input'] = {}
+            if 'show_output' in meshParams: 
+                if meshParams['show_output']:
+                    meshParams['dump'] = dump 
+                else: 
+                    meshParams['dump'] = None 
+                    
             self.createModelErrorMesh(**meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh # create flat mesh
@@ -5444,6 +5457,7 @@ class Project(object): # Project master class instanciated by the GUI
             mesh = self.mesh # use same mesh
 
         # create working directory
+        dump('Making temporary error modelling directory...\n')
         fwdDir = os.path.join(self.dirname, 'err')
         if os.path.exists(fwdDir):
             shutil.rmtree(fwdDir)
@@ -5506,8 +5520,9 @@ class Project(object): # Project master class instanciated by the GUI
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
-
+        
         # run the inversion
+        dump('Running R* code (forward mode)...\n')
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
 
         # get error model
@@ -5535,12 +5550,13 @@ class Project(object): # Project master class instanciated by the GUI
             if 'modErr' in s.df:
                 s.df.drop('modErr', axis=1)
             s.df = pd.merge(s.df, dferr, on=['a','b','m','n'], how='inner')
-
+        
         if rmTree:# eventually delete the directory to spare space
+            dump('Removing temporary error directory...\n')
             shutil.rmtree(fwdDir)
 
         self.fwdErrModel = True # class now has a forward error model.
-        time.sleep(0.05)
+        dump('Modelling error done!\n')
 
 
     def showIter(self, index=-2, ax=None, modelDOI=False, cropMaxDepth=False):

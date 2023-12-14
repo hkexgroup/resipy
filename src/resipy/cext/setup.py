@@ -9,7 +9,7 @@ if platform.system() == 'Linux': #open mp support on linux
     ext_modules = [
         Extension(
             "meshCalc",
-            ["meshCalc.pyx"],
+            ["meshCalcUnix.pyx"],
             extra_compile_args=["-fopenmp"],
             extra_link_args=['-fopenmp'],
         ),

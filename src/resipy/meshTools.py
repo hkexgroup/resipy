@@ -6,8 +6,8 @@ Module handles mesh generation, display, discretisation and post processing.
 The convention for x y z coordinates is that the z coordinate is the elevation.
 
 Dependencies: 
-    numpy (conda lib)
-    matplotlib (conda lib)
+    numpy (standard scientific lib)
+    matplotlib (standard scientific lib)
     gmshWrap(ResIPy resipy module)
     python3 standard libaries
 """
@@ -5903,7 +5903,7 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
     if node_pos is not None:
-        mesh.setElecNode(np.array(node_pos,dtype=self.dint)) # add electrode nodes to mesh provided by the user
+        mesh.setElecNode(np.array(node_pos,dtype=mesh.dint)) # add electrode nodes to mesh provided by the user
     
     return mesh
 

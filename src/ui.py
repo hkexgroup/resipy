@@ -1293,7 +1293,7 @@ class App(QMainWindow):
                 
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
-                    self.project.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
+                    self.project.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser, dump=self.infoDump)
                     self.writeLog('k.create3DSurvey({:s}, lineSpacing={:s}, ftype="{:s}", parser={:s})'.format(
                         str(fnames), str(val), self.ftype, str(self.parser)))
                     self.infoDump('3D survey from regular 2D lines created.')
@@ -5541,7 +5541,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         self.mwRMS = MatplotlibWidget(navi=False)
         self.mwIter = MatplotlibWidget(navi=False)
-        
         
         # ------------------------- show subtab
         self.mwInv = MatplotlibWidget(navi=True)

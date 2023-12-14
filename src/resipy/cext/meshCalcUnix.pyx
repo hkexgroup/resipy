@@ -40,7 +40,7 @@ cdef int bisection_search(long long[:] arr, long long var) nogil:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)  
-def bisection_searchL(list arr, long long int var):
+def bisection_searchL(list arr, long long var):
     """Efficent search algorithm for sorted list of postive ints 
     
     Parameters
@@ -188,7 +188,7 @@ cdef long tetra_signp(double[:] a, double[:] b, double [:] c,  double [:] d) nog
         return 0 # something dogdey has happened as all points are on the same plane   
 
 @cython.boundscheck(False)    
-cdef void sortInt(long[:] arr, int n) nogil: 
+cdef void sortInt(long long[:] arr, int n) nogil: 
     #adapted from https://www.geeksforgeeks.org/insertion-sort/
     #sorts array in place
     cdef int i, j, key
@@ -201,15 +201,15 @@ cdef void sortInt(long[:] arr, int n) nogil:
         arr[j + 1] = key 
 
 cdef long long mergeInts(int a, int b, int c, int pad): # merge 3 ints 
-    cdef long long x = np.floor(a*10**pad + b) # merge a and b
-    return np.floor(x*10**pad + c) # merge c 
+    cdef long long x = np.floor(a*10**pad) + b # merge a and b
+    return x*np.floor(10**pad) + c # merge c 
 
 cdef long long mergeInt(int a, int b, int pad): #merge 2 ints 
-    return np.floor(a*10**pad + b) # merge a and b
+    return a* np.floor(10**pad) + b # merge a and b
 
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
-def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
+def neigh3d(long long[:,:] connection, int return_tri_combo, int num_threads=2):
     """Compute neighbours of each element within a 3D tetrahedral mesh 
     
     Parameters
@@ -230,10 +230,10 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef int numel = connection.shape[0]
     cdef int npere = 4
     #face arrays 
-    cdef long[:] face = np.zeros(3,dtype=int)
-    cdef long[:] a = np.asarray([1,0,0,0], dtype=int) #does not work for refined mesh, no idea why 
-    cdef long[:] b = np.asarray([2,3,1,1], dtype=int)  
-    cdef long[:] c = np.asarray([3,2,3,2], dtype=int)  
+    cdef long long[:] face = np.zeros(3,dtype=np.int64)
+    cdef long long[:] a = np.asarray([1,0,0,0], dtype=np.int64) #does not work for refined mesh, no idea why 
+    cdef long long[:] b = np.asarray([2,3,1,1], dtype=np.int64)  
+    cdef long long[:] c = np.asarray([3,2,3,2], dtype=np.int64)  
 
     #combination array 
     cdef np.ndarray[long long, ndim=2] tri_combo = np.zeros((numel,4),dtype=np.int64 ,order='C') # allocate space for tri_combo 
@@ -255,20 +255,20 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
             # assign each face an organised and unique code
             tri_combov[i,j] = mergeInts(face[0],face[1],face[2],pad)
 
-    cdef np.ndarray[long, ndim=2] neigh = np.zeros((numel,4),dtype=int) # allocate space for neighbour matrix        
-    cdef long[:,:] neighv = neigh  
+    cdef np.ndarray[long long, ndim=2] neigh = np.zeros((numel,4),dtype=np.int64) # allocate space for neighbour matrix        
+    cdef long long[:,:] neighv = neigh  
     
     #using binary search and sorted lists for efficient index lookup 
     cdef np.ndarray[long long, ndim=1] tri_flatten = tri_combo.T.flatten() #all faces in one array 
 	
-    cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
+    cdef np.ndarray[long long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(np.int64, order='C') # sorted indexes  (pure python code)
     cdef np.ndarray[long long, ndim=1] tri_sort = tri_flatten[temp_idx] # sorted faces (forward direction)
     cdef long long[:] tri_sortv = tri_sort
     cdef int maxo = len(tri_sort)-1
 
     cdef long long o, idx
     #create lookup array 
-    cdef np.ndarray[long, ndim=1] lookup = np.zeros(numel*4,dtype=int)
+    cdef np.ndarray[long long, ndim=1] lookup = np.zeros(numel*4,dtype=np.int64)
 
     for i in range(numel):
         lookup[i] = i
@@ -276,8 +276,8 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
         lookup[i+(2*numel)] = i
         lookup[i+(3*numel)] = i
 
-    cdef np.ndarray[long, ndim=1] lookup_idx = np.asarray(lookup[temp_idx],order='C')
-    cdef long[:] lookup_idxv = lookup_idx
+    cdef np.ndarray[long long, ndim=1] lookup_idx = np.asarray(lookup[temp_idx],order='C')
+    cdef long long[:] lookup_idxv = lookup_idx
   
     #loop is parallel becuase it can be intense
     for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
@@ -307,7 +307,7 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def faces3d(long[:,:] connection, long[:,:] neigh):
+def faces3d(long long[:,:] connection, long[:,:] neigh):
     """Return external faces of a 3D tetrahedral mesh 
     
     Parameters
@@ -331,7 +331,7 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
     cdef int c = 0
-    cdef np.ndarray[long, ndim=2] nmap = np.array([[1, 2, 3], [0, 3, 2], 
+    cdef np.ndarray[long long, ndim=2] nmap = np.array([[1, 2, 3], [0, 3, 2], 
                                                    [0, 1, 3], [0, 1, 2]])
     
     #first thing is to find all the cases where neigh == 1 
@@ -344,15 +344,15 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
                 fnum.append(j)
                 c+=1
     
-    cdef long[:] idxa = np.array(idx,dtype=int)
-    cdef long[:] fnuma = np.array(fnum,dtype=int)
-    cdef np.ndarray[long, ndim=1] idxo = np.array(idx,dtype=int)
+    cdef long long[:] idxa = np.array(idx,dtype=np.int64)
+    cdef long long[:] fnuma = np.array(fnum,dtype=np.int64)
+    cdef np.ndarray[long long, ndim=1] idxo = np.array(idx,dtype=np.int64)
     
     cdef int nfaces = len(idx)
     cdef int fidx, fnumi 
     
-    cdef np.ndarray[long, ndim=2] fconnection = np.zeros((nfaces,3),dtype=int) # face connection matrix 
-    cdef long[:,:] fconnectionv = fconnection
+    cdef np.ndarray[long long, ndim=2] fconnection = np.zeros((nfaces,3),dtype=np.int64) # face connection matrix 
+    cdef long long[:,:] fconnectionv = fconnection
     
     for i in range(nfaces):
         fidx = idxa[i]
@@ -365,7 +365,7 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def neigh2d(long[:,:] connection, int return_tri_combo=1, int num_threads=2):
+def neigh2d(long long[:,:] connection, int return_tri_combo=1, int num_threads=2):
     """Compute neighbours of each element within a 2D triangular or quad mesh 
     
     Parameters
@@ -385,8 +385,8 @@ def neigh2d(long[:,:] connection, int return_tri_combo=1, int num_threads=2):
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
     #face arrays 
-    cdef long [:] a,b
-    cdef long[:] face = np.zeros(2,dtype=int)
+    cdef long long[:] a,b
+    cdef long long[:] face = np.zeros(2,dtype=np.int64)
     
     #combination array 
     cdef np.ndarray[long long, ndim=2] tri_combo = np.zeros((numel,npere),dtype=np.int64) # allocate space for tri_combo 
@@ -397,11 +397,11 @@ def neigh2d(long[:,:] connection, int return_tri_combo=1, int num_threads=2):
     
     #define face arrays
     if npere == 3:#then elements are triangles
-        a = np.asarray([0,1,2], dtype=int)
-        b = np.asarray([1,2,0], dtype=int)
+        a = np.asarray([0,1,2], dtype=np.int64)
+        b = np.asarray([1,2,0], dtype=np.int64)
     elif npere == 4:#elements are quads
-        a = np.asarray([0,1,2,3], dtype=int)
-        b = np.asarray([1,2,3,0], dtype=int)  
+        a = np.asarray([0,1,2,3], dtype=np.int64)
+        b = np.asarray([1,2,3,0], dtype=np.int64)  
     
     for i in range(numel):
         for j in range(npere):
@@ -412,26 +412,26 @@ def neigh2d(long[:,:] connection, int return_tri_combo=1, int num_threads=2):
             # assign each face an organised and unique code
             tri_combov[i,j] = mergeInt(face[0],face[1],pad)
         
-    cdef np.ndarray[long, ndim=2] neigh = np.zeros((numel,npere),dtype=int) # allocate space for neighbour matrix        
-    cdef long[:,:] neighv = neigh             
+    cdef np.ndarray[long long, ndim=2] neigh = np.zeros((numel,npere),dtype=np.int64) # allocate space for neighbour matrix        
+    cdef long long[:,:] neighv = neigh             
     
     #using binary search and sorted arrays for efficient index lookup 
     cdef np.ndarray[long long, ndim=1] tri_flatten = tri_combo.T.flatten() #all faces together 
 	
-    cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
+    cdef np.ndarray[long long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
     cdef long long[:] tri_sort = tri_flatten[temp_idx] # sorted faces (forward direction)
     cdef int maxo = len(tri_sort)-1
     cdef long long o
     cdef int idx
     
-    cdef np.ndarray[long, ndim=1] lookup = np.zeros((numel*4),dtype=int)
+    cdef np.ndarray[long long, ndim=1] lookup = np.zeros((numel*4),dtype=np.int64)
     for i in range(numel):
         lookup[i] = i
         lookup[i+numel] = i
         lookup[i+(2*numel)] = i
         lookup[i+(3*numel)] = i
 
-    cdef long[:] lookup_idx = lookup[temp_idx]
+    cdef long long[:] lookup_idx = lookup[temp_idx]
     
     #loop is parallel becuase it can be intense
     for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
@@ -461,7 +461,7 @@ def neigh2d(long[:,:] connection, int return_tri_combo=1, int num_threads=2):
     
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
-def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
+def neighPrism(long long[:,:] connection, int return_tri_combo, int num_threads=2):
     """Compute neighbours of each element within a prism mesh 
     
     Parameters
@@ -482,15 +482,15 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef int numel = connection.shape[0]
     cdef int npere = 5
     #face arrays 
-    cdef long[:] faces = np.zeros(4,dtype=int) # face on side 
-    cdef long[:] facet = np.zeros(3,dtype=int) # face on top / bottom 
-    cdef long[:] a = np.asarray([0,3], dtype=int)
-    cdef long[:] b = np.asarray([1,4], dtype=int)  
-    cdef long[:] c = np.asarray([2,5], dtype=int)  
-    cdef long[:] d = np.asarray([0,1,2] , dtype=int)
-    cdef long[:] e = np.asarray([1,2,0] , dtype=int)
-    cdef long[:] f = np.asarray([3,4,3] , dtype=int)
-    cdef long[:] g = np.asarray([4,5,5] , dtype=int)
+    cdef long long[:] faces = np.zeros(4,dtype=np.int64) # face on side 
+    cdef long long[:] facet = np.zeros(3,dtype=np.int64) # face on top / bottom 
+    cdef long long[:] a = np.asarray([0,3], dtype=np.int64)
+    cdef long long[:] b = np.asarray([1,4], dtype=np.int64)  
+    cdef long long[:] c = np.asarray([2,5], dtype=np.int64)  
+    cdef long long[:] d = np.asarray([0,1,2] , dtype=np.int64)
+    cdef long long[:] e = np.asarray([1,2,0] , dtype=np.int64)
+    cdef long long[:] f = np.asarray([3,4,3] , dtype=np.int64)
+    cdef long long[:] g = np.asarray([4,5,5] , dtype=np.int64)
 
     #combination array 
     cdef np.ndarray[long long, ndim=2] tri_combo = np.zeros((numel,5),dtype=np.int64 ,order='C') # allocate space for tri_combo 
@@ -524,20 +524,20 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
                                          pad)
         
 
-    cdef np.ndarray[long, ndim=2] neigh = np.zeros((numel,5),dtype=int) # allocate space for neighbour matrix        
-    cdef long[:,:] neighv = neigh  
+    cdef np.ndarray[long long, ndim=2] neigh = np.zeros((numel,5),dtype=np.int64) # allocate space for neighbour matrix        
+    cdef long long[:,:] neighv = neigh  
     
     #using binary search and sorted lists for efficient index lookup 
     cdef np.ndarray[long long, ndim=1] tri_flatten = tri_combo.T.flatten() #all faces in one array 
 	
-    cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
+    cdef np.ndarray[long long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
     cdef np.ndarray[long long, ndim=1] tri_sort = tri_flatten[temp_idx] # sorted faces (forward direction)
     cdef long long[:] tri_sortv = tri_sort
     cdef int maxo = len(tri_sort)-1
 
     cdef long long o, idx
     #create lookup array 
-    cdef np.ndarray[long, ndim=1] lookup = np.zeros((numel*5),dtype=int)
+    cdef np.ndarray[long long, ndim=1] lookup = np.zeros((numel*5),dtype=np.int64)
     for i in range(numel):
         lookup[i] = i
         lookup[i+numel] = i
@@ -545,8 +545,8 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
         lookup[i+(3*numel)] = i
         lookup[i+(4*numel)] = i
 
-    cdef np.ndarray[long, ndim=1] lookup_idx = np.asarray(lookup[temp_idx],order='C')
-    cdef long[:] lookup_idxv = lookup_idx
+    cdef np.ndarray[long long, ndim=1] lookup_idx = np.asarray(lookup[temp_idx],order='C')
+    cdef long long[:] lookup_idxv = lookup_idx
   
     #loop is parallel becuase it can be intense
     for i in prange(numel,nogil=True,num_threads=num_threads,schedule='dynamic'):
@@ -576,7 +576,7 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
+def facesPrism(long long[:,:] connection, double[:,:] node, long[:,:] neigh):
     """Return external faces of a 3D prism mesh 
     
     Parameters
@@ -599,7 +599,7 @@ def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
     cdef int i,j,k #loop variables
     cdef int numel = connection.shape[0]
     cdef int c = 0
-    cdef np.ndarray[long, ndim=2] nmap = np.array([[0, 1, 2, -1], 
+    cdef np.ndarray[long long, ndim=2] nmap = np.array([[0, 1, 2, -1], 
                                                    [3, 4, 5, -1], 
                                                    [0, 1, 4, 3], 
                                                    [1, 2, 5, 4],
@@ -615,9 +615,9 @@ def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
                 fnum.append(j)
                 c+=1
     
-    cdef long[:] idxa = np.array(idx,dtype=int)
-    cdef np.ndarray[long, ndim=1] idxo = np.array(idx,dtype=int)
-    cdef long[:] fnuma = np.array(fnum,dtype=int)
+    cdef long long[:] idxa = np.array(idx,dtype=np.int64)
+    cdef np.ndarray[long long, ndim=1] idxo = np.array(idx,dtype=np.int64)
+    cdef long long[:] fnuma = np.array(fnum,dtype=np.int64)
     
     cdef int nfaces = len(idx)
     cdef int fidx, fnumi, search 
@@ -644,7 +644,7 @@ def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
  
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def sortNeigh(np.ndarray[long, ndim=2] neigh):
+def sortNeigh(np.ndarray[long long, ndim=2] neigh):
     """Sort neighbour matrix for input into R3t. 
     -----------
     neigh: nd array 
@@ -658,7 +658,7 @@ def sortNeigh(np.ndarray[long, ndim=2] neigh):
     """
     cdef int numel = neigh.shape[0]
     cdef int npere = neigh.shape[1]
-    cdef long[:,:] neighv = neigh
+    cdef long long[:,:] neighv = neigh
     
     #reorder each row (acsending but outside elements at end of row) 
     cdef long like_inf = numel*2 #make a big number 
@@ -676,7 +676,7 @@ def sortNeigh(np.ndarray[long, ndim=2] neigh):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def splitTri(long[:,:] connection, double[:,:] node):
+def splitTri(long long[:,:] connection, double[:,:] node):
     """Split triangle elements down into 4 smaller triangles 
     Parameters
     -----------
@@ -701,9 +701,9 @@ def splitTri(long[:,:] connection, double[:,:] node):
     cdef double[:] x = np.zeros(3,dtype=float)
     cdef double[:] y = np.zeros(3,dtype=float)
     cdef double[:] z = np.zeros(3,dtype=float)
-    cdef long[:] n = np.zeros(6,dtype=int) # new node numbers 
+    cdef long long[:] n = np.zeros(6,dtype=np.int64) # new node numbers 
     cdef float mx, my, mz
-    cdef long[:] nodes = np.zeros(2,dtype=int)
+    cdef long long[:] nodes = np.zeros(2,dtype=np.int64)
     cdef long long mn
     cdef int i, j, nno, tmpi, search
 
@@ -712,26 +712,26 @@ def splitTri(long[:,:] connection, double[:,:] node):
     cdef int numel = connection.shape[0] # number of elements 
     
     #matrices 
-    cdef np.ndarray[long, ndim=2] new_connection = np.zeros((numel*4,3),dtype = int) # new connection matrix 
-    cdef long[:,:] new_connectionv = new_connection # memory view 
+    cdef np.ndarray[long long, ndim=2] new_connection = np.zeros((numel*4,3),dtype = int) # new connection matrix 
+    cdef long long[:,:] new_connectionv = new_connection # memory view 
 
     cdef np.ndarray[double, ndim=2] new_node = np.zeros((numel*3,3), dtype=float)
     cdef np.ndarray[long long, ndim=1] new_node_idx = np.zeros(numel*3, dtype=np.int64)
-    cdef np.ndarray[long, ndim=1] og_el_id = np.zeros(numel*3,dtype=int)
+    cdef np.ndarray[long long, ndim=1] og_el_id = np.zeros(numel*3,dtype=np.int64)
     cdef double[:,:] new_nodev = new_node
-    cdef long[:] og_el_idv = og_el_id 
+    cdef long long[:] og_el_idv = og_el_id 
    
     cdef int pad = len(str(num_nodes))+1
     
-    cdef long[:] a = np.array([0,1,2],dtype=int)
-    cdef long[:] b = np.array([1,2,0],dtype=int)
+    cdef long long[:] a = np.array([0,1,2],dtype=np.int64)
+    cdef long long[:] b = np.array([1,2,0],dtype=np.int64)
     
     #remap the element nodes with this matrix 
     cdef list remap = [[0, 5, 3],
                        [1, 4, 3],
                        [2, 5, 4],
                        [3, 4, 5]]
-    cdef long[:,:] remapv = np.asarray(remap,dtype=int)
+    cdef long long[:,:] remapv = np.asarray(remap,dtype=np.int64)
     
     ### loop through the elements ### all possible node configurations 
     for i in range(numel):
@@ -761,11 +761,11 @@ def splitTri(long[:,:] connection, double[:,:] node):
     ### find unique node configs # ###   
     # cdef list unicl, idx
     # unicl, idx = unique(list(new_node_idx)) # unique and ordered node configs 
-    # cdef long[:] idxa = np.asarray(idx, dtype=int)
-    # cdef long[:] uniclv = np.asarray(unicl,dtype=int)
+    # cdef long long[:] idxa = np.asarray(idx, dtype=np.int64)
+    # cdef long long[:] uniclv = np.asarray(unicl,dtype=np.int64)
     cdef np.ndarray[long long, ndim=1] idxa, unicl
     unicl, idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
-    cdef long[:] node_id = np.arange(len(unicl)) + num_nodes 
+    cdef long long[:] node_id = np.arange(len(unicl)) + num_nodes 
     
     ### map back to elements #### 
     for i in range(numel):
@@ -805,7 +805,7 @@ def splitTri(long[:,:] connection, double[:,:] node):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def splitTetra(long[:,:] connection, double[:,:] node):
+def splitTetra(long long[:,:] connection, double[:,:] node):
     """Split tetrahedral elements down into 8 smaller tetrahedra 
     Parameters
     -----------
@@ -828,29 +828,29 @@ def splitTetra(long[:,:] connection, double[:,:] node):
     cdef double[:] x = np.zeros(4,dtype=float)
     cdef double[:] y = np.zeros(4,dtype=float)
     cdef double[:] z = np.zeros(4,dtype=float)
-    cdef long[:] n = np.zeros(10,dtype=int) # new node numbers 
+    cdef long long[:] n = np.zeros(10,dtype=np.int64) # new node numbers 
     cdef double mx, my, mz
-    cdef long[:] nodes = np.zeros(2,dtype=int)
+    cdef long long[:] nodes = np.zeros(2,dtype=np.int64)
     cdef long long mn
     cdef int i, j, nno, tmpi, search #loop variables 
 
     cdef int num_nodes = len(node_x)
     cdef int numel = connection.shape[0]
 
-    cdef np.ndarray[long, ndim=2] new_connection = np.zeros((numel*8,4),dtype=int) # new connection matrix 
-    cdef long[:,:] new_connectionv = new_connection
+    cdef np.ndarray[long long, ndim=2] new_connection = np.zeros((numel*8,4),dtype=np.int64) # new connection matrix 
+    cdef long long[:,:] new_connectionv = new_connection
 
     cdef np.ndarray[double, ndim=2] new_node = np.zeros((numel*6,3),dtype=float) # used to reference already computed node centres
     cdef np.ndarray[long long, ndim=1] new_node_idx = np.zeros(numel*6,dtype=np.int64)
    
-    cdef np.ndarray[long, ndim=1] og_el_id = np.zeros(numel*6,dtype=int)
+    cdef np.ndarray[long long, ndim=1] og_el_id = np.zeros(numel*6,dtype=np.int64)
     cdef double[:,:] new_nodev = new_node
-    cdef long[:] og_el_idv = og_el_id 
+    cdef long long[:] og_el_idv = og_el_id 
     
     cdef int pad = len(str(num_nodes))
     
-    cdef long[:] a = np.array([0,1,2,3,3,3],dtype=int)
-    cdef long[:] b = np.array([1,2,0,0,1,2],dtype=int)
+    cdef long long[:] a = np.array([0,1,2,3,3,3],dtype=np.int64)
+    cdef long long[:] b = np.array([1,2,0,0,1,2],dtype=np.int64)
     
     #remap the element nodes with this matrix 
     cdef list remap = [[4, 7, 6, 0],
@@ -861,7 +861,7 @@ def splitTetra(long[:,:] connection, double[:,:] node):
                        [8, 5, 9, 6],
                        [4, 5, 6, 8],
                        [4, 1, 5, 8]]
-    cdef long[:,:] remapv = np.asarray(remap,dtype=int)
+    cdef long long[:,:] remapv = np.asarray(remap,dtype=np.int64)
     
     ### loop through the elements ### all possible node configurations 
     for i in range(numel):
@@ -890,7 +890,7 @@ def splitTetra(long[:,:] connection, double[:,:] node):
     ### find unique node configs # ###       
     cdef np.ndarray[long long, ndim=1] idxa, unicl
     unicl, idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
-    cdef long[:] node_id = np.arange(len(unicl)) + num_nodes
+    cdef long long[:] node_id = np.arange(len(unicl)) + num_nodes
     
     ### map back to elements #### 
     for i in range(numel):
@@ -930,7 +930,7 @@ def splitTetra(long[:,:] connection, double[:,:] node):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)   
-def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
+def orderTetra(long long[:,:] connection, double[:,:] node, int num_threads=2):
     """ Organise tetrahedral element nodes into a clockwise order
     
     following solution at: 
@@ -958,8 +958,8 @@ def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
     
-    cdef np.ndarray[long,ndim=2] con = np.zeros((numel,npere), dtype=int)# new connection matrix 
-    cdef long[:,:] conv = con # connection memeory view
+    cdef np.ndarray[long long,ndim=2] con = np.zeros((numel,npere), dtype=np.int64)# new connection matrix 
+    cdef long long[:,:] conv = con # connection memeory view
     
     cdef np.ndarray[double, ndim=1] node_x = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
     cdef np.ndarray[double, ndim=1] node_y = np.asarray(node[:,1],dtype=float)
@@ -971,12 +971,12 @@ def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
     #looping variables 
     cdef double v00,v01,v02,v10,v11,v12,v20,v21,v22,s0,s1,s2, N 
     
-    cdef np.ndarray[long, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
-    cdef long[:] ccwv = ccw #clockwise view
+    cdef np.ndarray[long long, ndim=1] ccw = np.zeros(numel,dtype=np.int64) # clockwise array 
+    cdef long long[:] ccwv = ccw #clockwise view
     cdef Py_ssize_t i 
     cdef int k, ei, tid # loop integers 
-    cdef np.ndarray[long, ndim=1] count = np.zeros(numel,dtype=int)
-    cdef long[:] countv = count
+    cdef np.ndarray[long long, ndim=1] count = np.zeros(numel,dtype=np.int64)
+    cdef long long[:] countv = count
     cdef int count_out #rolling total for the number of corrected elements 
 
     #with nogil, parallel(num_threads=num_threads):
@@ -1024,7 +1024,7 @@ def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def orderQuad(long[:,:] connection, double[:,:] node):
+def orderQuad(long long[:,:] connection, double[:,:] node):
     """Order quaderlateral elements counterclockwise 
     
     Parameters
@@ -1062,13 +1062,13 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     cdef double[:] xtmp = np.zeros(4,dtype=float)
     cdef double[:] ztmp = np.zeros(4,dtype=float)
 
-    cdef np.ndarray[long, ndim=1] count = np.zeros(numel,dtype=int)
-    cdef long[:] countv = count
+    cdef np.ndarray[long long, ndim=1] count = np.zeros(numel,dtype=np.int64)
+    cdef long long[:] countv = count
     cdef int count_out 
     
     cdef double[:] theta = np.zeros(4,dtype=float) # theta array
     
-    cdef long[:] order = np.zeros(4,dtype=int) #ordering array
+    cdef long long[:] order = np.zeros(4,dtype=np.int64) #ordering array
     
     cdef double pi = np.pi 
     cdef int i, k, c, j
@@ -1185,8 +1185,8 @@ def surfaceCall(long[:,:] fconnection, double[:,:] node, double[:,:] cellcentres
     cdef np.ndarray[double,ndim=1] nodez =  np.asarray(node[:,2],dtype=float)
     cdef double tqz = (max(nodez) - min(nodez)) + max(nodez) # query point in z axis
     
-    cdef np.ndarray[long,ndim=1] ocheck = np.zeros(nfaces,dtype=int)
-    cdef long[:] ocheckv = ocheck
+    cdef np.ndarray[long long,ndim=1] ocheck = np.zeros(nfaces,dtype=np.int64)
+    cdef long long[:] ocheckv = ocheck
 
     #looping variables 
     cdef int i,j, tid
@@ -1249,7 +1249,7 @@ def surfaceCall(long[:,:] fconnection, double[:,:] node, double[:,:] cellcentres
 #nsizeA and finite element conductance calculation
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def conductanceCall(long[:,:] connection, int numnp, int typ=0,
+def conductanceCall(long long[:,:] connection, int numnp, int typ=0,
                     int num_threads=1):
     """Calculate the array size needed for the finite element conductance matrix
     in R2 class codes 
@@ -1280,28 +1280,28 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     cdef int numel = connection.shape[0]
     cdef int nedges 
     cdef int pad = len(str(numnp))
-    cdef long[:] a, b
+    cdef long long[:] a, b
     cdef np.ndarray[long long, ndim=1] idx, counts, # unique counts and indices 
     cdef np.ndarray[long long, ndim=1] uni, combof # uni segment combinations 
-    cdef np.ndarray[long, ndim=2] Nconnec = np.zeros((numnp,nmax),dtype=int) - 1
-    cdef long[:,:] Nconnecv = Nconnec
+    cdef np.ndarray[long long, ndim=2] Nconnec = np.zeros((numnp,nmax),dtype=np.int64) - 1
+    cdef long long[:,:] Nconnecv = Nconnec
 
     #determine number of edges 
     if typ==5:#then elements are triangles
         nedges = 3
-        a = np.asarray([0,1,2], dtype=int)
-        b = np.asarray([1,2,0], dtype=int)
+        a = np.asarray([0,1,2], dtype=np.int64)
+        b = np.asarray([1,2,0], dtype=np.int64)
     elif typ==8 or typ==9:#elements are quads
         nedges = 6
-        a = np.asarray([0,1,2,3,0,1], dtype=int)
-        b = np.asarray([1,2,3,0,2,3], dtype=int)
+        a = np.asarray([0,1,2,3,0,1], dtype=np.int64)
+        b = np.asarray([1,2,3,0,2,3], dtype=np.int64)
     elif typ == 10:# elements are tetrahedra 
         nedges = 6
-        a = np.asarray([0,1,2,3,3,3], dtype=int)
-        b = np.asarray([1,2,0,0,1,2], dtype=int)
+        a = np.asarray([0,1,2,3,3,3], dtype=np.int64)
+        b = np.asarray([1,2,0,0,1,2], dtype=np.int64)
     elif typ == 13: # elements are 3d wedges 
-        a = np.asarray([0,1,2, 3,4,5, 0,1,2, 0,0, 1,1, 2,2], dtype=int)
-        b = np.asarray([1,2,0, 4,5,3, 3,4,5, 5,4, 3,5, 3,4], dtype=int)
+        a = np.asarray([0,1,2, 3,4,5, 0,1,2, 0,0, 1,1, 2,2], dtype=np.int64)
+        b = np.asarray([1,2,0, 4,5,3, 3,4,5, 5,4, 3,5, 3,4], dtype=np.int64)
         nedges = len(a)
     else: 
         raise ValueError('Cell type argument does not match vtk cell types,', 
@@ -1310,7 +1310,7 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
 
     #looping variables     
     cdef long long[:,:] combo = np.zeros((numel,nedges),dtype=np.int64)
-    # cdef long[:] nodes = np.zeros(2,dtype=int)
+    # cdef long long[:] nodes = np.zeros(2,dtype=np.int64)
     cdef int i,j,k
     cdef long long merged 
     cdef long na, nb, nid
@@ -1367,7 +1367,7 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def externalN(long[:,:] connection, double[:,:] node, long[:,:] neigh):
+def externalN(long long[:,:] connection, double[:,:] node, long[:,:] neigh):
     """Get the external nodes of a triangle or tetrahedral mesh. Future plan 
     is to add a flag to determine if nodes are on top of the mesh or on the side. 
 
@@ -1403,14 +1403,14 @@ def externalN(long[:,:] connection, double[:,:] node, long[:,:] neigh):
     else:
         raise Exception('Unsupported mesh type for computing external nodes')
         
-    cdef long[:] a, b, c 
+    cdef long long[:] a, b, c 
     if flag3d == 0: 
-        a = np.asarray([0,1,2], dtype=int)
-        b = np.asarray([1,2,0], dtype=int)
+        a = np.asarray([0,1,2], dtype=np.int64)
+        b = np.asarray([1,2,0], dtype=np.int64)
     else:
-        a = np.asarray([1,0,0,0], dtype=int) 
-        b = np.asarray([2,3,1,1], dtype=int)  
-        c = np.asarray([3,2,3,2], dtype=int)  
+        a = np.asarray([1,0,0,0], dtype=np.int64) 
+        b = np.asarray([2,3,1,1], dtype=np.int64)  
+        c = np.asarray([3,2,3,2], dtype=np.int64)  
       
     cdef list enodesl = [] # will be used to store all found face nodes 
     cdef list surfaceflagl = [] # will be used to store if node is at the surface 
@@ -1524,11 +1524,11 @@ def externalN(long[:,:] connection, double[:,:] node, long[:,:] neigh):
                             surfaceflagl.append(0) 
                             
                             
-    cdef np.ndarray[long, ndim=1] enodeu, enodeidx 
+    cdef np.ndarray[long long, ndim=1] enodeu, enodeidx 
     enodeu, enodeidx = np.unique(enodesl,return_index=True) # get unique nodes 
     
-    cdef np.ndarray[long, ndim=1] enodes = np.zeros(len(enodeu),dtype=int)
-    cdef np.ndarray[long, ndim=1] surfaceflag = np.zeros(len(enodeu),dtype=int)
+    cdef np.ndarray[long long, ndim=1] enodes = np.zeros(len(enodeu),dtype=np.int64)
+    cdef np.ndarray[long long, ndim=1] surfaceflag = np.zeros(len(enodeu),dtype=np.int64)
 
     for i in range(len(enodeu)):
         enodes[i] = enodesl[enodeidx[i]]
@@ -1539,7 +1539,7 @@ def externalN(long[:,:] connection, double[:,:] node, long[:,:] neigh):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threads=2):
+def fcrosscheck(long long[:,:] fconnection1, long long[:,:] fconnection2):#, int num_threads=2):
     """Cross check for overlapping faces in 2 different 2D face meshes... 
     Finds repeats of the first face connection matrix in the second. 
     
@@ -1562,7 +1562,7 @@ def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threa
     cdef int numel2 = fconnection2.shape[0]
     
     #face arrays 
-    cdef long[:] face = np.zeros(3,dtype=int)
+    cdef long long[:] face = np.zeros(3,dtype=np.int64)
 
     #combination arrays 
     cdef np.ndarray[long long, ndim=1] combo1 = np.zeros((numel1,),dtype=np.int64 ,order='C') # allocate space for combination matrix 
@@ -1598,13 +1598,13 @@ def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threa
         
     #using binary search and sorted lists for efficient lookup 
     cdef np.ndarray[long long, ndim=1] cflatten = combo2.flatten() #all faces in one array 
-    cdef np.ndarray[long, ndim=1] tempidx = np.argsort(cflatten).astype(int,order='C') 
+    cdef np.ndarray[long long, ndim=1] tempidx = np.argsort(cflatten).astype(int,order='C') 
     
     cdef long long[:] csort = cflatten[tempidx] # sorted faces (for second matrix)
     cdef long long o
 
-    cdef np.ndarray[long, ndim=1] repeats = np.zeros((numel1,),dtype=np.int64 ,order='C') 
-    cdef long[:] repeatv = repeats    
+    cdef np.ndarray[long long, ndim=1] repeats = np.zeros((numel1,),dtype=np.int64 ,order='C') 
+    cdef long long[:] repeatv = repeats    
     
     for i in range(numel1):
     #for i in prange(numel1,nogil=True,num_threads=num_threads,schedule='static'): # parrallel implimentation  
@@ -1617,7 +1617,7 @@ def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threa
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def boundcall(long[:,:] tconnection, long[:,:] fconnection, double[:,:] node):
+def boundcall(long long[:,:] tconnection, long long[:,:] fconnection, double[:,:] node):
     """
     Compute cell boundary conditions for E4D input. Works for gentle topography. 
     Assumes sides of mesh are flat. 
@@ -1669,10 +1669,10 @@ def boundcall(long[:,:] tconnection, long[:,:] fconnection, double[:,:] node):
     cdef double[:] fcentriod = np.zeros(npere_face,dtype=float)
     
     cdef long bd # boundary flags 
-    cdef np.ndarray[long, ndim=1] node_bd = np.zeros(numnp,dtype=int)
-    cdef np.ndarray[long, ndim=1] face_bd = np.zeros(numel,dtype=int)
-    cdef long[:] node_bdv = node_bd 
-    cdef long[:] face_bdv = face_bd 
+    cdef np.ndarray[long long, ndim=1] node_bd = np.zeros(numnp,dtype=np.int64)
+    cdef np.ndarray[long long, ndim=1] face_bd = np.zeros(numel,dtype=np.int64)
+    cdef long long[:] node_bdv = node_bd 
+    cdef long long[:] face_bdv = face_bd 
     
     #do checks? 
     if numel != numel_check:
@@ -1762,19 +1762,19 @@ def rmRepeatNodes(double[:,:] node, long [:,:] connection, int n=10, int num_thr
     cdef int ndim = node.shape[1] # should be 3 (always)
     
     cdef int c = 0 # rolling count used in for loops 
-    cdef np.ndarray[long,ndim=2] idx = np.zeros((numnp,n), dtype=int)-1 # index grouping 
-    cdef long[:,:] idxv = idx 
+    cdef np.ndarray[long long,ndim=2] idx = np.zeros((numnp,n), dtype=np.int64)-1 # index grouping 
+    cdef long long[:,:] idxv = idx 
     cdef int err = 0 # error flag
     cdef int i,j # looping variables 
     
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
-    cdef np.ndarray[long,ndim=2] nconnec = np.zeros((numel,npere), dtype=np.int64)
-    cdef long[:,:] nconnecv = nconnec 
+    cdef np.ndarray[long long,ndim=2] nconnec = np.zeros((numel,npere), dtype=np.int64)
+    cdef long long[:,:] nconnecv = nconnec 
 
     
-    cdef long[:] remap = np.zeros(numnp,dtype=int)-1 # array to allocate remapped node values to 
-    cdef long[:] flag = np.zeros(numnp,dtype=int) # decides if point already added
+    cdef long long[:] remap = np.zeros(numnp,dtype=np.int64)-1 # array to allocate remapped node values to 
+    cdef long long[:] flag = np.zeros(numnp,dtype=np.int64) # decides if point already added
     
     for i in prange(numnp,nogil=True,num_threads=num_threads,schedule='static'):
         #this bit can be parallel 
