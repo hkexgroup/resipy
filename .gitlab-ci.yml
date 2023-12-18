@@ -13,8 +13,9 @@ test:
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
   artifacts:
     reports:
-      coverage_format: cobertura
-      path: 'coverage.xml'
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
 pages:
   script:
