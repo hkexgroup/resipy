@@ -9,8 +9,13 @@ test:
   - cd src
   - coverage run --source=resipy test.py
   - coverage report --include=resipy/Project.py,resipy/Survey.py,resipy/meshTools.py,resipy/DCA.py,resipy/protocols.py
+  - coverage xml
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
-  
+  artifacts:
+    reports:
+      coverage_format: cobertura
+      path: coverage.xml
+
 pages:
   script:
   - apt-get update
