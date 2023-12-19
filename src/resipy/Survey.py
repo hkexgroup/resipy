@@ -193,7 +193,7 @@ class Survey(object):
         self.filt_typ = 'Raw'
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
-        
+
         # check arguments
         if name == '':
             if fname is not None:
@@ -251,7 +251,7 @@ class Survey(object):
                 else:
                     print("Unrecognised ftype, available types are :",avail_ftypes )
                     raise Exception('Sorry this file type is not implemented yet')
-        
+
             # assign dataframe and check the types of a,b,m,n (all labels must be string)
             self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
             self.ndata = self.df.shape[0]
@@ -268,7 +268,7 @@ class Survey(object):
                 self.df['phaseError'] = self.df['phiErr'].copy()
             else:
                 self.df['phaseError'] = np.nan
-            
+
             # set electrode dataframe
             if type(elec) == np.ndarray: # TODO for temporary stability
                 self.elec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
@@ -277,7 +277,7 @@ class Survey(object):
                 self.elec['label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
             else:
                 self.elec = elec
-            
+
             # check if voltage is signed for specific formats
             if ftype == 'BGS Prime':
                 self.checkTxSign()
@@ -291,7 +291,7 @@ class Survey(object):
                 self.df['app'] = self.df['K']*self.df['resist']
             elif 'app' in self.df.columns:
                 self.df['resist'] = self.df['app']/self.df['K']
-            
+
         # we provide df and elec dataframes
         elif df is not None and elec is not None:
             self.df = df # assuming dataframe is already well formatted
@@ -313,7 +313,7 @@ class Survey(object):
         else:
             raise ValueError('No fname supplied, no df and elec supplied. Returned.')
             return
-        
+
         # apply basic filtering
         self.filterDefault()
         if compRecip:
@@ -459,7 +459,7 @@ class Survey(object):
         """Checking the sign of the transfer resistances (2D survey only !).
         """
         resist = self.df['resist'].values.copy()
-        self.computeK()
+        self.computeKborehole()
         K = self.df['K'].values
         ie = ((K < 0) & (resist > 0)) | ((K > 0) & (resist < 0))
         self.df.loc[ie, 'resist'] = resist[ie]*-1
@@ -1743,8 +1743,6 @@ class Survey(object):
         array = self.isequence - 1 
         elec = self.elec[['x','y','z']].values
         
-        print(max(array.flatten()))
-        
         aposx = elec[:,0][array[:,0]]
         aposy = elec[:,1][array[:,0]]
         aposz = elec[:,2][array[:,0]]
@@ -1775,7 +1773,7 @@ class Survey(object):
         
     def computeKborehole(self,Gl = None): # ground level 
         """
-        Compute geometric factor for a borehole survery assuming a flat 2D 
+        Compute geometric factor for a borehole survey assuming a flat 2D 
         surface. Gl = ground level. 
         """
       
