@@ -327,7 +327,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per Project instance)
-        self.meshParams = {} # mesh parameters passed to mesh creation scheme 
+        self.meshParams = {} # mesh parameters passed to mesh creation scheme
+        self.wholespace = False # flag for whole space problem 
         self.topo = pd.DataFrame(columns=['x','y','z']) # store additional topo points
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
@@ -2727,18 +2728,19 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 def dump(x):
                     pass
+                
+        if typ == 'default':
+            if self.typ == 'R2' or self.typ == 'cR2': # it's a 2D mesh
+                typ = 'trian'
+            else:
+                typ = 'tetra'
+                
         self.meshParams = {'typ':typ, 'buried':buried, 'surface':surface,
                            'cl_factor':cl_factor, 'cl':cl, 'dump':dump,
                            'res0': res0, 'show_output':show_output,
                            'refine':refine,'fmd':fmd}
         if kwargs is not None:
             self.meshParams.update(kwargs)
-
-        if typ == 'default':
-            if self.typ == 'R2' or self.typ == 'cR2': # it's a 2D mesh
-                typ = 'trian'
-            else:
-                typ = 'tetra'
         
         # flag for if mesh gets refined during mesh creation 
         refined = False 
@@ -2775,7 +2777,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.computeFineMeshDepth()
         else:
             self.fmd = fmd
-
+        
         if typ == 'quad':
             print('Creating quadrilateral mesh...', end='')
             surface_x = self.topo['x'].values if surface is not None else None
@@ -2801,11 +2803,10 @@ class Project(object): # Project master class instanciated by the GUI
             if 'geom_input' in kwargs:
                 geom_input.update(kwargs['geom_input'])
                 kwargs.pop('geom_input')
-
-            whole_space = False
+            
             if self.elec['buried'].values.all() and surface is None:
                 # all electrodes buried and no surface given
-                whole_space = True
+                self.wholespace = True
 
             elec_type = elec_type.tolist()
 
@@ -2821,7 +2822,7 @@ class Project(object): # Project master class instanciated by the GUI
                                  path=os.path.join(self.apiPath, 'exe'),
                                  cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=show_output,
-                                 fmd=self.fmd, whole_space=whole_space,
+                                 fmd=self.fmd, whole_space=self.wholespace,
                                  handle=setMeshProc, **kwargs)
                 elif typ == 'circle':
                     print('Creating circular mesh...NOT IMPLEMENTED YET', end='')
@@ -2841,7 +2842,7 @@ class Project(object): # Project master class instanciated by the GUI
                                  surface_refinement=surface,
                                  cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=show_output,
-                                 fmd=self.fmd, whole_space=whole_space,
+                                 fmd=self.fmd, whole_space=self.wholespace,
                                  handle=setMeshProc, **kwargs)
                 elif typ == 'prism':
                     print('Creating prism mesh...', end='')
@@ -2884,6 +2885,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.param['mesh'] = mesh
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
+
         numel = self.mesh.numel
         self.mesh.addAttribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
         self.mesh.addAttribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
@@ -5422,28 +5424,46 @@ class Project(object): # Project master class instanciated by the GUI
             
 
     def computeModelError(self, rmTree=False, dump=None):
-        """Compute modelling error associated with the mesh.
-        This is computed on a flat triangular or tetrahedral mesh.
+        """Compute modelling error associated with the mesh for a half space
+        problem. This is computed on a flat mesh with the same meshing parameters
+        as the project mesh. In the case of non-conventional surveys a different
+        modelling error scheme will be used. 
 
         Parameters
         ----------
         rmTree : bool
             Remove the working directory used for the error modelling. Default
             is True.
+        dump : bool 
+            Function to direct the output of the modelling error process, by default
+            the outputs are printed to the console. 
+            
         """
         if dump is None:
             def dump(x):
                 print(x, end='')
                 
         dump('Doing error modelling...\n')
+        
+        cases = ['tetra','trian','quad'] # use cases where modelling error is a half space 
+        halfspace = True 
+        if self.meshParams['typ'] not in cases and not self.wholespace: 
+            # raise Exception('Modelling error not avialable for this mesh type yet')
+            halfspace = False 
+            
         node_elec = None # we need this as the node_elec with topo and without might be different
-        if any(self.elec['z'].values != self.elec['z'].values[0]): # so we have topography
-            dump('Creating mesh with flat topo...\n\n')
+        if not halfspace:
+            dump('Refining the mesh for the case of a generic problem...\n\n')
+            mesh = self.mesh.refine() # refine the mesh (maybe even need 2x as much? kinda slow though)  
+        elif any(self.elec['z'].values != 0): # so we have topography in this case and need a new mesh 
+            dump('Creating mesh without ANY topography...\n\n')
             meshParams = self.meshParams.copy()
             if '3' in self.typ:#change interp method 
                 meshParams['interp_method'] = None # dont do any interpolation 
             if 'geom_input' in meshParams: # dont use geometry from here because it'll likley be incompatible on the flat mesh
                 meshParams['geom_input'] = {}
+                
+            # NB: Don't use the same dump from the mesh creation tab in the UI 
             if 'show_output' in meshParams: 
                 if meshParams['show_output']:
                     meshParams['dump'] = dump 
@@ -5468,24 +5488,19 @@ class Project(object): # Project master class instanciated by the GUI
         fparam['job_type'] = 0
         centroids = mesh.elmCentre
         
-        #below block not needed now R2 reads in .dat files for quad mesh 
-        # if self.param['mesh_type'] == 6:
-        #     fparam['num_regions'] = 1
-        #     maxElem = centroids.shape[0]
-        #     fparam['regions'] = np.array([[1, maxElem, 100]])
-        # else:
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             n = 2
-            name = 'mesh.dat'
-            file_path = os.path.join(fwdDir, name)
-            mesh.dat(file_path)
+            mname = 'mesh.dat'
+            meshPath = os.path.join(fwdDir, mname)
+            mesh.dat(meshPath)
         else:
             n = 3
-            name = 'mesh3d.dat'
-            file_path = os.path.join(fwdDir, name)
-            mesh.datAdv(file_path, iadvanced=self.iadvanced) # use advanced mesh format if 3D 
+            mname = 'mesh3d.dat'
+            meshPath = os.path.join(fwdDir, mname)
+            mesh.datAdv(meshPath, iadvanced=self.iadvanced) # use advanced mesh format if 3D 
+        
         #make starting resistivity file 
-        resFile = np.zeros((centroids.shape[0],n+1)) # centroid x, y, z, res0
+        resFile = np.zeros((mesh.numel, n+1)) # centroid x, y, z, res0
         resFile[:,-1] = 100
         np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                    fmt='%.3f')
@@ -5511,10 +5526,7 @@ class Project(object): # Project master class instanciated by the GUI
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
                     protocol[c] = '1 ' + protocol[c]
-            # protocol.insert(1, 'sa', 1)
-            # protocol.insert(3, 'sb', 1)
-            # protocol.insert(5, 'sm', 1)
-            # protocol.insert(7, 'sn', 1)
+
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
@@ -5523,27 +5535,47 @@ class Project(object): # Project master class instanciated by the GUI
         
         # run the inversion
         dump('Running R* code (forward mode)...\n')
-        self.runR2(fwdDir) # this will copy the R2.exe inside as well
+        self.runR2(fwdDir,dump) # run R*.exe in inside working directory 
+        
+        if halfspace: 
+            # assume that apparent resistivities should equal 100 in the case of a halfspace 
+            ap = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-1]
+            modErr = np.abs(100-ap)/100
+        else: # need to run code again with reference mesh 
+            # grab reference transfer resistances made on refined mesh 
+            tr0 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-2]
+            k = 100/tr0 # compute geometric factor 
+            ap0 = tr0*k # apparent resistivities 
+            
+            # keep files for refined mesh 
+            shutil.move(os.path.join(fwdDir,mname),
+                        os.path.join(fwdDir,mname.replace('.dat','_refined.dat')))
+            shutil.move(os.path.join(fwdDir,self.typ + '_forward.dat'),
+                        os.path.join(fwdDir,self.typ + '_forward_refined.dat'))
+            shutil.move(os.path.join(fwdDir,'resistivity.dat'),
+                        os.path.join(fwdDir,'resistivity_refined.dat'))
 
-        # get error model
-        # if (self.typ == 'R3t') | (self.typ == 'cR3t'):
-        #     try:
-            # x = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=0)
-        #     except:#try just reading in the last 2 columns instead
-        #         fh = open(os.path.join(fwdDir, self.typ + '.fwd'))
-        #         no_meas = len(protocol)
-        #         trans_res = [0]*no_meas
-        #         app_res = [0]*no_meas
-        #         for i in range(no_meas):
-        #             line = fh.readline().split()
-        #             trans_res[i] = float(line[-2])
-        #             app_res[i] = float(line[-1])
-        #         x = np.array((trans_res,app_res)).T
-        #         fh.close()
-
-        # else:
-        x = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)
-        modErr = np.abs(100-x[:,-1])/100
+            # write new mesh that is used for the actual inversion
+            if n == 2: 
+                self.mesh.dat(meshPath) # (use class mesh not the refined one)
+            else: # use advanced mesh format if 3D   
+                self.mesh.datAdv(meshPath, iadvanced=self.iadvanced)   
+            # write a new starting resistivity file
+            resFile = np.zeros((self.mesh.numel, n+1)) # centroid x, y, z, res0
+            resFile[:,-1] = 100
+            np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), 
+                       resFile,
+                       fmt='%.3f')
+            
+            dump('Running R* code for reference mesh ...\n')
+            self.runR2(fwdDir,dump)
+            tr1 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-2]
+            ap1 = tr1*k #(use same k as before)
+            modErr = np.abs(ap0-ap1)/100
+            
+            
+        # append modelling error to survey dataframes 
+        dump('Adding to modelling error to data structures...\n')
         dferr = pd.DataFrame(seq, columns=['a','b','m','n'])
         dferr['modErr'] = modErr
         for s in self.surveys:
@@ -5557,7 +5589,6 @@ class Project(object): # Project master class instanciated by the GUI
 
         self.fwdErrModel = True # class now has a forward error model.
         dump('Modelling error done!\n')
-
 
     def showIter(self, index=-2, ax=None, modelDOI=False, cropMaxDepth=False):
         """Dispay temporary inverted section after each iteration.
