@@ -9,13 +9,12 @@ test:
   - cd src
   - coverage run --source=resipy test.py
   - coverage report --include=resipy/Project.py,resipy/Survey.py,resipy/meshTools.py,resipy/DCA.py,resipy/protocols.py
-  - coverage xml
+  - coverage html
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+%)/'
   artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: src/coverage.xml
+    paths:
+    - src/htmlcov
+
 
 pages:
   script:
