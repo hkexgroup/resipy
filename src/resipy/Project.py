@@ -322,6 +322,7 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             dirname = os.path.abspath(dirname)
         print('Working directory is:', dirname)
+        self.pinfo = {} # project information 
         self.setwd(dirname) # working directory (for the datas)
         self.elec = None # will be assigned when creating a survey
         self.surveys = [] # list of survey object
@@ -365,15 +366,58 @@ class Project(object): # Project master class instanciated by the GUI
         self.surfaceIdx = None # used to show plan view iterations of 3D inversions
         self.darkMode = False # If true, electrodes wil be plotted in white, else black
         self.iadvanced = True # If true, use the advanced mesh format for 3D mesh
+        # summary information, shown went printing 
+        self.pinfo = {'Data':False,
+                      'Number of Surveys': 0,
+                      'Number of electrodes':0,
+                      'Borehole electrodes':False, 
+                      'Remote electrodes':False, 
+                      'Error model':False, 
+                      'Mesh Type':'Not set',
+                      'Number of Elements':0,
+                      'Number of Nodes':0,
+                      'Estimated RAM for forward solution (Gb)':0.0,
+                      'Estimated RAM for inverse solution (Gb)':0.0,
+                      'Convergence of inverse solution':False, 
+                      'RMS of inverse solution':np.nan,
+                      'Number of iterations':0,
+                      'Median normalised error':np.nan,
+                      'Working Directory':self.dirname}
         
         
+    def summary(self): 
+        text = '_____Project Summary_____\n'
+        for key in self.pinfo.keys(): 
+            text += key 
+            text += ' : '
+            v = self.pinfo[key] # dict value 
+            if type(v) is int: 
+                text += '{:d}'.format(v)
+            elif type(v) is float:
+                text += '{:6.4f}'.format(v)
+            elif type(v) is bool: 
+                if v:
+                    text += 'Yes'
+                else:
+                    text += 'No'
+            else: 
+                text += '{:s}'.format(v)
+            text += '\n'
             
+        return text 
+            
+    def __str__(self):
+        return self.summary() 
+                    
+    
     def setBorehole(self, val=False):
         """Set all surveys in borehole type if `True` is passed.
         """
         self.iBorehole = val
         for s in self.surveys:
             s.iBorehole = val
+        if self.iBorehole: 
+            self.pinfo['Borehole electrodes'] = True 
 
 
     def _num2elec(self, elec):
@@ -439,6 +483,7 @@ class Project(object): # Project master class instanciated by the GUI
         elec['remote'] = iremote
         if np.sum(iremote) > 0:
             print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
+            
         return elec
 
 
@@ -510,7 +555,12 @@ class Project(object): # Project master class instanciated by the GUI
             self.computeFineMeshDepth()
             for s in self.surveys:
                 s.computeKborehole() # recalculate K 
-            
+                
+        self.pinfo['Number of electrodes'] = len(self.elec)
+        if 'iremote' in self.elec.columns: 
+            if any(elec['iremote']):
+                self.pinfo['Remote electrodes'] = True 
+                
     
     def mergeElec(self, dist=-1):
         """Merge electrodes that have less than a certain distance to eache other
@@ -843,6 +893,7 @@ class Project(object): # Project master class instanciated by the GUI
             print('clearing dirname')
         os.mkdir(wd)
         self.dirname = wd
+        self.pinfo['Working Directory'] = wd 
 
 
     def setTitle(self, linetitle):
@@ -923,6 +974,10 @@ class Project(object): # Project master class instanciated by the GUI
                    }
         with open(os.path.join(savedir, 'settings.json'), 'w') as f:
             f.write(json.dumps(settings))
+            
+        # also save summary information 
+        with open(os.path.join(savedir,'summary.json'), 'w') as f:
+            f.write(json.dumps(self.pinfo))
         
         # param as numpy array
         keys = ['num_regions', 'res0File', 'num_xz_poly', 'a_wgt', 'b_wgt',
@@ -1001,6 +1056,7 @@ class Project(object): # Project master class instanciated by the GUI
                 mesh = mt.vtk_import(os.path.join(savedir, surveyName + '.vtk'))
                 mesh.setElec(elec[:,0], elec[:,1], elec[:,2])
                 self.meshResults.append(mesh)
+            self.surveys[-1].setSeqIds()
 
         # for i in range(100000): # don't think that someone will store so many
         #     f = os.path.join(savedir, 'survey{:d}'.format(i))
@@ -1110,6 +1166,11 @@ class Project(object): # Project master class instanciated by the GUI
             
             with open(os.path.join(savedir, 'fwdLog.log'), 'r') as f:
                 self.fwdLog = f.read()
+                
+        # read summary information (if it is there)
+        if os.path.exists(os.path.join(savedir, 'summary.json')):
+            with open(os.path.join(savedir, 'summary.json'), 'r') as f:
+                self.pinfo = json.load(f)
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
                      parser=None, debug=True, **kwargs):
@@ -1157,6 +1218,10 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 if len(s.df['a'].iloc[0].split()) == 2: 
                     s._rmLineNum() 
+                    
+        # flag that data has been added 
+        self.pinfo['Data'] = True 
+        self.pinfo['Number of Surveys'] = 1 
         
             
     def addData(self, **kwargs):
@@ -1282,6 +1347,10 @@ class Project(object): # Project master class instanciated by the GUI
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
+        
+        # flag that data has been added 
+        self.pinfo['Data'] = True 
+        self.pinfo['Number of Surveys'] = len(self.surveys) 
 
 
     def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
@@ -1362,6 +1431,10 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None
         self.setElec(elec)
         self.setBorehole(self.iBorehole)
+        
+        # flag that data has been added 
+        self.pinfo['Data'] = True 
+        self.pinfo['Number of Surveys'] = 1 
 
 
     def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
@@ -1411,6 +1484,9 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None
         self.setElec(elec) # create initial electrodes df - to be populated later
         self.setBorehole(self.iBorehole)
+        # flag that data has been added 
+        self.pinfo['Data'] = True 
+        self.pinfo['Number of Surveys'] = 1 
         
     
     
@@ -2189,6 +2265,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorLin(ax=ax)
+        self.pinfo['Error model'] = True 
 
 
     def fitErrorPwl(self, index=-1, ax=None):
@@ -2220,6 +2297,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorPwl(ax=ax)
+        self.pinfo['Error model'] = True 
 
 
     def fitErrorLME(self, index=-1, ax=None, rpath=None, iplot=True):
@@ -2249,6 +2327,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorLME(ax=ax, rpath=rpath, iplot=iplot)
+        self.pinfo['Error model'] = True 
 
 
     def showErrorIP(self, index=0, ax=None):
@@ -2304,6 +2383,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorPwlIP(ax=ax)
+        self.pinfo['Error model'] = True 
 
 
     def fitErrorParabolaIP(self, index=-1, ax=None):
@@ -2335,6 +2415,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorParabolaIP(ax=ax)
+        self.pinfo['Error model'] = True 
 
 
 
@@ -2606,6 +2687,7 @@ class Project(object): # Project master class instanciated by the GUI
             numRemoved = self.surveys[index].filterTransferRes(vmin=vmin, vmax=vmax)
         return numRemoved
     
+    
     def filterContRes(self, index=-1, vmin=None, vmax=None):
         """Filter measurements by contact resistance if avialable. 
         
@@ -2627,6 +2709,7 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             numRemoved = self.surveys[index].filterContRes(vmin=vmin, vmax=vmax)
         return numRemoved
+    
 
     def computeFineMeshDepth(self):
         """Compute the Fine Mesh Depth (FMD) based on electrode
@@ -2739,6 +2822,7 @@ class Project(object): # Project master class instanciated by the GUI
                            'cl_factor':cl_factor, 'cl':cl, 'dump':dump,
                            'res0': res0, 'show_output':show_output,
                            'refine':refine,'fmd':fmd}
+        meshtypename = 'default'
         if kwargs is not None:
             self.meshParams.update(kwargs)
         
@@ -2780,6 +2864,7 @@ class Project(object): # Project master class instanciated by the GUI
         
         if typ == 'quad':
             print('Creating quadrilateral mesh...', end='')
+            meshtypename = 'Quadrilateral'
             surface_x = self.topo['x'].values if surface is not None else None
             surface_z = self.topo['z'].values if surface is not None else None
             mesh,meshx,meshy,topo,e_nodes = mt.quadMesh(elec_x,elec_z,list(elec_type),
@@ -2818,6 +2903,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.mproc = None
                 if typ == 'trian':
                     print('Creating triangular mesh...', end='')
+                    meshtypename = 'Triangular'
                     mesh = mt.triMesh(elec_x,elec_z,elec_type,geom_input,
                                  path=os.path.join(self.apiPath, 'exe'),
                                  cl_factor=cl_factor,
@@ -2826,6 +2912,7 @@ class Project(object): # Project master class instanciated by the GUI
                                  handle=setMeshProc, **kwargs)
                 elif typ == 'circle':
                     print('Creating circular mesh...NOT IMPLEMENTED YET', end='')
+                    meshtypename = 'Triangular'
                     mesh = mt.circularMesh(np.c_[elec_x, elec_y, elec_z],
                                              path=os.path.join(self.apiPath, 'exe'),
                                              cl=cl, dump=dump, show_output=show_output,
@@ -2834,6 +2921,7 @@ class Project(object): # Project master class instanciated by the GUI
                     
                 elif typ == 'tetra':
                     print('Creating tetrahedral mesh...', end='')    
+                    meshtypename = 'Tetrahedral'
                     if cl == -1:
                         dist = cdist(self.elec[~self.elec['remote']][['x','y']].values) # half the minimal electrode distance
                         cl = np.min(dist[dist != 0])/4 
@@ -2846,6 +2934,7 @@ class Project(object): # Project master class instanciated by the GUI
                                  handle=setMeshProc, **kwargs)
                 elif typ == 'prism':
                     print('Creating prism mesh...', end='')
+                    meshtypename = 'Prism'
                     mesh = mt.prismMesh(elec_x, elec_y, elec_z,
                                          path=os.path.join(self.apiPath, 'exe'),
                                          cl=cl, dump=dump, show_output=show_output,
@@ -2854,6 +2943,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # self.iadvanced = False # as current implimentation of advanced mesh doesnt work with prisms 
                 elif typ == 'cylinder':
                     print('Creating cylinder mesh...', end='')
+                    meshtypename = 'Tetrahredal (cylindrical)'
                     mesh = mt.cylinderMesh(elec_x, elec_y, elec_z,
                                              path=os.path.join(self.apiPath, 'exe'),
                                              cl=cl, cl_factor=cl_factor, dump=dump, 
@@ -2863,6 +2953,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # self.iadvanced = False # ditto 
                 elif typ == 'tank':
                     print('Creating tank mesh...', end='')
+                    meshtypename = 'Tetrahedral (tank)'
                     mesh = mt.tankMesh(np.c_[elec_x, elec_y, elec_z],
                                              path=os.path.join(self.apiPath, 'exe'),
                                              cl=cl, dump=dump, show_output=show_output,
@@ -2897,7 +2988,9 @@ class Project(object): # Project master class instanciated by the GUI
         elif self.typ=='R2':
             self.mesh.addAttribute(np.arange(numel)+1,'param')
         
-        self.param['reqMemory'] = getSysStat()[2] - self._estimateMemory(dump=dump) # if negative then we need more RAM
+        memInv = float(self._estimateMemory(dump=dump)) 
+        memFwd = float(self._estimateMemory(dump=pointer, inverse=False))
+        self.param['reqMemory'] = getSysStat()[2] - memInv # if negative then we need more RAM
         self.mesh.iremote = self.elec['remote'].values
         
         # define zlim
@@ -2924,12 +3017,19 @@ class Project(object): # Project master class instanciated by the GUI
             self.zlim = [zlimBot, zlimTop]
         self._computePolyTable()
         print('done ({:d} elements)'.format(self.mesh.df.shape[0]))
+        self.pinfo['Number of Elements'] = self.mesh.numel 
+        self.pinfo['Number of Nodes']=self.mesh.numnp 
+        self.pinfo['Mesh Type'] = meshtypename
+        self.pinfo['Estimated RAM for forward solution (Gb)'] = memFwd
+        self.pinfo['Estimated RAM for inverse solution (Gb)'] = memInv 
         
         
     def _computePolyTable(self):
         # define num_xz_poly or num_xy_poly
         elec = self.elec[~self.elec['remote']][['x','y','z']].values
         elec_x, elec_y, elec_z = elec[:,0], elec[:,1], elec[:,2]
+        self.param['num_xz_poly'] = 0 
+        self.param['num_xy_poly'] = 0 
         
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.param['num_xz_poly'] = 5
@@ -2967,7 +3067,7 @@ class Project(object): # Project master class instanciated by the GUI
             xmin, xmax = np.min(elec_x), np.max(elec_x)
             ymin, ymax = np.min(elec_y), np.max(elec_y)
             zmin, zmax = np.min(elec_z)-self.fmd, np.max(elec_z)
-            xz_poly_table = np.array([
+            xy_poly_table = np.array([
             [xmin, ymax],
             [xmax, ymax],
             [xmax, ymin],
@@ -2975,7 +3075,7 @@ class Project(object): # Project master class instanciated by the GUI
             [xmin, ymax]])
             self.param['zmin'] = zmin
             self.param['zmax'] = zmax
-            self.param['xy_poly_table'] = xz_poly_table
+            self.param['xy_poly_table'] = xy_poly_table
 
     
     def _defineZlim(self):
@@ -3046,16 +3146,21 @@ class Project(object): # Project master class instanciated by the GUI
         #     colx = self.mesh.quadMeshNp() # convert nodes into column indexes
         #     self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), np.array(colx), np.ones((len(e_nodes,1)))].astype(int)
             #will only work for assuming electrodes are a surface array
+        meshtypename = 'default'
         if self.mesh.type2VertsNo() == 4:
             if flag_3D:
                 self.param['mesh_type'] = 4 # tetra mesh
+                meshtypename = 'Tetrahedral'
             else:
                 self.param['mesh_type'] = 6 # general quad mesh
+                meshtypename = 'Quadrilateral'
         else:
             if flag_3D:
                 self.param['mesh_type'] = 6 # prism mesh 
+                meshtypename = 'Prism'
             else:
                 self.param['mesh_type'] = 3 # triangular mesh
+                meshtypename = 'Triangular'
         self.param['node_elec'] = [self.elec['label'].values, e_nodes.astype(int)]
 
         # checking
@@ -3093,6 +3198,17 @@ class Project(object): # Project master class instanciated by the GUI
         if self.zlim is None:
             self._defineZlim()
         self._computePolyTable()
+        
+        memInv = float(self._estimateMemory(dump=pointer, inverse=True))
+        memFwd = float(self._estimateMemory(dump=pointer, inverse=False))
+        
+        #flag up mesh in pinfo 
+        self.pinfo['Number of Elements'] = self.mesh.numel 
+        self.pinfo['Number of Nodes']=self.mesh.numnp 
+        self.pinfo['Mesh Type'] = meshtypename
+        self.pinfo['Estimated RAM for forward solution (Gb)'] = memFwd
+        self.pinfo['Estimated RAM for inverse solution (Gb)'] = memInv 
+        
         
 
     def showMesh(self, ax=None, **kwargs):
@@ -3691,10 +3807,6 @@ class Project(object): # Project master class instanciated by the GUI
 
 
         # get the files as it was a sequential inversion
-        # TODO should now be consistent
-        # if self.typ=='R3t' or self.typ=='cR3t':
-            # toRename = ['.dat', '.vtk', '.err', '.sen', '_diffres.dat']
-        # else:
         toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
         r2outText = ''
         for i, s in enumerate(surveys):
@@ -4190,6 +4302,7 @@ class Project(object): # Project master class instanciated by the GUI
         """
         if dirname is None:
             dirname = self.dirname
+        self.getRMS(dirname)
         idone = 0
         ifailed = 0
         self.meshResults = [] # make sure we empty the list first
@@ -4239,6 +4352,8 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 pass
                 #break
+                
+        self.pinfo['Number of Surveys'] = len(self.meshResults)
         print('')
 
         # compute conductivity in mS/m
@@ -4259,6 +4374,31 @@ class Project(object): # Project master class instanciated by the GUI
             except Exception as e:
                 print('failed to compute difference: ', e)
                 pass
+            
+            
+    def getRMS(self,dirname=None):
+        if dirname is None:
+            dirname = self.dirname 
+        fpath = os.path.join(dirname, self.typ+'.out')
+        if not os.path.exists(fpath):
+            return 
+        fh = open(fpath,'r')
+        lines = fh.readlines() 
+        rms = 0 
+        iterations = 0 
+        for line in lines: 
+            if 'Final RMS Misfit' in line: 
+                rms = float(line.split()[-1])
+            if 'Iteration' in line:
+                iterations += 1 
+        if rms == 0:
+            self.pinfo['Convergence of inverse solution'] = False 
+        else:
+            self.pinfo['Convergence of inverse solution'] = True 
+        self.pinfo['Number of iterations'] = iterations 
+        self.pinfo['RMS of inverse solution'] = rms 
+        return rms 
+        
     
     def computeVol(self, attr='Resistivity(ohm.m)', vmin=None , vmax=None, index=0):
         """Given a 3D dataset, calculates volume based on mesh type.
@@ -5522,6 +5662,7 @@ class Project(object): # Project master class instanciated by the GUI
             seq = np.unique(seq, axis=0)
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq],
                                 columns=['index','a','b','m','n'])
+        # seems to be a problem here if the first electrode is not one. #### TODO #### 
         if (self.typ == 'R3t') | (self.typ == 'cR3t'): # it's a 3D survey
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
@@ -5756,7 +5897,10 @@ class Project(object): # Project master class instanciated by the GUI
         if  np.sum([df.shape[0] > 0 for df in dfs]) != len(self.surveys):
             print('error in reading error files (do not exists or empty')
             return # this check the number of dfs AND the fact that they are not empty
+        
+        normerr = np.array([])
         for s, df in zip(self.surveys, dfs):
+            normerr = np.vstack(df['Normalised_Error'].values)
             df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
             cols = ['a','b','m','n','resInvError']
             
@@ -5769,6 +5913,7 @@ class Project(object): # Project master class instanciated by the GUI
                 s.df = s.df.drop('phaseInvMisfit', axis=1)
             s.df = pd.merge(s.df, df[cols], on=['a','b','m','n'], how='left')
             s.dfInvErrOutputOrigin = s.df.copy() # for being able to reset post processing filters
+        self.pinfo['Median normalised error'] = float(np.median(np.abs(normerr)))
 
                     
 
@@ -6219,7 +6364,6 @@ class Project(object): # Project master class instanciated by the GUI
         
         
 
-
     def saveVtks(self, dirname=None):
         """Save vtk files of inversion results to a specified directory.
 
@@ -6236,19 +6380,38 @@ class Project(object): # Project master class instanciated by the GUI
         if len(self.meshResults) == 0:
             self.getResults()
         count=0
+        
+        # check param for truncation variables 
+        for key in ['num_xz_poly','num_xy_poly']:
+            if key not in self.param.keys():
+                self.param[key] = 0 
+        for key in ['zmin','zmax']:
+            if key not in self.param.keys():
+                self.param[key] = None 
+            
+        # loop through and export meshes as vtk files 
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
+            meshcopy = mesh.copy()
             if self.iTimeLapse:
                 fname = 'time_step{:0>4}.vtk'.format(count)
             else:
                 fname = mesh.mesh_title + '.vtk'
             file_path = os.path.join(dirname, fname) 
-            meshcopy = mesh.copy()
             if self.trapeziod is not None and self.pseudo3DMeshResult is None:
                 meshcopy = meshcopy.crop(self.trapeziod)
+            elif '3' in self.typ and self.param['num_xy_poly'] > 2: 
+                meshcopy = meshcopy.crop(self.param['xy_poly_table'])
+                meshcopy.elec = None 
+                if self.param['zmin'] is None or self.param['zmax'] is None:
+                    pass # cant truncate mesh with out z limits 
+                else: 
+                    meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
+                                                           self.param['zmax']])
             elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
                 meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
-            meshcopy.vtk(file_path, title=mesh.mesh_title)
+                
+            meshcopy.vtk(file_path, title=mesh.mesh_title) # save to vtk 
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
             if self.pseudo3DMeshResultList is not None:
                 file_path = os.path.join(dirname, mesh.mesh_title + '_3D.vtk')

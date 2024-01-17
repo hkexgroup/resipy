@@ -1172,18 +1172,24 @@ class Mesh:
         
         
     def crop(self, polyline):
-        """Crop the mesh given a polyline in 2D.
+        """Crop the mesh given a polyline in 2D. If 3D then the mesh will be 
+        cropped in the XY plane. 
         
         Parameters
         ----------
         polyline : array of float
-            Array of size Nx2 with the XZ coordinates forming the polyline. Note
-            that the first and last coordinates should be the
+            Array of size Nx2 with the XZ (or XY) coordinates forming the 
+            polyline. Notethat the first and last coordinates should be the
             same to close the polyline.
         """
         # get points inside the polygon
         path = mpath.Path(polyline)
-        centroids = np.c_[self.elmCentre[:,0], self.elmCentre[:,2]]
+        
+        if self.ndims == 2: 
+            centroids = np.c_[self.elmCentre[:,0], self.elmCentre[:,2]]
+        else:
+            centroids = np.c_[self.elmCentre[:,0], self.elmCentre[:,1]]
+            
         i2keep = path.contains_points(centroids) # this is the fastest way to check if point are in polygon 
         
         # filter element-based attribute

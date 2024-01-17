@@ -6091,7 +6091,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         #%% tab 6 POSTPROCESSING
         self.tabPostProcessing = QWidget()
-        self.tabs.addTab(self.tabPostProcessing, 'Post-processing')
+        self.tabs.addTab(self.tabPostProcessing, 'Error Charts')
         self.tabs.setTabEnabled(6,False)
         
         self.errorGraphs = QTabWidget()
@@ -6327,6 +6327,24 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         self.tabPostProcessing.setLayout(postProcessingLayout)
 
+        #%% Project information (summary) tab 
+        
+        def getSummary():
+            if self.project is None: 
+                text = 'No data has been imported' 
+                self.projectInfoText.setText(text)
+                return 
+            self.projectInfoText.setText(self.project.summary())
+        
+        self.tabProjectInfo = QTabWidget()
+        self.tabs.addTab(self.tabProjectInfo, 'Summary')
+        self.projectInfoLayout = QVBoxLayout()
+        self.projectInfoLayout.setAlignment(Qt.AlignTop)
+        self.projectInfoText = QTextBrowser()
+        # self.projectInfoText.setText(getSummary())
+        self.projectInfoLayout.addWidget(self.projectInfoText)
+        self.tabProjectInfo.setLayout(self.projectInfoLayout)
+        self.tabs.currentChanged.connect(getSummary)
 
 
         #%% Help tab
