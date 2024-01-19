@@ -5482,6 +5482,12 @@ class Project(object): # Project master class instanciated by the GUI
             else: 
                 self.surveys[0].write2protocol(outputname)
                 
+        memFwd = self._estimateMemory(dump=pointer,inverse=False)
+        memInv = self._estimateMemory(dump=pointer,inverse=True)
+        
+        self.pinfo['Estimated RAM for forward solution (Gb)'] = memFwd
+        self.pinfo['Estimated RAM for inverse solution (Gb)'] = memInv
+        
         dump('Forward modelling done.')
         
     def saveForwardModelResult(self,fname):

@@ -1731,6 +1731,18 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
     
     ref_x = [min(elec_x), min(elec_x), max(elec_x), max(elec_x), xmean]
     ref_y = [min(elec_y), max(elec_y), min(elec_y), max(elec_y), ymean]
+    if mesh_refinement is not None: 
+        rx = np.array(mesh_refinement['x']) 
+        ry = np.array(mesh_refinement['y'])
+        rz = np.array(mesh_refinement['z'])
+        tokeep = [True]*5 
+        for i in range(5): 
+            sqdist = (ref_x[i]-rx)**2 + (ref_y[i]-ry)**2 + (-fmd-rz)**2 
+            idist = np.sqrt(sqdist)
+            if min(idist) < 1e-16: 
+                tokeep[i] = False 
+        ref_x = [ref_x[b] for b in tokeep]
+        ref_y = [ref_y[b] for b in tokeep]
 
     # add some refinement 
     # if all(np.array(elec_z)==0):
@@ -1739,7 +1751,7 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
         if elec_z[i] == -fmd:
             skip_refinement = True 
     fh.write("//Subsurface refinement fields\n")
-    template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//refienement coordinate\n"
+    template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//refinement coordinate\n"
     for i in range(len(ref_x)):
         if skip_refinement:
             continue 

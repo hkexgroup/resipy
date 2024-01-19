@@ -160,6 +160,18 @@ def in_box(x,y,z,xmax,xmin,ymax,ymin,zmax,zmin):
     idx = (idx_x_in==True) & (idx_y_in==True) & (idx_z_in==True)
     return idx
 
+def findDist(elec_x, elec_y, elec_z): # find maximum and minimum electrode spacings 
+    dist = np.zeros((len(elec_x),len(elec_x)))   
+    x1 = np.array(elec_x)
+    y1 = np.array(elec_y)
+    z1 = np.array(elec_z)
+    for i in range(len(elec_x)):
+        x2 = elec_x[i]
+        y2 = elec_y[i]
+        z2 = elec_z[i]
+        dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
+    return dist.flatten() # array of all electrode distances 
+
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points',data=None):
     """
@@ -4770,6 +4782,90 @@ def tri_mesh(*args):
 
 
 #%% 3D tetrahedral mesh 
+# compute bearing 
+def bearing(dx,dy):
+    if dx == 0 and dy == 0:
+        raise ValueError('both dx and dy equal 0 - check no 2 electrodes occupy same xy coordinates')
+    elif dx == 0 and dy > 0:
+        return 0
+    elif dx == 0 and dy < 0:
+        return 180
+    elif dx > 0 and dy == 0:
+        return 90
+    elif dx < 0 and dy == 0:
+        return 270
+    elif dx > 0 and dy > 0: 
+        return np.rad2deg(np.arctan(dx/dy))
+    elif dx > 0 and dy < 0: 
+        return 180 + np.rad2deg(np.arctan(dx/dy))
+    elif dx < 0 and dy < 0: 
+        return 180 + np.rad2deg(np.arctan(dx/dy))
+    elif dx < 0 and dy > 0: 
+        return 360 + np.rad2deg(np.arctan(dx/dy))
+    
+def quad(dx,dy):
+    b = bearing(dx,dy)
+    if b > 315 or b <= 45:
+        return 0 
+    elif b > 45 and b <= 135: 
+        return 1 
+    elif b > 135 and b <= 225: 
+        return 2 
+    else:
+        return 3 
+    
+def controlPoints(elec_x, elec_y, r, min_r=None):
+    """
+    Create control points for surface electrodes 
+    """
+    if min_r is None:
+        min_r = r 
+    nelec = len(elec_x)
+    tree = cKDTree(np.c_[elec_x,elec_y])
+    _,idx = tree.query(np.c_[elec_x,elec_y],3)
+    
+    xstack = [] 
+    ystack = [] 
+    
+    addry = [r,0,-r,0]
+    addrx = [0,r,0,-r]
+    
+    for i in range(nelec):
+        dx0 = elec_x[idx[i,1]] - elec_x[i] 
+        dx1 = elec_x[idx[i,2]] - elec_x[i]
+        dy0 = elec_y[idx[i,1]] - elec_y[i]
+        dy1 = elec_y[idx[i,2]] - elec_y[i]
+        
+        q0 = quad(dx0, dy0) # quadrant 
+        q1 = quad(dx1, dy1) # quadrant 
+        qs = [q0,q1]
+        
+        # avoid adding points in any known quadrant 
+        for j in range(4):
+            if j not in qs: 
+                xstack.append(elec_x[i] + addrx[j]) 
+                ystack.append(elec_y[i] + addry[j]) 
+                
+    xstack = np.array(xstack)
+    ystack = np.array(ystack)
+    # double check no points are repeated 
+    tree = cKDTree(np.c_[xstack, ystack])
+    ilookup = tree.query_ball_point(np.c_[xstack, ystack],min_r)
+    
+    # keep only first instance of points close to each other 
+    repeats = np.array([False]*len(xstack),dtype=bool)
+    for i in range(xstack.shape[0]):
+        if len(ilookup[i]) > 1: 
+            c = 0 
+            for c,j in enumerate(ilookup[i]):
+                if c == 0: 
+                    continue 
+                repeats[j] = True 
+        
+    
+    return xstack[~repeats], ystack[~repeats]
+                
+                
 def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, 
               interp_method = 'triangulate', surface_refinement=None, 
               mesh_refinement=None, ball_refinement=True,
@@ -5052,8 +5148,44 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                                     'y':mesh_refinement['y'],
                                     'z':mesh_refinement['z']}
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to wholespace problem
+    elif not whole_space and len(surf_elec_x)>0:
+        selec = np.c_[surf_elec_x, surf_elec_y, surf_elec_z]
+        tree = cKDTree(selec)
+        idist,_ = tree.query(selec,2) 
+        # make some of our own control points in this case
+        if 'cl' in kwargs.keys(): 
+            cl = kwargs['cl']
+        else: 
+            cl = min(idist[:,1])/4 
         
-    # Use ball refinement by default 
+        if 'fmd' in kwargs.keys(): # compute depth of investigation
+            fmd = kwargs['fmd']
+        else:
+            dist = np.unique(findDist(surf_elec_x, surf_elec_y, surf_elec_z))
+            fmd = dist[-1]/3 # maximum possible dipole length / 3
+        
+        if 'cl_factor' in kwargs.keys():
+            cl_factor = kwargs['cl_factor']
+        else:
+            cl_factor = 5 
+            
+        # control points in x y coordinates 
+        cpx, cpy = controlPoints(surf_elec_x, surf_elec_y, np.mean(idist[:,1]), cl*1.5)
+        cpz = np.zeros_like(cpx)
+        
+        fmdx = cpx[::3]
+        fmdy = cpy[::3]
+        fmdz = (fmdx*0) - abs(fmd) # add some points at depth too 
+        
+        control = {'x':np.append(cpx,fmdx),
+                   'y':np.append(cpy,fmdy),
+                   'z':np.append(cpz,fmdz),
+                   'cl':np.full_like(np.append(cpz,fmdz), cl*cl_factor)}
+        
+        kwargs['mesh_refinement'] = control 
+    
+    
+    # Use ball refinement by (default)
     if ball_refinement:
         kwargs['use_fields'] = True 
         
