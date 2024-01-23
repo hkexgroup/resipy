@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.4.7' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.4.8' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -133,6 +133,8 @@ def getSysStat():
         avialable memory.
     ram_usage: float
         in percent. 
+    ram_total: float
+        total memory in gb 
     """
     #processor info
     try: # for Apple silicon
@@ -143,9 +145,10 @@ def getSysStat():
         
     #check the amount of ram avialable 
     ram = psutil.virtual_memory()
-    ram_avail = ram[1]*9.31e-10
-    ram_usage = ram[2]
-    return cpu_speed, cpu_usage, ram_avail, ram_usage 
+    ram_avail = ram.available*9.31e-10
+    ram_usage = ram.percent 
+    ram_total = ram.total*9.31e-10
+    return cpu_speed, cpu_usage, ram_avail, ram_usage, ram_total 
 
 def getMacOSVersion():
     OpSys=platform.system()    
@@ -199,9 +202,9 @@ def systemCheck(dump=print):
     
     #check the amount of ram 
     ram = psutil.virtual_memory()
-    totalMemory = ram[0]*9.31e-10
-    availMemory = ram[1]*9.31e-10
-    usage = ram[2]
+    totalMemory = ram.total*9.31e-10
+    availMemory = ram.available*9.31e-10
+    usage = ram.percent
     dump('Total memory = %3.1f Gb (usage = %3.1f)'%(totalMemory,usage))
     
     #wine check - this message will display if wine is not installed / detected
@@ -400,8 +403,10 @@ class Project(object): # Project master class instanciated by the GUI
                     text += 'Yes'
                 else:
                     text += 'No'
-            else: 
+            elif type(v) is str:
                 text += '{:s}'.format(v)
+            else:
+                text += 'nan' 
             text += '\n'
             
         return text 
@@ -1223,6 +1228,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = 1 
         
+        _ = self._estimateMemory(dump=pointer)
+        
             
     def addData(self, **kwargs):
         """Adds data to the survey - used usually to add reciprocal datasets
@@ -1351,6 +1358,8 @@ class Project(object): # Project master class instanciated by the GUI
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = len(self.surveys) 
+        
+        _ = self._estimateMemory(dump=pointer)
 
 
     def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
@@ -1435,6 +1444,7 @@ class Project(object): # Project master class instanciated by the GUI
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = 1 
+        _ = self._estimateMemory(dump=pointer)
 
 
     def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
@@ -1486,7 +1496,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.setBorehole(self.iBorehole)
         # flag that data has been added 
         self.pinfo['Data'] = True 
-        self.pinfo['Number of Surveys'] = 1 
+        self.pinfo['Number of Surveys'] = len(self.surveys)
+        _ = self._estimateMemory(dump=pointer)
         
     
     
@@ -1663,6 +1674,9 @@ class Project(object): # Project master class instanciated by the GUI
         self.mesh = self.projs[0].mesh # just to have a populated mesh in master Project!
         if 'fmd' in kwargs:
             self.pseudo3Dfmd = kwargs['fmd']
+            
+        # check ram requirements 
+        _ = self._estimateMemory(dump=pointer) 
    
     
     
@@ -1845,6 +1859,76 @@ class Project(object): # Project master class instanciated by the GUI
         
         return targetProjParams
     
+    def _checkMemory(self,parallel=False, ncores=None):
+        """
+        Check the memory allocation of the system that could be used for inversion. 
+        Adjusts the number of parallel threads to match amount of RAM available. 
+
+        Parameters
+        ----------
+        parallel : bool, optional
+            If True, ResIPy can run in parallel in time-lapse or batch modes. 
+            The default is False.
+        ncores : int, optional
+            Number of parallel threads allowed. The default is None.
+
+        Raises
+        ------
+        Exception
+            If memory estimate required for inversion exceeds the total system memory 
+            then an error is thrown! 
+
+        Returns
+        -------
+        ncores: int
+            Number of parallel threads adjusted for system memory 
+
+        """
+        
+        if ncores is None: 
+            ncores = sysinfo['physicalCpuCount']
+            
+        # get memory estimates 
+        memInv = self._estimateMemory(dump=pointer)
+        memTot = sysinfo['totalMemory'] #use the total memory (its more conversative)
+        
+        # check if static inversion possible 
+        if memInv > memTot: 
+            raise Exception('The amount of memory required for inversion exceeds that of known system resources (please make mesh coarser)')
+            return 0 
+         
+        # if not parallel we can exit here 
+        if not parallel:
+            return 1 
+        
+        maxInversions = 1 
+        adjustTrigger = False 
+        
+        if len(self.surveys) > 1:
+            nsurveys = len(self.surveys) - 1
+            # number of surveys that can possibly be inverted in parallel is 
+            # n - 1 becuase of the baseline which is inverted independently 
+            maxInversions = min([nsurveys,ncores]) # maximum number of inversions at one time 
+            
+            if ncores == maxInversions:                     
+                # provide the user with some safety net 
+                while (maxInversions*memInv) > memTot: 
+                    adjustTrigger = True 
+                    ncores -= 1 
+                    maxInversions = ncores # maximum number of inversions at one time 
+                    if ncores == 1:
+                        break 
+                    
+        # flag to the user they're using too many cores 
+        if adjustTrigger: 
+            warnings.warn('Adjusting parallel threads (to %i) to match RAM available'%ncores)
+                    
+        # check if static inversion possible 
+        if (memInv*maxInversions) > memTot: 
+            raise Exception('The amount of memory required for time-lapse inversion exceeds that of known system resources')
+                    
+        return ncores 
+            
     
     def invertPseudo3D(self, invLog=None, runParallel=False, **kwargs):
         """Run pseudo3D inversions.
@@ -1858,6 +1942,16 @@ class Project(object): # Project master class instanciated by the GUI
         kwargs : -
             Keyword arguments to be passed to invert().
         """
+        # check memory, retrieve optimum number of cores 
+        ncores = self._checkMemory(runParallel,None)
+        
+        # also, as each proj will be treated independently, we dont want the user 
+        # calling the parallel functionalities of Project.invert in the pseudo3D case 
+        if 'parallel' in kwargs.keys():
+            kwargs['parallel'] = False 
+        if 'ncores' in kwargs.keys():
+            kwargs['ncores'] = None  
+        
         # kill management
         self.procs = []
         self.proc = ProcsManagement(self)
@@ -1897,12 +1991,8 @@ class Project(object): # Project master class instanciated by the GUI
             wds2 = wds.copy()
     
             # create workers directory
-            ncoresAvailable = ncores = sysinfo['cpuCount']
-            if ncores is None:
-                ncores = sysinfo['physicalCpuCount']
-            else:
-                if ncores > ncoresAvailable:
-                    raise ValueError('Number of cores larger than available')
+            if ncores > sysinfo['cpuCount']:
+                raise ValueError('Number of cores larger than available')
     
             if OS == 'Windows':
                 cmd = [exePath]
@@ -2988,9 +3078,11 @@ class Project(object): # Project master class instanciated by the GUI
         elif self.typ=='R2':
             self.mesh.addAttribute(np.arange(numel)+1,'param')
         
-        memInv = float(self._estimateMemory(dump=dump)) 
-        memFwd = float(self._estimateMemory(dump=pointer, inverse=False))
+        # check ram 
+        memInv = self._estimateMemory(dump=dump)
         self.param['reqMemory'] = getSysStat()[2] - memInv # if negative then we need more RAM
+        
+        # deal with remote electrodes in mesh object 
         self.mesh.iremote = self.elec['remote'].values
         
         # define zlim
@@ -3020,8 +3112,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of Elements'] = self.mesh.numel 
         self.pinfo['Number of Nodes']=self.mesh.numnp 
         self.pinfo['Mesh Type'] = meshtypename
-        self.pinfo['Estimated RAM for forward solution (Gb)'] = memFwd
-        self.pinfo['Estimated RAM for inverse solution (Gb)'] = memInv 
         
         
     def _computePolyTable(self):
@@ -3199,15 +3289,12 @@ class Project(object): # Project master class instanciated by the GUI
             self._defineZlim()
         self._computePolyTable()
         
-        memInv = float(self._estimateMemory(dump=pointer, inverse=True))
-        memFwd = float(self._estimateMemory(dump=pointer, inverse=False))
-        
         #flag up mesh in pinfo 
         self.pinfo['Number of Elements'] = self.mesh.numel 
         self.pinfo['Number of Nodes']=self.mesh.numnp 
         self.pinfo['Mesh Type'] = meshtypename
-        self.pinfo['Estimated RAM for forward solution (Gb)'] = memFwd
-        self.pinfo['Estimated RAM for inverse solution (Gb)'] = memInv 
+        
+        _ = self._estimateMemory(dump=pointer)
         
         
 
@@ -3446,6 +3533,10 @@ class Project(object): # Project master class instanciated by the GUI
                     s.df = s.df.drop('resist0', axis=1)
                 if 'recipMean0' in s.df.columns:
                     s.df = s.df.drop('recipMean0', axis=1)
+                if self.param['reg_mode'] == 2 and i > 0:
+                    # modelling error already accounted for in the baseline model! 
+                    errTot = False 
+                    
                 s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
                 # resError and phaseError should already have been populated
                 # handle the case when SOME survey were fitted but not all
@@ -3461,6 +3552,7 @@ class Project(object): # Project master class instanciated by the GUI
                         if self.bigSurvey.errorModel is None:
                             self.bigSurvey.fitErrorPwlIP()
                         s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
+                        
                 # if not it means that the 'resError' columns has already
                 # been populated when the files has been imported
 
@@ -3477,11 +3569,12 @@ class Project(object): # Project master class instanciated by the GUI
                         os.mkdir(refdir)
                     if 'mesh.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
-                                os.path.join(self.dirname, 'ref', 'mesh.dat'))
+                                    os.path.join(refdir, 'mesh.dat'))
                     if 'mesh3d.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
-                                os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
-                    s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
+                                    os.path.join(refdir, 'mesh3d.dat'))
+                    s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, 
+                                     errTot=errTot, threed=threed) # no subset for background, just use all
                 else:
                     content = content + str(protocol.shape[0]) + '\n'
                     content = content + protocol.to_csv(sep='\t', header=False, index=False)
@@ -3882,6 +3975,9 @@ class Project(object): # Project master class instanciated by the GUI
             def dump(x):
                 print(x, end='')
                 
+        # check inversion is doable first with the amount of total amount of RAM available to the machine 
+        ncores = self._checkMemory(parallel,ncores)
+                
         # clean meshResults list
         self.meshResults = []
         
@@ -3945,7 +4041,7 @@ class Project(object): # Project master class instanciated by the GUI
                 fm0 = self.surveys[0].df['resist'].values.copy()
                 self.sequence = None
                 self.surveys = surveysBackup
-                self.write2protocol(errTot=errTot, fm0=fm0) # rewrite them with d-d0+f(m0)
+                self.write2protocol(errTot=False, fm0=fm0) # rewrite them with d-d0+f(m0)
         elif self.iTimeLapse == True and self.referenceMdl==True:
             print('Note: Skipping reference inversion, as reference model has already been assigned')
 
@@ -4306,15 +4402,29 @@ class Project(object): # Project master class instanciated by the GUI
         idone = 0
         ifailed = 0
         self.meshResults = [] # make sure we empty the list first
-        if self.iTimeLapse == True:
-            fname = os.path.join(dirname, 'ref', 'f001_res.vtk')
-            mesh0 = mt.vtk_import(fname, order_nodes=False)
+        if self.iTimeLapse: # grab reference mesh 
+            if '3' in self.typ:
+                # TODO: importing of the reference survey in 3D is being dodgy 
+                # think its a bug with R3t. 
+                resfname = os.path.join(dirname, 'ref', 'f001_res.dat')
+                senfname = os.path.join(dirname, 'ref', 'f001_sen.dat')
+                resarray = np.genfromtxt(resfname)
+                senarray = np.genfromtxt(senfname)
+                mesh0 = self.mesh.copy()
+                mesh0.addAttribute(resarray[:,3],'Resistivity(ohm.m)')
+                mesh0.addAttribute(resarray[:,4],'Resistivity(log10)')
+                mesh0.addAttribute(1/resarray[:,3],'Conductivity(mS/m)')
+                mesh0.addAttribute(senarray[:,4],'Sensitivity_map(log10)')
+            else:
+                fname = os.path.join(dirname, 'ref', 'f001_res.vtk')
+                mesh0 = mt.vtk_import(fname, order_nodes=False)
             mesh0.mesh_title = self.surveys[0].name
             elec = self.surveys[0].elec.copy()
             mesh0.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
             mesh0.iremote = elec['remote'].values
             self.meshResults.append(mesh0)
             idone += 1
+            
         if self.iForward is True:
             initMesh = mt.vtk_import(os.path.join(dirname, 'fwd','forward_model.vtk'), order_nodes=False)
             elec_x = self.elec['x'].values
@@ -4332,7 +4442,20 @@ class Project(object): # Project master class instanciated by the GUI
             fname = os.path.join(dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fname):
                 try:
-                    mesh = mt.vtk_import(fname, order_nodes=False)
+                    if '3' in self.typ and self.param['num_xy_poly'] == 0:
+                        # something not right with the 3D truncation 
+                        # put in the safety solution 
+                        resfname = os.path.join(dirname, 'f{:0>3d}_res.dat'.format(i+1))
+                        senfname = os.path.join(dirname, 'f{:0>3d}_sen.dat'.format(i+1))
+                        resarray = np.genfromtxt(resfname)
+                        senarray = np.genfromtxt(senfname)
+                        mesh = self.mesh.copy()
+                        mesh.addAttribute(resarray[:,3],'Resistivity(ohm.m)')
+                        mesh.addAttribute(resarray[:,4],'Resistivity(log10)')
+                        mesh.addAttribute(1/resarray[:,3],'Conductivity(mS/m)')
+                        mesh.addAttribute(senarray[:,4],'Sensitivity_map(log10)')
+                    else: 
+                        mesh = mt.vtk_import(fname, order_nodes=False)
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
                     mesh.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
@@ -4340,8 +4463,9 @@ class Project(object): # Project master class instanciated by the GUI
                     self.meshResults.append(mesh) # this will be very memory intensive to put all meshes into a list for long time lapse surveys
                     #TODO : Rethink storage of timelapse results 
                     idone += 1
-                except Exception:
+                except Exception as e:
                     ifailed += 1
+                    # print(e)
                     # if inversion fails in time-lapse it's that the initial
                     # model is good enough to explain the data (a_wgt/b_wgt
                     # error too low) so we can replace it by the initial model
@@ -5482,11 +5606,7 @@ class Project(object): # Project master class instanciated by the GUI
             else: 
                 self.surveys[0].write2protocol(outputname)
                 
-        memFwd = self._estimateMemory(dump=pointer,inverse=False)
-        memInv = self._estimateMemory(dump=pointer,inverse=True)
-        
-        self.pinfo['Estimated RAM for forward solution (Gb)'] = memFwd
-        self.pinfo['Estimated RAM for inverse solution (Gb)'] = memInv
+        _ = self._estimateMemory(dump=pointer)
         
         dump('Forward modelling done.')
         
@@ -6486,7 +6606,7 @@ class Project(object): # Project master class instanciated by the GUI
                 count += 1
         print("%i surveys removed as they had no measurements!"%count)
         
-    def _estimateMemory(self, dump=print, inverse=True, debug=False):
+    def _estimateMemory(self, dump=print, debug=False):
         """More accurate calculation of the amount of memory required
         to run a forward model or inversion. 
         
@@ -6496,16 +6616,14 @@ class Project(object): # Project master class instanciated by the GUI
         ----------
         dump : function, optional
             stdout direction, ie where to print outputs 
-        inverse : Bool, optional
-            Is the problem to be inverted? The default is True.
         debug : TYPE, optional
             If true all the variable values are printed to console. The 
             default is False.
 
         Returns
         -------
-        Gb : float
-            Memory needed for problem in gigabytes 
+        memInv : float
+            Memory needed for inverse problem in gigabytes 
 
         """
         #NB: using variable names from Andy's codes 
@@ -6519,10 +6637,13 @@ class Project(object): # Project master class instanciated by the GUI
             nmeas = []
             for s in self.surveys:
                 df = s.df 
-                ie = df['irecip'].values >= 0 # count the number of measurements actually put to file 
-                nmeas.append(sum(ie))
+                if 'irecip' in df.columns: 
+                    ie = df['irecip'].values >= 0 # count the number of measurements actually put to file 
+                    nmeas.append(sum(ie))
+                else:
+                    nmeas.append(len(df))
             num_ind_meas = np.mean(nmeas) # number of measurements 
-            mnum_ind_meas = num_ind_meas # maximum number of measurements
+            mnum_ind_meas = max(nmeas) # maximum number of measurements (more conservative estimate)
                     
         #nsize A estimation - describes number of connected nodes 
         kxf = self.mesh.connection.flatten() # flattened connection matrix
@@ -6537,10 +6658,22 @@ class Project(object): # Project master class instanciated by the GUI
             num_param = len(np.unique(self.mesh.df['param'].values))
         else:
             num_param = self.mesh.numel
+            
         nfaces = self.mesh.type2FaceNo()
         
         #electrodes 
         num_electrodes = len(self.elec)
+        
+        # special case of pseudo 3D 
+        if len(self.projs) > 0: 
+            _num_param = [0]*len(self.projs)
+            _num_elec = [0]*len(self.projs)
+            for i,proj in enumerate(self.projs):
+                _num_param[i] = proj.mesh.numel 
+                _num_elec[i] = len(proj.elec)
+            # convservative estimate, take the maximums! 
+            num_param = max(_num_param)
+            num_electrodes = max(_num_elec)
         
         # this refers to the roughness matrix in 2D problems
         if 'inverse_type' in self.param and self.param['inverse_type'] == 2:
@@ -6548,33 +6681,43 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             numRterm = 5 
         
-        if self.typ == 'R3t' or self.typ =='cR3t': # do 3D calculation 
-            memDP=numnp*(8+num_electrodes)+nsizeA+numel+num_ind_meas * 2
+        if '3' in self.typ: # do 3D calculation 
+            memDP=numnp*(8+num_electrodes)+nsizeA+numel+mnum_ind_meas * 2
             memR=0
-            memI=numnp*2+(npere+2)*numel+numnp+1+nsizeA+num_electrodes*3+num_ind_meas*12
+            memI=numnp*2+(npere+2)*numel+numnp+1+nsizeA+num_electrodes*3+mnum_ind_meas*12
             memL=numel*2
+            
+            memFwd = (memL + memI*4 + memR*4 + memDP*8)/1.0e9
               
-            if inverse: 
-                memDP=memDP+num_param*9+num_ind_meas*(num_param+6) 
-                memR=memR+(num_param*nfaces)
-                memI=memI+num_param*nfaces    
+            # now estimate for inverse case 
+            memDP=memDP+num_param*9+mnum_ind_meas*(num_param+6) 
+            memR=memR+(num_param*nfaces)
+            memI=memI+num_param*nfaces    
+                
         else: # do 2D calculation
-            memDP=(numnp)*(5+num_electrodes)+nsizeA+numel+mnum_ind_meas*3+num_ind_meas       
+            memDP=(numnp)*(5+num_electrodes)+nsizeA+numel+mnum_ind_meas*3+mnum_ind_meas       
             memR=0
             memI=nsizeA+numel*6+numnp*4+mnum_ind_meas*8
             memL=numel+numnp
+            
+            memFwd = (memL + memI*4 + memR*4 + memDP*8)/1.0e9
 
-            if inverse:
-                memDP=memDP+numel+num_param*10+num_ind_meas*(num_param+7) 
-                memR=memR+num_param*numRterm
-                memI=memI+num_param*numRterm
-                memL=memL+num_ind_meas
+            # now estimate for inverse case 
+            memDP=memDP+numel+num_param*10+mnum_ind_meas*(num_param+7) 
+            memR=memR+num_param*numRterm
+            memI=memI+num_param*numRterm
+            memL=memL+mnum_ind_meas
         
-        Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
-        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
+        memInv = (memL + memI*4 + memR*4 + memDP*8)/1.0e9
         
-        avialMemory = getSysStat()[2]
-        if Gb >= avialMemory:
+        dump('ResIPy Estimated RAM usage = %f Gb'%memInv)
+        
+        self.pinfo['Estimated RAM for forward solution (Gb)'] = float(memFwd)
+        self.pinfo['Estimated RAM for inverse solution (Gb)'] = float(memInv) 
+            
+        
+        avialMemory = psutil.virtual_memory().available*9.31e-10
+        if memInv >= avialMemory:
             dump('*** It is likely that more RAM is required for inversion! ***\n'
                  '*** Make a coarser mesh ***')
         
@@ -6587,13 +6730,12 @@ class Project(object): # Project master class instanciated by the GUI
             print('num_ind_meas = %i'%num_ind_meas)
             print('npere = %i'%npere)
             print('nfaces = %i'%nfaces)
-            print('inverse = %s'%str(inverse))
             print('memDP = %i'%memDP)
             print('memR = %i'%memR)
             print('memI = %i'%memI)
             print('memL = %i'%memL)
             
-        return Gb
+        return memInv 
     
     def _estimateMemoryJac(self, dump=print):
         """Estimates the memory needed by inversion code to formulate 
@@ -6630,7 +6772,7 @@ class Project(object): # Project master class instanciated by the GUI
         Gb=(numel*num_ind_meas*8)/1.0e9
         dump('ResIPy Estimated RAM usage = %f Gb'%Gb)  
         
-        avialMemory = sysinfo['availMemory']
+        avialMemory = psutil.virtual_memory().available*9.31e-10
         if Gb >= avialMemory:
             dump('*** It is likely that more RAM is required for inversion! ***\n'
                  '*** Make a coarser mesh ***')

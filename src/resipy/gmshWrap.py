@@ -1598,7 +1598,7 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
 #%% 3D half space 
 def halfspace3d(elec_x, elec_y, elec_z = None,
                 fmd=-1, file_path='mesh3d.geo',
-                cl=-1, cl_factor=-1, cln_factor=1000, dp_len=-1, 
+                cl=-1, cl_factor=-1, cln_factor=1e6, dp_len=-1, 
                 mesh_refinement=None, use_fields=True, dump=None,
                 flank_fac = 12):
     """

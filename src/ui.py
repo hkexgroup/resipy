@@ -3550,7 +3550,7 @@ class App(QMainWindow):
         self.clnFactorEdit = QLineEdit()
         self.clnFactorEdit.setToolTip(self.clnFactorToolTip)
         self.clnFactorEdit.setValidator(QDoubleValidator())
-        self.clnFactorEdit.setText('1000')
+        self.clnFactorEdit.setText('100000')
         # OPTION TO REFINE GRID POST PROCESSING FOR FORWARD MODELLING 
         self.refineTetraCheck = QCheckBox('Refine')
         self.refineTetraCheck.setToolTip('Refine the mesh for forward modelling'

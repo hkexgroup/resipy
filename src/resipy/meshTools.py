@@ -4927,9 +4927,6 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         'bilinear' : 4 known points are used to compute the equation of a plane 
                     in which the interpolated point lies. This method is reccomended 
                     if elevation data is organised in a regular grid. 
-        'idw' : Inverse distance weighting, interpolated points are assigned a 
-                    a z value which is a weighted average of all points in the 
-                    search raduis. This method works best for gentle topography. 
         'nearest' : Nearest neighbour interpolation. Z value at the interpolated 
                     point takes on the same Z value as the closest known point. 
                     This method can work well for dense elevation data, say in 
@@ -5046,16 +5043,16 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         
         if interp_method == 'triangulate':
             # need to check the number of interpolation points is stable for triangulation 
-            if len(surf_elec_x) == 4: 
+            if len(x_interp) == 4: 
                 interp_method = 'bilinear'
-            elif len(surf_elec_x) < 4: 
-                interp_method = 'idw'
+            elif len(x_interp) < 4: 
+                interp_method = 'nearest'
         
         if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
             dump('found buried electrodes')
             if interp_method is None:
-                bur_elec_z_topo= np.zeros_like(bur_elec_idx)
-            elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
+                bur_elec_z_topo= np.zeros_like(bur_elec_idx) # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
+            elif interp_method == 'bilinear': 
                 bur_elec_z_topo = interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
             elif interp_method == 'nearest':
                 bur_elec_z_topo = interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
@@ -5120,9 +5117,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         #if we have buried points normalise their elevation to as if they are on a flat surface
         if len(bur_rz)>0: 
             dump('found buried mesh refinement points')
-            if interp_method is None:
+            if interp_method is None:# still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
                 bur_rz_topo = np.zeros_like(bur_idx)
-            elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
+            elif interp_method == 'bilinear': 
                 bur_rz_topo = interp.interp2d(bur_rx, bur_ry, x_interp, y_interp, z_interp)
             elif interp_method == 'nearest':
                 bur_rz_topo = interp.nearest(bur_rx, bur_ry, x_interp, y_interp, z_interp)
@@ -5149,8 +5146,8 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                                     'z':mesh_refinement['z']}
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to wholespace problem
     elif not whole_space and len(surf_elec_x)>0:
-        selec = np.c_[surf_elec_x, surf_elec_y, surf_elec_z]
-        tree = cKDTree(selec)
+        selec = np.c_[surf_elec_x, surf_elec_y, surf_elec_z] # surface electrodes 
+        tree = cKDTree(selec) 
         idist,_ = tree.query(selec,2) 
         # make some of our own control points in this case
         if 'cl' in kwargs.keys(): 
@@ -5158,7 +5155,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         else: 
             cl = min(idist[:,1])/4 
         
-        if 'fmd' in kwargs.keys(): # compute depth of investigation
+        if 'fmd' in kwargs.keys(): # compute depth of investigation if not given 
             fmd = kwargs['fmd']
         else:
             dist = np.unique(findDist(surf_elec_x, surf_elec_y, surf_elec_z))

@@ -681,9 +681,20 @@ print('----------- Testing 3D time-lapse inversion -----------')
 t0 = time.time()
 print('------------- 3D time-lapse difference inversion ---------------')
 k = Project(typ='R3t')
+
+## column type 
 k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-column/data' ,ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d-timelapse-column/elec.csv')
 k.createMesh(typ='cylinder',cl=0.5)
+
+## field type 
+# k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
+# k.importElec(testdir + 'dc-3d-timelapse-protocol/elecs.csv')
+# k.createMesh(cl=0.5)
+# k.param['a_wgt'] = 0.001 
+# k.param['b_wgt'] = 0.002
+### problem --> RMS solution shows instant convergence, so this doesn't work
+
 k.invert()
 
 k.showResults(index=0,use_pyvista=use_pyvista)
