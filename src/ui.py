@@ -6091,7 +6091,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         #%% tab 6 POSTPROCESSING
         self.tabPostProcessing = QWidget()
-        self.tabs.addTab(self.tabPostProcessing, 'Error Charts')
+        self.tabs.addTab(self.tabPostProcessing, 'Post Processing')
         self.tabs.setTabEnabled(6,False)
         
         self.errorGraphs = QTabWidget()
