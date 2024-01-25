@@ -4564,8 +4564,8 @@ def check4repeatNodes(X,Y,Z,flag=None):
     pts = np.c_[X,Y,Z]
     tree = cKDTree(pts)
     dist,neigh = tree.query(pts,2)
-    if any(dist[:,1]<1e-15): # raise an issue when repeated nodes are present 
-        pblm_idx = np.arange(pts.shape[0])[dist[:,1] < 1e-15]
+    if any(dist[:,1]<1e-16): # raise an issue when repeated nodes are present 
+        pblm_idx = np.arange(pts.shape[0])[dist[:,1] < 1e-16]
         
         ## go through pairs of repeated nodes and keep one of them, so pair up the repeated nodes 
         pairs = [] # stores pairs of repeated points 
@@ -4584,8 +4584,8 @@ def check4repeatNodes(X,Y,Z,flag=None):
                 pairs.append(pair)
 
         ## print out to user the problematic nodes 
-        error = 'The following surface nodes are repeated!\n'
-        # print(error.strip())
+        error = 'The following nodes are repeated!\n'
+        count = 0 
         for pair in pairs:
             for p in pair: 
                 x_ = X[p]
@@ -4595,6 +4595,10 @@ def check4repeatNodes(X,Y,Z,flag=None):
                 line = "X = {:16.8f}, Y = {:16.8f}, Z = {:16.8f}, flag = {:}\n".format(x_,y_,z_,f_)
                 # print(line.strip())
                 error += line 
+            count += 1 
+            if count > 10:
+                break # otherwise error message will be too big 
+                
         
         #warnings.warn(error,Warning)
         raise ValueError(error)
@@ -4776,11 +4780,6 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
 
     return mesh
 
-def tri_mesh(*args):
-    warnings.warn('tri_mesh is depreciated, use triMesh instead')
-    triMesh(**args)
-
-
 #%% 3D tetrahedral mesh 
 # compute bearing 
 def bearing(dx,dy):
@@ -4814,7 +4813,7 @@ def quad(dx,dy):
     else:
         return 3 
     
-def controlPoints(elec_x, elec_y, r, min_r=None):
+def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
     """
     Create control points for surface electrodes 
     """
@@ -5167,18 +5166,35 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             cl_factor = 5 
             
         # control points in x y coordinates 
-        cpx, cpy = controlPoints(surf_elec_x, surf_elec_y, np.mean(idist[:,1]), cl*1.5)
+        cpx, cpy = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
+                                          np.mean(idist[:,1]), cl*1.5)
         cpz = np.zeros_like(cpx)
         
         fmdx = cpx[::3]
         fmdy = cpy[::3]
         fmdz = (fmdx*0) - abs(fmd) # add some points at depth too 
         
-        control = {'x':np.append(cpx,fmdx),
-                   'y':np.append(cpy,fmdy),
-                   'z':np.append(cpz,fmdz),
-                   'cl':np.full_like(np.append(cpz,fmdz), cl*cl_factor)}
+        # append to control points 
+        cpx = np.append(cpx,fmdx)
+        cpy = np.append(cpy,fmdy)
+        cpz = np.append(cpz,fmdz)
+        cpl = np.full_like(cpx, cl*cl_factor)
         
+        # one last check that no points are duplicated 
+        tree = cKDTree(np.c_[elec_x,elec_y,elec_z]) 
+        idist,_ = tree.query(np.c_[cpx,cpy,cpz]) 
+        tokeep = [True]*len(cpx)
+        for i in range(len(cpx)):
+            if idist[i] < 1e-16:
+                tokeep[i] = False 
+        cpx = cpx[tokeep]
+        cpy = cpy[tokeep]
+        cpz = cpz[tokeep]
+        
+        control = {'x':cpx,
+                   'y':cpy,
+                   'z':cpz,
+                   'cl':cpl}
         kwargs['mesh_refinement'] = control 
     
     
@@ -5722,10 +5738,6 @@ def tetraMeshOld(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     
     return mesh
 
-def tetra_mesh(*args):
-    warnings.warn('tetra_mesh is depreciated, use tetraMesh instead', DeprecationWarning)
-    tetraMesh(*args)
-
 
 
 #%% column mesh 
@@ -5807,10 +5819,6 @@ def prismMesh(elec_x, elec_y, elec_z,
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
     return mesh 
-
-def prism_mesh(*args):
-    warnings.warn('prism_mesh is depreciated, use prismMesh instead', DeprecationWarning)
-    prismMesh(*args)
     
 
 #%% cylinder mesh
@@ -6040,11 +6048,10 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
     if node_pos is not None:
         mesh.setElecNode(np.array(node_pos,dtype=mesh.dint)) # add electrode nodes to mesh provided by the user
     
-    return mesh
-
-def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
-    warnings.warn('custom_mesh_import is depreciated, use readMesh instead', DeprecationWarning)
-    mesh = readMesh(file_path, node_pos, order_nodes)
+    # check if poorly formed (will raise an error if so)
+    flag = ['mesh node']*mesh.numnp 
+    check4repeatNodes(mesh.node[:,0], mesh.node[:,1], mesh.node[:,2], flag)
+    
     return mesh
     
 #%% merge meshes from multiple mesh objects 

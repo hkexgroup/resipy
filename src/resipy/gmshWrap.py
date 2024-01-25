@@ -1729,39 +1729,34 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
         setFields(fh, nfield)
     fh.write("//End of electrodes\n")
     
-    ref_x = [min(elec_x), min(elec_x), max(elec_x), max(elec_x), xmean]
-    ref_y = [min(elec_y), max(elec_y), min(elec_y), max(elec_y), ymean]
-    if mesh_refinement is not None: 
-        rx = np.array(mesh_refinement['x']) 
-        ry = np.array(mesh_refinement['y'])
-        rz = np.array(mesh_refinement['z'])
+    
+
+    if mesh_refinement is None and min(elec_z) == 0: 
+        
+        # add some safety net and add some refinement at depth for the user 
+        # if no mesh refinement provided and only surface electrodes are present 
+        
+        ref_x = [min(elec_x), min(elec_x), max(elec_x), max(elec_x), xmean]
+        ref_y = [min(elec_y), max(elec_y), min(elec_y), max(elec_y), ymean]
+        tree = cKDTree(np.c_[ref_x,ref_y])
+        idist, _ = tree.query(np.c_[ref_x,ref_y],2)
         tokeep = [True]*5 
         for i in range(5): 
-            sqdist = (ref_x[i]-rx)**2 + (ref_y[i]-ry)**2 + (-fmd-rz)**2 
-            idist = np.sqrt(sqdist)
-            if min(idist) < 1e-16: 
+            if min(idist[i,1]) < 1e-16: 
                 tokeep[i] = False 
         ref_x = [ref_x[b] for b in tokeep]
         ref_y = [ref_y[b] for b in tokeep]
 
-    # add some refinement 
-    # if all(np.array(elec_z)==0):
-    skip_refinement = False 
-    for i in range(nelec):
-        if elec_z[i] == -fmd:
-            skip_refinement = True 
-    fh.write("//Subsurface refinement fields\n")
-    template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//refinement coordinate\n"
-    for i in range(len(ref_x)):
-        if skip_refinement:
-            continue 
-        no_pts += 1 
-        fh.write(template%(no_pts,ref_x[i],ref_y[i],-fmd))
-        fh.write("Point{%i} In Volume{1};//specify refinement in volume\n"%no_pts)
+        fh.write("//Subsurface refinement fields\n")
+        template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//refinement coordinate\n"
+        for i in range(len(ref_x)):
+            no_pts += 1 
+            fh.write(template%(no_pts,ref_x[i],ref_y[i],-fmd))
+            fh.write("Point{%i} In Volume{1};//specify refinement in volume\n"%no_pts)
         
         
     # check if any mesh refinement is requested 
-    if mesh_refinement is not None:
+    else:
         fh.write('//Custom refinement points\n')
         # find surface points 
         rx = mesh_refinement['x']

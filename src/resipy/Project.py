@@ -2912,6 +2912,9 @@ class Project(object): # Project master class instanciated by the GUI
                            'cl_factor':cl_factor, 'cl':cl, 'dump':dump,
                            'res0': res0, 'show_output':show_output,
                            'refine':refine,'fmd':fmd}
+        for key in kwargs.keys():
+            self.meshParams[key] = kwargs[key]
+            
         meshtypename = 'default'
         if kwargs is not None:
             self.meshParams.update(kwargs)
@@ -3204,6 +3207,7 @@ class Project(object): # Project master class instanciated by the GUI
             flag_3D = False
         self.mesh = mt.readMesh(file_path, node_pos=node_pos, 
                                           order_nodes=order_nodes)
+
         self.meshParam = {'typ':'imported'}
 
         # recover region based on resistivity
@@ -4403,21 +4407,8 @@ class Project(object): # Project master class instanciated by the GUI
         ifailed = 0
         self.meshResults = [] # make sure we empty the list first
         if self.iTimeLapse: # grab reference mesh 
-            if '3' in self.typ:
-                # TODO: importing of the reference survey in 3D is being dodgy 
-                # think its a bug with R3t. 
-                resfname = os.path.join(dirname, 'ref', 'f001_res.dat')
-                senfname = os.path.join(dirname, 'ref', 'f001_sen.dat')
-                resarray = np.genfromtxt(resfname)
-                senarray = np.genfromtxt(senfname)
-                mesh0 = self.mesh.copy()
-                mesh0.addAttribute(resarray[:,3],'Resistivity(ohm.m)')
-                mesh0.addAttribute(resarray[:,4],'Resistivity(log10)')
-                mesh0.addAttribute(1/resarray[:,3],'Conductivity(mS/m)')
-                mesh0.addAttribute(senarray[:,4],'Sensitivity_map(log10)')
-            else:
-                fname = os.path.join(dirname, 'ref', 'f001_res.vtk')
-                mesh0 = mt.vtk_import(fname, order_nodes=False)
+            fname = os.path.join(dirname, 'ref', 'f001_res.vtk')
+            mesh0 = mt.vtk_import(fname, order_nodes=False)
             mesh0.mesh_title = self.surveys[0].name
             elec = self.surveys[0].elec.copy()
             mesh0.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
@@ -4442,20 +4433,7 @@ class Project(object): # Project master class instanciated by the GUI
             fname = os.path.join(dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fname):
                 try:
-                    if '3' in self.typ and self.param['num_xy_poly'] == 0:
-                        # something not right with the 3D truncation 
-                        # put in the safety solution 
-                        resfname = os.path.join(dirname, 'f{:0>3d}_res.dat'.format(i+1))
-                        senfname = os.path.join(dirname, 'f{:0>3d}_sen.dat'.format(i+1))
-                        resarray = np.genfromtxt(resfname)
-                        senarray = np.genfromtxt(senfname)
-                        mesh = self.mesh.copy()
-                        mesh.addAttribute(resarray[:,3],'Resistivity(ohm.m)')
-                        mesh.addAttribute(resarray[:,4],'Resistivity(log10)')
-                        mesh.addAttribute(1/resarray[:,3],'Conductivity(mS/m)')
-                        mesh.addAttribute(senarray[:,4],'Sensitivity_map(log10)')
-                    else: 
-                        mesh = mt.vtk_import(fname, order_nodes=False)
+                    mesh = mt.vtk_import(fname, order_nodes=False)
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
                     mesh.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
