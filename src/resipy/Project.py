@@ -534,7 +534,14 @@ class Project(object): # Project master class instanciated by the GUI
                 ok = True # first assignement of electrodes
             if ok:
                 elec = self._findRemote(elec) # identification of remote electrode
-                self.elec = elec
+                self.elec = elec 
+                
+                # for some reason these columns are sometimes missing in timelapse mode?? 
+                if 'buried' not in elec.columns: 
+                    elec['buried'] = False 
+                if 'remote' not in elec.columns:
+                    elec['remote'] = False 
+                    
                 for s in self.surveys:
                     s.elec = elec
             
@@ -3208,7 +3215,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.mesh = mt.readMesh(file_path, node_pos=node_pos, 
                                           order_nodes=order_nodes)
 
-        self.meshParam = {'typ':'imported'}
+        self.meshParams = {'typ':'imported'}
 
         # recover region based on resistivity
         if file_path[-4:] == '.vtk':

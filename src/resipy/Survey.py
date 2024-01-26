@@ -2175,7 +2175,8 @@ class Survey(object):
             vmax = np.percentile(resist[~np.isnan(resist)],90) # use 90% percentile 
             
         elecz = self.elec['z'].values
-        elecz = elecz[np.invert(self.elec['remote'].values)]
+        if 'remote' in self.elec.columns: 
+            elecz = elecz[np.invert(self.elec['remote'].values)]
 
         dp_x,dp_y,dp_z = self._computePseudoDepth(True) # get dipole depths 
         #Nb pseudo depths are returned as absolute values now 
