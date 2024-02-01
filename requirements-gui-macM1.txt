@@ -1,0 +1,10 @@
+numpy
+matplotlib
+pandas
+scipy
+requests
+psutil
+pyvista==0.37.0
+pyvistaqt==0.9.0
+PyQt5
+vtk
