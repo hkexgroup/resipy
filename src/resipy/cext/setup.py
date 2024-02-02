@@ -37,9 +37,10 @@ else: # macOS
 		you need to install gcc through Homebrew by:
 		brew install cmake gcc
         brew install cmake gcc@xx for specific version of gcc - then change below to specific version
+        Note: gcc-13 works on Apple Silicon
     '''
-    os.environ['CC'] = 'gcc-10' # gcc-xx based on gcc version
-    os.environ['CXX'] = 'g++-10' # g++-xx based on g++ version
+    os.environ['CC'] = 'gcc-13' # gcc-xx based on gcc version
+    os.environ['CXX'] = 'g++-13' # g++-xx based on g++ version
     ext_modules = [
         Extension(
             "meshCalc",
