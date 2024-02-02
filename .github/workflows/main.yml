@@ -92,15 +92,15 @@ jobs:
 
       - name: Set up environment
         run: |
-          brew reinstall python@3.12
+          brew reinstall python@3.12.1
           cd ..
-          /usr/local/bin/python3.12 -m pip install virtualenv
-          /usr/local/bin/python3.12 -m virtualenv -p /usr/local/bin/python3.12 pyenv
+          /usr/local/bin/python3.12.1 -m pip install virtualenv
+          /usr/local/bin/python3.12.1 -m virtualenv -p /usr/local/bin/python3.12.1 pyenv
           source pyenv/bin/activate
           cd resipy
-          /usr/local/bin/python3.12 -m pip install setuptools
-          /usr/local/bin/python3.12 -m pip install -r requirements-gui-macM1.txt
-          /usr/local/bin/python3.12 -m pip install pyinstaller
+          /usr/local/bin/python3.12.1 -m pip install setuptools
+          /usr/local/bin/python3.12.1 -m pip install -r requirements-gui-macM1.txt
+          /usr/local/bin/python3.12.1 -m pip install pyinstaller
 
       - name: Run build
         run: |
