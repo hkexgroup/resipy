@@ -84,7 +84,7 @@ jobs:
           
 
   build-macos:
-    runs-on: macos-11
+    runs-on: macos-13
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -92,16 +92,15 @@ jobs:
 
       - name: Set up environment
         run: |
-          brew reinstall python@3.10
+          brew reinstall python@3.12
           cd ..
-          /usr/local/bin/python3.10 -m pip install virtualenv
-          /usr/local/bin/python3.10 -m virtualenv -p /usr/local/bin/python3.10 pyenv
+          /usr/local/bin/python3.12 -m pip install virtualenv
+          /usr/local/bin/python3.12 -m virtualenv -p /usr/local/bin/python3.12 pyenv
           source pyenv/bin/activate
           cd resipy
-          /usr/local/bin/python3.10 -m pip install setuptools
-          /usr/local/bin/python3.10 -m pip install -r requirements-gui.txt
-          /usr/local/bin/python3.10 -m pip install pyinstaller
-          /usr/local/bin/python3.10 -m pip install pyvistaqt pyvista vtk
+          /usr/local/bin/python3.12 -m pip install setuptools
+          /usr/local/bin/python3.12 -m pip install -r requirements-gui-macM1.txt
+          /usr/local/bin/python3.12 -m pip install pyinstaller
 
       - name: Run build
         run: |
