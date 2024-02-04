@@ -1,3 +1,20 @@
+v3.5.0
+------
+- Introduction of project summary page.
+- Major speed improvements to the loading data.
+- Ability to make an error model for non-conventional arrays.
+- Ability to create 3D mesh from a single 2D line.
+- More efficient 3D meshing (hemispherical half space).
+- Faster reciprocal error calculation.
+- Ability to calculate app. resistivity for XBH/buried electrodes.
+- Native support for Apple Silicon devices.
+- Support for python v3.7 to v3.12.
+- Bug fix: 3D difference inversion (time-lapse).
+- Bug fix: ResIPy crash when doing an error model in 3D surveys (UI).
+- Bug fix: vmin/vmax in log scale in results (UI).
+- Bug fix: pseudo section electrodes being in the air (UI).
+
+
 v3.4.5
 ------
 - Add ability to change electrode size in 3D (API only).
