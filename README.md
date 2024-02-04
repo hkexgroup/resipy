@@ -23,7 +23,7 @@ Note for Windows users:
 
 Notes for Mac and Linux users:
 - You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction [below](https://gitlab.com/hkex/resipy#wine-installation-linux-and-mac-users)).
-- On MacOS: If you get "ResIPy is damaged" error, run this command in terminal `xattr -cr /Applications/ResIPy.app`
+- On MacOS: If you get "ResIPy is damaged" or "ResIPy cannot be opened" error, run this command in terminal `xattr -cr /Applications/ResIPy.app`
 - On Linux: If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 Zip files:<br>
