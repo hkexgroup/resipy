@@ -2470,9 +2470,11 @@ class App(QMainWindow):
                 for s in self.project.surveys:
                     numRestored += len(s.dfReset) - len(s.df)
                     s.df = s.dfReset.copy()
+                    s.isequence = s.isequenceReset.copy()
             else:
                 numRestored = len(self.project.surveys[self.recipErrDataIndex].dfReset) - len(self.project.surveys[self.recipErrDataIndex].df)
                 self.project.surveys[self.recipErrDataIndex].df = self.project.surveys[self.recipErrDataIndex].dfReset.copy()
+                self.project.surveys[self.recipErrDataIndex].isequence = self.project.surveys[self.recipErrDataIndex].isequenceReset.copy()
             if self.recipErrorInputLine.text() != '':
                 self.errHist(self.recipErrDataIndex)
                 self.recipErrorInputLine.setText('')
@@ -6168,8 +6170,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.invErrorCombo.currentIndex() == 0: # apply to each
                 for s in self.project.surveys:
                     s.df = s.dfInvErrOutputOrigin.copy()
+                    s.isequence = s.isequenceReset.copy()
             else:
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
+                self.project.surveys[self.invErrorIndex].isequence = self.project.surveys[self.invErrorIndex].isequenceReset.copy()
             
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')

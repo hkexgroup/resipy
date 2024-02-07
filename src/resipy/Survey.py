@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
 from scipy.stats import norm, linregress
-from scipy.stats.kde import gaussian_kde
+from scipy.stats import gaussian_kde
 from scipy.linalg import lstsq
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
@@ -323,6 +323,7 @@ class Survey(object):
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
         self.dfOrigin = self.df.copy()
+        self.isequenceReset = self.isequence.copy() # for retetting filters in the UI
        
      
 #     @classmethod
@@ -519,6 +520,7 @@ class Survey(object):
         # create a backup of the clean dataframe
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
+        self.isequenceReset = self.isequence.copy()
         
         ''' the following piece of code is not useful anymore. The default
         behavior is to keep all measurements except NaN, duplicates, Inf and
@@ -593,6 +595,7 @@ class Survey(object):
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
         self.dfOrigin = self.df.copy()
+        self.isequenceReset = self.isequence.copy()
 
     
     def filterData(self, i2keep):
@@ -2633,6 +2636,7 @@ class Survey(object):
             vmax = np.max(appRes)
         ikeep = (appRes >= vmin) & (appRes <= vmax)
         self.df = df[ikeep]
+        self.isequence = self.isequence[ikeep]
         self.df.reset_index()
         
         if debug:
@@ -2663,6 +2667,7 @@ class Survey(object):
             vmax = np.max(tRes)
         ikeep = (tRes >= vmin) & (tRes <= vmax)
         self.df = df[ikeep]
+        self.isequence = self.isequence[ikeep]
         self.df.reset_index()
         
         if debug:
