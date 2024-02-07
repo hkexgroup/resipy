@@ -2076,6 +2076,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.meshResults.append(deepcopy(proj.meshResults[0]))
                 survey.df = proj.surveys[0].df.copy() # to populate inversion error outputs
                 survey.dfInvErrOutputOrigin = survey.df.copy()
+                survey.isequenceInvErrOutputReset = survey.isequence.copy()
                 if proj.invLog == '': # in case of parallel inversion
                     with open(os.path.join(proj.dirname, proj.typ + '.out'),'r') as f:
                         proj.invLog = f.read()
@@ -6024,6 +6025,7 @@ class Project(object): # Project master class instanciated by the GUI
                 s.df = s.df.drop('phaseInvMisfit', axis=1)
             s.df = pd.merge(s.df, df[cols], on=['a','b','m','n'], how='left')
             s.dfInvErrOutputOrigin = s.df.copy() # for being able to reset post processing filters
+            s.isequenceInvErrOutputReset = s.isequence.copy()
         self.pinfo['Median normalised error'] = float(np.median(np.abs(normerr)))
 
                     

@@ -6170,10 +6170,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.invErrorCombo.currentIndex() == 0: # apply to each
                 for s in self.project.surveys:
                     s.df = s.dfInvErrOutputOrigin.copy()
-                    s.isequence = s.isequenceReset.copy()
+                    s.isequence = s.isequenceInvErrOutputReset.copy()
             else:
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
-                self.project.surveys[self.invErrorIndex].isequence = self.project.surveys[self.invErrorIndex].isequenceReset.copy()
+                self.project.surveys[self.invErrorIndex].isequence = self.project.surveys[self.invErrorIndex].isequenceInvErrOutputReset.copy()
             
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
