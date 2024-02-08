@@ -1177,16 +1177,16 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     flag=flag+(['electrode']*len(elec_x))   
     
     #deal with end case electrodes, check max topo points are outside survey bounds 
-    min_idx = np.argmin(electrodes[0])
-    max_idx = np.argmax(electrodes[0])
-    if min(electrodes[0]) == min(x_pts):
-        x_pts = np.append(x_pts,electrodes[0][min_idx] - 5*(dp_len/len(electrodes[0]))) # in this case extend the survey bounds beyond the first electrode 
-        z_pts = np.append(z_pts,max(electrodes[1]))
+    while min(electrodes[0]) <= min(x_pts):
+        min_idx = np.argmin(x_pts)
+        x_pts = np.append(x_pts,x_pts[min_idx] - (cl*cl_factor)) # in this case extend the survey bounds beyond the first (leftmost) electrode 
+        z_pts = np.append(z_pts,z_pts[min_idx])
         flag.append('topography point')#add a flag
         
-    if max(electrodes[0]) == max(x_pts):
-        x_pts = np.append(x_pts,electrodes[0][max_idx] + 5*(dp_len/len(electrodes[0])))
-        z_pts = np.append(z_pts,max(electrodes[1]))
+    while max(electrodes[0]) >= max(x_pts):
+        max_idx = np.argmax(x_pts)
+        x_pts = np.append(x_pts,x_pts[max_idx] + (cl*cl_factor)) # in this case extend the survey bounds beyond the last (rightmost) electrode 
+        z_pts = np.append(z_pts,z_pts[max_idx])
         flag.append('topography point')
             
     idx=np.argsort(x_pts) # now resort the x positions in ascending order
@@ -1517,8 +1517,10 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     if len(blines)>0:#add boundary lines if present 
         fh.write("Line{%s} In Surface{2};//boundary lines\n"%str(blines).strip('[').strip(']'))
     
-    #add buried electrodes? (added after as we need Surface 1 to be defined)       
+    # add buried electrodes? (added after as we need Surface 1 to be defined)      
+    # TODO: add ball fields for buried electrodes 
     if bu_flag:
+        nfield = 0 
         fh.write("\n//Buried electrodes \n")  
         buried_x = np.array(electrodes[0])[bur_idx]#get buried electrode coordinate information
         buried_z = np.array(electrodes[1])[bur_idx]
@@ -1526,14 +1528,17 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         e_pt_idx = [0]*len(buried_x)
         for k in range(len(buried_x)):
             no_pts += 1 
+            nfield += 1 
             fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,buried_x[k],buried_y[k],buried_z[k],k+1))
             e_pt_idx[k] = no_pts
-        
+            # add_ball_field(fh,nfield,buried_x[k],buried_y[k],buried_z[k],cl,cl,cl*cl_factor,0)
+            
         node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
         fh.write("Point{%s} In Surface{%i};//include node in meshing\n"%(str(e_pt_idx).strip('[').strip(']'), no_plane))
         fh.write("//end of buried electrodes.\n")
         elec_x_cache = np.append(elec_x_cache,buried_x)
         elec_z_cache = np.append(elec_z_cache,buried_z)
+        # setFields(fh,nfield)
         
     if len(rem_idx)>0: #then we need to add remote electrodes to the mesh
         fh.write("\n//Remote electrodes \n")
@@ -1756,7 +1761,7 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
         
         
     # check if any mesh refinement is requested 
-    else:
+    elif mesh_refinement is not None:
         fh.write('//Custom refinement points\n')
         # find surface points 
         rx = mesh_refinement['x']

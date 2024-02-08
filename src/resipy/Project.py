@@ -1185,7 +1185,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.pinfo = json.load(f)
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
-                     parser=None, debug=True, **kwargs):
+                     parser=None, debug=True, estMemory=True, **kwargs):
         """Read electrodes and quadrupoles data and return 
         a survey object.
 
@@ -1205,6 +1205,9 @@ class Project(object): # Project master class instanciated by the GUI
         debug : bool, optional
             If True, information about the reciprocal measurements, default 
             filtering, etc. will be displayed.
+        estMemory: bool, optional
+            If true, estimate the amount of RAM required to do the inversion. 
+            Default is True. 
         **kwargs: Keyword arguments to be passed to Survey()
         """
         self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, debug=debug, **kwargs))
@@ -1235,18 +1238,21 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = 1 
         
-        _ = self._estimateMemory(dump=pointer)
+        if estMemory: 
+            _ = self._estimateMemory(dump=pointer)
         
             
-    def addData(self, **kwargs):
+    def addData(self,index=0, **kwargs):
         """Adds data to the survey - used usually to add reciprocal datasets
         
         Parameters
         ----------
+        index: int
+            Survey index to add data to. 
         **kwargs: Keyword arguments to be passed to Survey.addData()
         """
         
-        self.surveys[0].addData(**kwargs)
+        self.surveys[index].addData(**kwargs)
 
 
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
@@ -1330,7 +1336,8 @@ class Project(object): # Project master class instanciated by the GUI
 
 
         for i, f in enumerate(files):
-            self.createSurvey(f, ftype=ftype, parser=parser, spacing=spacing, debug=debug)
+            self.createSurvey(f, ftype=ftype, parser=parser, spacing=spacing, 
+                              debug=debug, estMemory=False)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
             dump('\r{:d}/{:d} imported'.format(i+1, len(files)))
@@ -1451,6 +1458,103 @@ class Project(object): # Project master class instanciated by the GUI
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = 1 
+        _ = self._estimateMemory(dump=pointer)
+        
+    
+    def createMergedSurveys(self, fname, ftype='Protocol DC', delimiter=',',
+                            dump=None, debug=False):
+        """Create one or multiple surveys by merging multiple files referenced 
+        in singular human readable file with a specific format, survey details.
+        See notes below. 
+
+        Parameters
+        ----------
+        fname : str
+            file path to .csv file. 
+        ftype: str, reccomended 
+            file type, see ResIPy docs for types of file type avialable. Will be 
+            overwritten if specified in the survey details file. 
+        delimiter: str
+            delimiter used in merge 
+            
+        Notes
+        -----
+        Format of survey details file should have up to 3 columns with these names. 
+        fpath, sid (optional), and ftype (optional). 
+        
+        fpath: str
+            Path to survey file, best to use full system path 
+        
+        ftype: str, optional 
+            File type, should correspond to the file 'ftype' for each file (they
+            might be different for some reason, though best avoided). If not
+            passed the file type can be set be the variable at the top of this
+            function. 
+        
+        sid: int, optional 
+            Survey index, used for making timelapse surveys from multiple files
+        
+        """
+
+        finfo = pd.read_csv(fname,sep=delimiter) # file info dataframe 
+        
+        if 'fpath' not in finfo.columns: 
+            raise Exception('file paths are not defined in survey')
+            
+        if 'ftype' not in finfo.columns: 
+            finfo['ftype'] = ftype 
+        
+        if 'sid' not in finfo.columns: 
+            finfo['sid'] = 0 
+            
+        # get survey ids and unique survey indexes 
+        # returned indexes are the first instance of each survey index 
+        sid, uidx = np.unique(finfo.sid.values,return_index=True)
+        
+        self.surveys = [] # flush other surveys
+
+        if len(sid) > 1: 
+            self.iTimeLapse = True 
+            
+
+        c = 0 
+        for i in uidx: 
+            self.createSurvey(finfo.fpath[i], ftype=finfo.ftype[i], 
+                              debug=debug, estMemory=False)
+            sidx = np.argwhere(finfo.sid.values == i).tolist() # survey index 
+            _ = sidx.pop(0)
+            
+            for j in sidx: 
+                self.addData(index=c, fname=finfo.fpath[j], ftype=finfo.ftype[j])
+                # add data for each survey 
+            c += 1 
+            
+        if self.iTimeLapse: # bit of clean up regarding timelapse case 
+            self.iTimeLapseReciprocal = np.array([False]*len(self.surveys)) # true if survey has reciprocal
+            for i in range(len(self.surveys)):
+                haveReciprocal = all(self.surveys[i].df['irecip'].values == 0)
+                self.iTimeLapseReciprocal[i] = haveReciprocal 
+            
+            # create bigSurvey (useful if we want to fit a single error model
+            # based on the combined data of all the surveys)
+            self.bigSurvey = self.surveys[0]
+            df = self.bigSurvey.df.copy()
+            for i in range(1,len(self.surveys)):
+                df2 = self.surveys[i].df
+                ipos = df2['irecip'].values > 0
+                ineg = df2['irecip'].values < 0
+                df2.loc[ipos, 'irecip'] = df2[ipos]['irecip'] + c
+                df2.loc[ineg, 'irecip'] = df2[ineg]['irecip'] - c
+                df = pd.concat([df, df2], ignore_index=True)
+                c = c + df2.shape[0]
+            self.bigSurvey.df = df.copy() # override it
+            self.bigSurvey.dfOrigin = df.copy()
+            self.bigSurvey.ndata = df.shape[0]
+        
+        # flag that data has been added 
+        self.pinfo['Data'] = True 
+        self.pinfo['Number of Surveys'] = len(self.surveys) 
+        
         _ = self._estimateMemory(dump=pointer)
 
 
@@ -2981,7 +3085,7 @@ class Project(object): # Project master class instanciated by the GUI
                 del self.param['num_regions']
         else:
             geom_input = {}
-
+            
             if surface is not None:
                 geom_input['surface'] = [self.topo['x'].values,
                                          self.topo['z'].values]

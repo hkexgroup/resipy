@@ -4603,6 +4603,89 @@ def check4repeatNodes(X,Y,Z,flag=None):
         #warnings.warn(error,Warning)
         raise ValueError(error)
 
+#%% control point helper functions 
+
+def bearing(dx,dy): # compute bearing 
+    if dx == 0 and dy == 0:
+        raise ValueError('both dx and dy equal 0 - check no 2 electrodes occupy same xy coordinates')
+    elif dx == 0 and dy > 0:
+        return 0
+    elif dx == 0 and dy < 0:
+        return 180
+    elif dx > 0 and dy == 0:
+        return 90
+    elif dx < 0 and dy == 0:
+        return 270
+    elif dx > 0 and dy > 0: 
+        return np.rad2deg(np.arctan(dx/dy))
+    elif dx > 0 and dy < 0: 
+        return 180 + np.rad2deg(np.arctan(dx/dy))
+    elif dx < 0 and dy < 0: 
+        return 180 + np.rad2deg(np.arctan(dx/dy))
+    elif dx < 0 and dy > 0: 
+        return 360 + np.rad2deg(np.arctan(dx/dy))
+    
+def quad(dx,dy):
+    b = bearing(dx,dy)
+    if b > 315 or b <= 45:
+        return 0 
+    elif b > 45 and b <= 135: 
+        return 1 
+    elif b > 135 and b <= 225: 
+        return 2 
+    else:
+        return 3 
+    
+def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
+    """
+    Create control points for surface electrodes in 3D (or 2d borehole electrodes)
+    """
+    if min_r is None:
+        min_r = r 
+    nelec = len(elec_x)
+    tree = cKDTree(np.c_[elec_x,elec_y])
+    _,idx = tree.query(np.c_[elec_x,elec_y],3)
+    
+    xstack = [] 
+    ystack = [] 
+    
+    addry = [r,0,-r,0]
+    addrx = [0,r,0,-r]
+    
+    for i in range(nelec):
+        dx0 = elec_x[idx[i,1]] - elec_x[i] 
+        dx1 = elec_x[idx[i,2]] - elec_x[i]
+        dy0 = elec_y[idx[i,1]] - elec_y[i]
+        dy1 = elec_y[idx[i,2]] - elec_y[i]
+        
+        q0 = quad(dx0, dy0) # quadrant 
+        q1 = quad(dx1, dy1) # quadrant 
+        qs = [q0,q1]
+        
+        # avoid adding points in any known quadrant 
+        for j in range(4):
+            if j not in qs: 
+                xstack.append(elec_x[i] + addrx[j]) 
+                ystack.append(elec_y[i] + addry[j]) 
+                
+    xstack = np.array(xstack)
+    ystack = np.array(ystack)
+    # double check no points are repeated 
+    tree = cKDTree(np.c_[xstack, ystack])
+    ilookup = tree.query_ball_point(np.c_[xstack, ystack],min_r)
+    
+    # keep only first instance of points close to each other 
+    repeats = np.array([False]*len(xstack),dtype=bool)
+    for i in range(xstack.shape[0]):
+        if len(ilookup[i]) > 1: 
+            c = 0 
+            for c,j in enumerate(ilookup[i]):
+                if c == 0: 
+                    continue 
+                repeats[j] = True 
+        
+    
+    return xstack[~repeats], ystack[~repeats]
 
 #%% build a triangle mesh - using the gmsh wrapper
 def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
@@ -4709,33 +4792,16 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     if bu_flag: 
         bux = np.array(elec_x)[np.array(bur_idx)]
         buz = np.array(elec_z)[np.array(bur_idx)]
-        vx = []
-        vz = []
-        vi = []
-        if len(bux) > 3: 
-            vpoints = np.c_[np.append(bux,elec_x),
-                            np.append(buz,elec_z)]
-            vor = Voronoi(vpoints)    
-            tree = cKDTree(vor.vertices)
-            nearby = tree.query_ball_tree(tree,cl*cl_factor) 
-            for i in range(len(nearby)):
-                near_idx = nearby[i]
-                # if point is clustered close to other refinement points it is 
-                # is not needed, only first instance is kept. 
-                for j in near_idx: 
-                    if mc.bisection_searchL(vi,j) == -1: 
-                        vx.append(vor.vertices[j,0])
-                        vz.append(vor.vertices[j,1])
-                        vi += near_idx
-                        vi = sorted(vi)
-                        break 
+        # control points in x z coordinates 
+        cpx, cpz = halfspaceControlPoints(bux, buz, 
+                                          cl, cl*1.5)
         if geom_input is None: 
-            geom_input = {'refine':[vx,vz]} 
+            geom_input = {'refine':[cpx,cpz]} 
         elif 'refine' in geom_input.keys():
-            geom_input['refine'][0] = list(geom_input['refine'][0]) + vx 
-            geom_input['refine'][1] = list(geom_input['refine'][1]) + vz
+            geom_input['refine'][0] = list(geom_input['refine'][0]) + cpx.tolist()
+            geom_input['refine'][1] = list(geom_input['refine'][1]) + cpz.tolist()
         else:
-            geom_input['refine'] = [vx,vz]            
+            geom_input['refine'] = [cpx,cpz]           
     
     #make .geo file
     file_name="mesh"
@@ -4781,90 +4847,6 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     return mesh
 
 #%% 3D tetrahedral mesh 
-# compute bearing 
-def bearing(dx,dy):
-    if dx == 0 and dy == 0:
-        raise ValueError('both dx and dy equal 0 - check no 2 electrodes occupy same xy coordinates')
-    elif dx == 0 and dy > 0:
-        return 0
-    elif dx == 0 and dy < 0:
-        return 180
-    elif dx > 0 and dy == 0:
-        return 90
-    elif dx < 0 and dy == 0:
-        return 270
-    elif dx > 0 and dy > 0: 
-        return np.rad2deg(np.arctan(dx/dy))
-    elif dx > 0 and dy < 0: 
-        return 180 + np.rad2deg(np.arctan(dx/dy))
-    elif dx < 0 and dy < 0: 
-        return 180 + np.rad2deg(np.arctan(dx/dy))
-    elif dx < 0 and dy > 0: 
-        return 360 + np.rad2deg(np.arctan(dx/dy))
-    
-def quad(dx,dy):
-    b = bearing(dx,dy)
-    if b > 315 or b <= 45:
-        return 0 
-    elif b > 45 and b <= 135: 
-        return 1 
-    elif b > 135 and b <= 225: 
-        return 2 
-    else:
-        return 3 
-    
-def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
-    """
-    Create control points for surface electrodes 
-    """
-    if min_r is None:
-        min_r = r 
-    nelec = len(elec_x)
-    tree = cKDTree(np.c_[elec_x,elec_y])
-    _,idx = tree.query(np.c_[elec_x,elec_y],3)
-    
-    xstack = [] 
-    ystack = [] 
-    
-    addry = [r,0,-r,0]
-    addrx = [0,r,0,-r]
-    
-    for i in range(nelec):
-        dx0 = elec_x[idx[i,1]] - elec_x[i] 
-        dx1 = elec_x[idx[i,2]] - elec_x[i]
-        dy0 = elec_y[idx[i,1]] - elec_y[i]
-        dy1 = elec_y[idx[i,2]] - elec_y[i]
-        
-        q0 = quad(dx0, dy0) # quadrant 
-        q1 = quad(dx1, dy1) # quadrant 
-        qs = [q0,q1]
-        
-        # avoid adding points in any known quadrant 
-        for j in range(4):
-            if j not in qs: 
-                xstack.append(elec_x[i] + addrx[j]) 
-                ystack.append(elec_y[i] + addry[j]) 
-                
-    xstack = np.array(xstack)
-    ystack = np.array(ystack)
-    # double check no points are repeated 
-    tree = cKDTree(np.c_[xstack, ystack])
-    ilookup = tree.query_ball_point(np.c_[xstack, ystack],min_r)
-    
-    # keep only first instance of points close to each other 
-    repeats = np.array([False]*len(xstack),dtype=bool)
-    for i in range(xstack.shape[0]):
-        if len(ilookup[i]) > 1: 
-            c = 0 
-            for c,j in enumerate(ilookup[i]):
-                if c == 0: 
-                    continue 
-                repeats[j] = True 
-        
-    
-    return xstack[~repeats], ystack[~repeats]
-                
-                
 def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, 
               interp_method = 'triangulate', surface_refinement=None, 
               mesh_refinement=None, ball_refinement=True,
@@ -4889,28 +4871,35 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     elec_type: list of strings, optional
         Defines if electrodes are buried or not.   
     keep_files : boolean, optional
-        `True` if the gmsh input and output file is to be stored in the working directory.
-    interp_method: string, default ='bilinear' optional
-        Interpolation method to translate mesh nodes in the z direction. In other words the method in which topography 
-        is appended to the mesh. Here the topography is added to the mesh in post processing. 
-        The options documented in the notes. 
-        if == 'idw': then provide search_radius.  
+        `True` if the gmsh input and output file is to be stored in the working 
+        directory.
+    interp_method: string, default ='triangulate' optional
+        Interpolation method to translate mesh nodes in the z direction. In 
+        other words the method in which topography is appended to the mesh. 
+        Here the topography is added to the mesh in post processing. 
+        The options are documented below in the notes. 
     surface_refinement : np.array, optional 
-        Numpy array of shape (3,n), should follow the format np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
-        Allows for extra refinement for the top surface of the mesh. The points are not added to the mesh, but 
-        considered in post processing in order to super impose topography on the mesh. 
+        Numpy array of shape (3,n), should follow the format 
+        np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
+        Allows for extra refinement for the top surface of the mesh. 
+        The points are not added to the mesh, but considered in post processing 
+        in order to super impose topography on the mesh. 
     mesh_refinement : dict, pd.DataFrame, optional 
-        Dataframe (or dict) contianing 'x', 'y', 'z', 'type' columns which describe points which can be used to refine the mesh,
-        unlike surface_refinement, this argument allows the user granular control over the refinement of mesh
-        elements. See further explanation in tetraMesh notes. 
+        Dataframe (or dict) contianing 'x', 'y', 'z', 'type', and 'cl', columns 
+        which describe control points which can be used to refine the mesh, unlike 
+        surface_refinement, this argument allows the user granular control over 
+        the refinement of mesh elements. If not provided ResIPy attempts to add 
+        mesh_refinement for you (though not in the case of a wholespace). 
+        See further explanation in tetraMesh notes. 
     ball_refinement: boolean, optional
         If True, tells gmsh to add a 'ball' of refined mesh around electrodes. 
         Default is True. 
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
     whole_space: boolean, optional
-        flag for if the problem should be treated as a whole space porblem, in which case 
-        electrode type is ingored and all electrodes are buried in the middle of a large mesh. 
+        flag for if the problem should be treated as a whole space porblem, in 
+        which case electrode type is ingored and all electrodes are buried in 
+        the middle of a large mesh. 
     dump : function, optional
         Function to which pass the output during mesh generation. `print()` is
         the default.
@@ -4968,7 +4957,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     avail_methods = ['bilinear','nearest','spline','triangulate',None]
     if interp_method not in avail_methods:
         raise NameError("'%s' is an unrecognised interpretation method"%interp_method)
-    if elec_z is not None and all(np.array(elec_z)==0):
+    if elec_z is None: 
+        elec_z = np.zeros_like(elec_x)
+    if all(np.array(elec_z)==0):
         interp_method = None 
         
     lineis2d = False 
@@ -5144,11 +5135,16 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                                     'y':mesh_refinement['y'],
                                     'z':mesh_refinement['z']}
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to wholespace problem
-    elif not whole_space and len(surf_elec_x)>0:
-        selec = np.c_[surf_elec_x, surf_elec_y, surf_elec_z] # surface electrodes 
-        tree = cKDTree(selec) 
-        idist,_ = tree.query(selec,2) 
-        # make some of our own control points in this case
+    elif not whole_space: # make some of our own control points in this case
+        elec = np.c_[elec_x, elec_y, elec_z] # surface electrodes 
+        tree = cKDTree(elec) 
+        idist,_ = tree.query(elec,2) 
+        
+        cpx = np.array([])
+        cpy = np.array([])
+        cpz = np.array([])
+        cpl = np.array([])
+        
         if 'cl' in kwargs.keys(): 
             cl = kwargs['cl']
         else: 
@@ -5164,24 +5160,45 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             cl_factor = kwargs['cl_factor']
         else:
             cl_factor = 5 
-            
-        # control points in x y coordinates 
-        cpx, cpy = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
-                                          np.mean(idist[:,1]), cl*1.5)
-        cpz = np.zeros_like(cpx)
         
-        fmdx = cpx[::3]
-        fmdy = cpy[::3]
-        fmdz = (fmdx*0) - abs(fmd) # add some points at depth too 
+        if len(surf_elec_x)>0: 
+            # control points in x y coordinates 
+            _cpx, _cpy = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
+                                                np.mean(idist[:,1]), cl*1.5)
+            _cpz = np.zeros_like(cpx)
         
-        # append to control points 
-        cpx = np.append(cpx,fmdx)
-        cpy = np.append(cpy,fmdy)
-        cpz = np.append(cpz,fmdz)
-        cpl = np.full_like(cpx, cl*cl_factor)
+            fmdx = _cpx[::3]
+            fmdy = _cpy[::3]
+            fmdz = (fmdx*0) - abs(fmd) # add some points at depth too 
         
+            # append to control points 
+            cpx = np.append(_cpx,fmdx)
+            cpy = np.append(_cpy,fmdy)
+            cpz = np.append(_cpz,fmdz)
+            cpl = np.full_like(cpx, cl*cl_factor)
+        
+        if len(bur_elec_x) > 0:
+            # add some random control points near the electrodes 
+            cbx = [0]*len(bur_elec_x)
+            cby = [0]*len(bur_elec_x)
+            cbz = [0]*len(bur_elec_x)
+            choice = np.arange(4)
+            for i in bur_elec_idx:
+                r = cl*1.5 
+                choicex = [r, 0, -r, 0]
+                choicey = [0, -r, 0, r]
+                j = np.random.choice(choice)
+                cbx[i] = elec_x[i] + choicex[j]
+                cby[i] = elec_y[i] + choicey[j]
+                cbz[i] = elec_z[i] 
+                
+            cpx = np.append(cpx,cbx)
+            cpy = np.append(cpy,cby)
+            cpz = np.append(cpz,cbz)
+            cpl = np.full_like(cpx, cl*cl_factor)
+                
+
         # one last check that no points are duplicated 
-        tree = cKDTree(np.c_[elec_x,elec_y,elec_z]) 
         idist,_ = tree.query(np.c_[cpx,cpy,cpz]) 
         tokeep = [True]*len(cpx)
         for i in range(len(cpx)):
