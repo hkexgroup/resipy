@@ -5165,11 +5165,11 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             # control points in x y coordinates 
             _cpx, _cpy = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
                                                 np.mean(idist[:,1]), cl*1.5)
-            _cpz = np.zeros_like(cpx)
+            _cpz = np.zeros_like(_cpx)
         
             fmdx = _cpx[::3]
             fmdy = _cpy[::3]
-            fmdz = (fmdx*0) - abs(fmd) # add some points at depth too 
+            fmdz = _cpz[::3] - abs(fmd) # add some points at depth too 
         
             # append to control points 
             cpx = np.append(_cpx,fmdx)
@@ -5184,7 +5184,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             cbz = [0]*len(bur_elec_x)
             choice = np.arange(4)
             for i in bur_elec_idx:
-                r = cl*1.5 
+                r = cl*1.0
                 choicex = [r, 0, -r, 0]
                 choicey = [0, -r, 0, r]
                 j = np.random.choice(choice)
