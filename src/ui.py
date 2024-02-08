@@ -3603,6 +3603,11 @@ class App(QMainWindow):
             self.writeLog('k.createMesh(typ="tetra", surface={:s}, fmd={:s}, cl={:.2f},'
                           ' cl_factor={:.2f}, cln_factor={:.2f}, refine={:d})'.format(
                               str(topo), str(fmd), cl, cl_factor, cln_factor, refine))
+            
+            # may want to truncate mesh by default in this case 
+            self.cropBelowFmd.setChecked(True)
+            self.notCropping.setChecked(False)
+            
             if pvfound:
                 self.mesh3Dplotter.clear() # clear all actors 
                 self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
@@ -3703,6 +3708,10 @@ class App(QMainWindow):
                                     show_output=True)
             self.writeLog('k.createMesh(typ="tank", cl={:.2e}, origin={:s}, dimension={:s},'
                           'refine={:d})'.format(cl, str(origin), str(dimension), refine))
+            
+            # may want to not truncate mesh by default in this case 
+            self.cropBelowFmd.setChecked(False)
+            self.notCropping.setChecked(True)
             
             # display the mesh
             if pvfound:
@@ -3814,6 +3823,10 @@ class App(QMainWindow):
                                     show_output=True)
             self.writeLog('k.createMesh(typ="cylinder", cl={:.2e}, cl_factor={:.2e}, zlim={:s}'
                           ', refine={:d})'.format(cl, cl_factor, str(zlim), refine))
+            
+            # may want to not truncate mesh by default in this case 
+            self.cropBelowFmd.setChecked(False)
+            self.notCropping.setChecked(True)
             
             # display the mesh
             if pvfound:
@@ -3942,6 +3955,9 @@ class App(QMainWindow):
                     self.meshOutputStack.setCurrentIndex(2)
                     self.regionTable.nrow = 0
                     self.regionTable.setRowCount(0)
+                    # may want to truncate mesh by default in this case 
+                    self.cropBelowFmd.setChecked(True)
+                    self.notCropping.setChecked(False)
                     for i in range(len(np.unique(self.project.mesh.df['region']))):
                         self.regionTable.addRow()
                         ie = self.project.mesh.df['region'] == i+1
