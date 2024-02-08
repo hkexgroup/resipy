@@ -44,7 +44,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="resipy",
-    version="3.4.6", # CHANGE HERE
+    version="3.5.0", # CHANGE HERE
     author="HKEx",
     description="API for resistivity and IP inversion/modelling around R* codes",
     long_description=long_description,

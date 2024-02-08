@@ -1,6 +1,5 @@
 GUI for R* family of codes (R2, cR2, R3t, cR3t)
 ===============================================
-(Note that **ResIPy** was called **pyR2** before 2019-04-16)
 
 ResIPy is a Python wrapper around the [R* family of codes](http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm) (for 2D/3D DC/IP inversion).
 ResIPy provides a standalone graphical user interface (GUI) along with a Python API (Application Programming Interface)
