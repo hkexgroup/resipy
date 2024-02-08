@@ -3227,6 +3227,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of Elements'] = self.mesh.numel 
         self.pinfo['Number of Nodes']=self.mesh.numnp 
         self.pinfo['Mesh Type'] = meshtypename
+        self.fwdErrModel = False # reset model error as mesh has changed 
         
         
     def _computePolyTable(self):

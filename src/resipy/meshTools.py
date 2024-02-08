@@ -5198,7 +5198,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             cpl = np.full_like(cpx, cl*cl_factor)
                 
 
-        # one last check that no points are duplicated 
+        # one last check that no points are duplicates of electrodes 
         idist,_ = tree.query(np.c_[cpx,cpy,cpz]) 
         tokeep = [True]*len(cpx)
         for i in range(len(cpx)):
