@@ -15,6 +15,3 @@ a multi-platform standalone Graphical User Interface (GUI) is also available to 
 Please see the gitlab repository for more information and to download the executable for the GUI: **https://gitlab.com/hkex/resipy**
 
 Or the online documentation: **https://hkex.gitlab.io/resipy**
-
-
-
