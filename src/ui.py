@@ -2935,7 +2935,7 @@ class App(QMainWindow):
 
 
         def dcaDump(val):
-            self.dcaProgress.setValue(val)
+            self.dcaProgress.setValue(int(val))
             QApplication.processEvents()
 
         def dcaFiltering():

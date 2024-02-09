@@ -51,7 +51,7 @@ def DCA(data_in, dump=None):
     data = data_in.copy()
     decayN = data[['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9',
                 'M10', 'M11', 'M12', 'M13', 'M14', 'M15', 'M16', 'M17', 'M18', 'M19', 'M20']]
-    DecayTime_int = data['TM1'][0]
+    DecayTime_int = data['TM1'].values[0]
     DecayTime = np.arange(int(DecayTime_int),np.shape(decayN)[1]*(int(DecayTime_int)+1),int(DecayTime_int))
     data['DC_slope'] = positive_test(decayN.copy(),DecayTime) #decay curve trend - positive trends are bad data
     
