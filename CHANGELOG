@@ -1,5 +1,11 @@
-v3.5.0
+v3.5.1
 ------
+- Improved meshing borehole surveys (2D and 3D).
+- Bug fix: Pre-processing range filtering indexing error.
+- Bug fix: ResIPy UI crashes when doing a 2D forward model. 
+- Bug fix: Lippmann parser to handle missing data.
+- Bug fix: RESIMGR parser to handle presence of electrode geometry.
+---- v3.5.0 ----
 - Introduction of project summary page.
 - Major speed improvements to the loading data.
 - Ability to make an error model for non-conventional arrays.
