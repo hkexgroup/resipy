@@ -482,17 +482,40 @@ def protocolParser(fname, ip=False, fwd=False):
 
 def primeParserTab(fname, espacing=1):
     """
-    Parses data from a prime file with the .tab extension - jamyd91
+    Parses data from a PRIME file with the .tab extension - jamyd91
+    Also works for the ResIMGR system. 
     """
-    #error check
-    fh = open(fname,'r')
-    line1 = fh.readline()
-    fh.close()
-    #print(line1)
-    if line1.find("Prime") == -1:
-        raise ImportError("Unrecognised prime file type")
         
-    temp = pd.read_csv(fname,header=26,delimiter='\t')
+    fh = open(fname,'r')
+    c = 0 # count for while loop 
+    line =  ''
+    maxline = 5000 # enforce some kind of saftey net against an unwinnable while loop 
+    geomline = 0 
+    geometry = False 
+    dataline = 0 
+    while 'data:' not in line: 
+        line = fh.readline()
+        if 'no_of_electrodes:' in line: 
+            geomline = c 
+            geometry = True 
+        c += 1 
+        if c > maxline:
+            raise ImportError("Cannot find data line in PRIME/RESIMGR file")
+            break 
+    dataline = c 
+    fh.close()
+    
+    temp = pd.read_csv(fname,header=dataline,delimiter='\t')
+    
+    # filter out error lines if present 
+    if temp['pt_line_number:'].dtype == object:
+        keepidx = [True]*len(temp)
+        for i in range(len(temp)):
+            if '**Error' in temp['pt_line_number:'][i]:
+                keepidx[i] = False 
+        temp = temp[keepidx].reset_index().drop(columns='index')
+    
+
     #Note R2 expects the electrode format in the form:
     #meas.no | P+ | P- | C+ | C- | transfer resistance
     
@@ -533,9 +556,34 @@ def primeParserTab(fname, espacing=1):
     elec['y'] = np.zeros(nelec)
     elec['z'] = np.zeros(nelec)
     
+    # if geometry present, overwrite the default geometry
+    if geometry: 
+        fh = open(fname,'r')
+        try: 
+            for i in range(geomline):
+                _ = fh.readline()
+            nelec = int(fh.readline().split()[-1])
+            _ = fh.readline() 
+            # make electrode data frame 
+            _elec = pd.DataFrame({
+                'label':[0]*nelec,
+                'x':[0.0]*nelec,
+                'y':[0.0]*nelec,
+                'z':[0.0]*nelec,
+                })
+            for i in range(nelec):
+                linesep = fh.readline().split() 
+                _elec.loc[i,'label'] = int(linesep[0])
+                _elec.loc[i,'x'] = float(linesep[1])
+                _elec.loc[i,'y'] = float(linesep[2])
+                _elec.loc[i,'z'] = float(linesep[3])
+            elec = _elec.copy() 
+            fh.close() 
+        except: # if unable to load in geometry fall back and close the file 
+            fh.close() 
+        
+    
     return elec, df
-##Test code
-#electrodes, data = primeParserTab("../Data/PRIME/3001_CAN_2017-11-16_005119.tab")
 
 
 #%% parse input for res2inv (.dat file)
