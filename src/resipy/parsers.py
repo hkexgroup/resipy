@@ -9,7 +9,7 @@ and electrode positions as numpy.array
 
 import numpy as np
 import pandas as pd
-import os 
+import os, warnings 
 import re
 import io
 
@@ -478,7 +478,7 @@ def protocolParser(fname, ip=False, fwd=False):
 # print(array)
 
 
-#%% PRIME system parser
+#%% PRIME family of ERT systems parser
 
 def primeParserTab(fname, espacing=1):
     """
@@ -514,6 +514,7 @@ def primeParserTab(fname, espacing=1):
             if '**Error' in temp['pt_line_number:'][i]:
                 keepidx[i] = False 
         temp = temp[keepidx].reset_index().drop(columns='index')
+        warnings.warn('Data missing in PRIME/RESIMGR file!')
     
 
     #Note R2 expects the electrode format in the form:
@@ -584,6 +585,55 @@ def primeParserTab(fname, espacing=1):
         
     
     return elec, df
+
+def geomParser(fname):
+    """
+    Parse PRIME Geometry file. 
+
+    Parameters
+    ----------
+    fname : str
+        Filepath to file.
+
+    Returns
+    -------
+    dfelec: pd.Dataframe() 
+        Geometry dataframe 
+    """
+    fh = open(fname,'r')
+    
+    x = []
+    y = []
+    z = []
+    n = []
+    b = []
+    
+    c = 0 
+    line = fh.readline()
+    # find header line 
+    while 'data:' not in line: 
+        line = fh.readline() 
+        c+=1 
+        if c>100:
+            raise Exception('Cannot find data line in geom file')
+            break 
+    _ = fh.readline()
+    # read in geometry information 
+    info = fh.readline().split() 
+    while len(info)>0:
+        n.append(int(info[0]))
+        x.append(float(info[1]))
+        y.append(float(info[2]))
+        z.append(float(info[3]))
+        if info[-1] =='Surface': 
+            b.append(0)
+        else:
+            b.append(1)
+        info = fh.readline().split()
+    # convert to pandas dataframe format 
+    d = {'x':x,'y':y,'z':z,'buried':b}
+    dfelec = pd.DataFrame(d)
+    return dfelec 
 
 
 #%% parse input for res2inv (.dat file)
@@ -1651,6 +1701,17 @@ def lippmannParser(fname):
                             'N':'n',
                             'I':'i',
                             'U':'vp'})
+    
+    # Filter out missing data (if there is any)
+    if df['vp'].dtype == object: 
+        keepidx = [True]*len(df)
+        for i in range(len(df)):
+            if '-' in df['vp'][i]:
+                keepidx[i] = False 
+        df = df[keepidx].reset_index().drop(columns='index')
+        warnings.warn('Data missing in Lippman file!')
+    
+    # check for ip data 
     if 'phi' in df.columns:
         df = df.rename(columns={'phi':'ip'})
         df = df[['a','b','m','n','i','vp','ip']]
@@ -1999,52 +2060,5 @@ def dasParser(fname):
     return dfelec, df
     
     
-def geomParser(fname):
-    """
-    Parse PRIME Geometry file. 
 
-    Parameters
-    ----------
-    fname : str
-        Filepath to file.
-
-    Returns
-    -------
-    dfelec: pd.Dataframe() 
-        Geometry dataframe 
-    """
-    fh = open(fname,'r')
-    
-    x = []
-    y = []
-    z = []
-    n = []
-    b = []
-    
-    c = 0 
-    line = fh.readline()
-    # find header line 
-    while 'data:' not in line: 
-        line = fh.readline() 
-        c+=1 
-        if c>100:
-            raise Exception('Cannot find data line in geom file')
-            break 
-    _ = fh.readline()
-    # read in geometry information 
-    info = fh.readline().split() 
-    while len(info)>0:
-        n.append(int(info[0]))
-        x.append(float(info[1]))
-        y.append(float(info[2]))
-        z.append(float(info[3]))
-        if info[-1] =='Surface': 
-            b.append(0)
-        else:
-            b.append(1)
-        info = fh.readline().split()
-    # convert to pandas dataframe format 
-    d = {'x':x,'y':y,'z':z,'buried':b}
-    dfelec = pd.DataFrame(d)
-    return dfelec 
     
