@@ -1297,7 +1297,7 @@ def res3invInputParser(fname):
     #for pole-pole and pole-dipole arrays
     elec[elec > 9999] = 999999
     elec[elec < -9999] = -999999
-    df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n') # removing data where ABMN overlap
+    df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n').reset_index().drop(columns='index') # removing data where ABMN overlap
     
     return elec, df
 
@@ -1439,7 +1439,7 @@ def stingParser(fname):
     #for pole-pole and pole-dipole arrays
     elec[elec > 9999] = 999999
     elec[elec < -9999] = -999999
-    df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n') # removing data where ABMN overlap
+    df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n').reset_index().drop(columns='index') # removing data where ABMN overlap
     
     return elec, df
 
@@ -1702,14 +1702,14 @@ def lippmannParser(fname):
                             'I':'i',
                             'U':'vp'})
     
-    # Filter out missing data (if there is any)
-    if df['vp'].dtype == object: 
-        keepidx = [True]*len(df)
-        for i in range(len(df)):
-            if '-' in df['vp'][i]:
-                keepidx[i] = False 
-        df = df[keepidx].reset_index().drop(columns='index')
-        warnings.warn('Data missing in Lippman file!')
+    # Filter out missing data (if there is any) - Not needed
+    # if df['vp'].dtype == object: 
+    #     keepidx = [True]*len(df)
+    #     for i in range(len(df)):
+    #         if '-' in df['vp'][i]:
+    #             keepidx[i] = False 
+    #     df = df[keepidx].reset_index().drop(columns='index')
+    #     warnings.warn('Data missing in Lippman file!')
     
     # check for ip data 
     if 'phi' in df.columns:
@@ -1719,7 +1719,7 @@ def lippmannParser(fname):
         df = df[['a','b','m','n','i','vp']]
         df['ip'] = 0
         
-    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
+    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float).reset_index().drop(columns='index')    
     
     #calculations
     df['resist'] = df['vp']/df['i']
@@ -1769,7 +1769,7 @@ def aresParser(fname, spacing=None):
         df = df[['a','b','m','n','i','vp']] # should be under "else:"
         df['ip'] = 0 # should be under "else:"
     
-    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
+    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float).reset_index().drop(columns='index')
     df[['a','b','m','n']] = df[['a','b','m','n']].astype(int)
     
     df['resist'] = df['vp']/df['i']
