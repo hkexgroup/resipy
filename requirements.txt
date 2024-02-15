@@ -5,3 +5,4 @@ scipy
 requests
 psutil
 pyvista==0.42.3
+chardet

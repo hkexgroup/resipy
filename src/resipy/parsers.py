@@ -12,6 +12,7 @@ import pandas as pd
 import os, warnings 
 import re
 import io
+import chardet
 
 
 #%% function to compute geometric factor - Jamyd91
@@ -1677,14 +1678,24 @@ def ericParser(file_path):
 def lippmannParser(fname):
     """Read in *.tx0 file from Lippmann instruments
     """
+    encodingFlag = False
+    
     with open(fname, 'r') as fh:
         dump = fh.readlines()
-
+        
     #getting electrode locations
     elec_lineNum_s = [i for i in range(len(dump)) if '* Electrode positions *' in dump[i]]
     elec_lineNum_e = [i-1 for i in range(len(dump)) if '* Remote electrode positions *' in dump[i]]
     elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
-    elec_raw = pd.read_csv(fname, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+    
+    try: 
+        elec_raw = pd.read_csv(fname, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+    except: #probably the problem is encoding. Doing this way because it's slow!
+        with open(fname, 'rb') as f:
+            result = chardet.detect(f.read()) 
+        elec_raw = pd.read_csv(fname, encoding=result['encoding'], skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+        encodingFlag = True
+        
     elec = np.array(elec_raw.str.split(expand=True).astype(float))
     
     #for pole-pole and pole-dipole arrays
@@ -1694,7 +1705,10 @@ def lippmannParser(fname):
     #getting data
     data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
     data_headers = dump[data_linNum_s[0]+1].split()[1:]
-    df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
+    if encodingFlag:
+        df = pd.read_csv(fname, encoding=result['encoding'], delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
+    else:
+        df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1)
     df = df.rename(columns={'A':'a',
                             'B':'b',
                             'M':'m',
@@ -1745,7 +1759,14 @@ def aresParser(fname, spacing=None):
     data_linNum_s = [i for i in range(len(dump)) if 'Measured data' in dump[i]]
     dump_clean = [x.split() for x in dump[data_linNum_s[0]+1:] if 'too low current' not in x]  # filtering "too low current" values
     # df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+1, index_col=False) # old way
-    df = pd.DataFrame(dump_clean[1:], columns=dump_clean[0])
+    
+    try: 
+        df = pd.DataFrame(dump_clean[1:], columns=dump_clean[0])
+    except: # probably the problem is encoding. Doing this way because it's slow!
+        with open(fname, 'rb') as f:
+            result = chardet.detect(f.read())
+        df = pd.DataFrame(dump_clean[1:], encoding=result['encoding'], columns=dump_clean[0])    
+    
     df = df.rename(columns={'C1[el]':'a',
                             'C2[el]':'b',
                             'P1[el]':'m',
@@ -1976,8 +1997,16 @@ def dasParser(fname):
     elec_lineNum_s = [i+2 for i in range(len(dump)) if '#elec_start' in dump[i]] # assuming headers !Cbl# El# Elec-X  Elec-Y  Elec-Z  Terrn-Z  Type  El.Num
     elec_lineNum_e = [i for i in range(len(dump)) if '#elec_end' in dump[i]]
     nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
-    dfElec_raw = pd.read_csv(io.StringIO(cleanData), delim_whitespace=True, skiprows=elec_lineNum_s[0], 
-                             nrows=nrows, index_col=False, header=None)
+    
+    try: 
+        dfElec_raw = pd.read_csv(io.StringIO(cleanData), delim_whitespace=True, skiprows=elec_lineNum_s[0], 
+                                 nrows=nrows, index_col=False, header=None)
+    except: # probably the problem is encoding. Doing this way because it's slow!
+        with open(fname, 'rb') as f:
+            result = chardet.detect(f.read())
+        dfElec_raw = pd.read_csv(io.StringIO(cleanData), encoding=result['encoding'], delim_whitespace=True, skiprows=elec_lineNum_s[0], 
+                                 nrows=nrows, index_col=False, header=None)
+    
     elecNum = dfElec_raw.iloc[:,0].str.split(',', expand=True).astype(int).astype(str)
     elecLabel = elecNum[0].str.cat(elecNum[1], sep=' ')
     dfelec = pd.DataFrame()
