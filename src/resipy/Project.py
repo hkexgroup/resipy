@@ -2325,6 +2325,7 @@ class Project(object): # Project master class instanciated by the GUI
             ie0[dfm['tlindex0'].values] = True
             ie = np.zeros(df.shape[0], dtype=bool)
             ie[dfm['tlindex'].values] = True
+            ie[dfm['irecip'].values <= 0] = False # dont keep reciprocals too 
             indexes.append((ie0, ie))
 
         print('done in {:.3}s'.format(time.time()-t0))
