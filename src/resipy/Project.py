@@ -2318,14 +2318,15 @@ class Project(object): # Project master class instanciated by the GUI
         for survey in self.surveys[1:]:
             df = survey.df.reset_index(drop=True)
             df['tlindex'] = df.index.astype(int)
-            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0']],
-                           df[['a', 'b', 'm', 'n', 'tlindex']],
+            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip']],
+                           df[['a', 'b', 'm', 'n', 'tlindex','irecip']],
                            how='inner', on=['a', 'b', 'm', 'n'])
             ie0 = np.zeros(df0.shape[0], dtype=bool)
             ie0[dfm['tlindex0'].values] = True
             ie = np.zeros(df.shape[0], dtype=bool)
             ie[dfm['tlindex'].values] = True
-            ie[dfm['irecip'].values <= 0] = False # dont keep reciprocals too 
+            if 'irecip' in dfm.columns:
+                ie[dfm['irecip'].values < 0] = False # dont keep reciprocals too 
             indexes.append((ie0, ie))
 
         print('done in {:.3}s'.format(time.time()-t0))
