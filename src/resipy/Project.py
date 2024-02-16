@@ -2274,59 +2274,29 @@ class Project(object): # Project master class instanciated by the GUI
         """
         print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
         t0 = time.time()
-        # dfs = [s.df for s in self.surveys]
-
-        # sort all dataframe (should already be the case)
-        # dfs2 = []
-        # for df in dfs:
-        #     dfs2.append(df)#.sort_values(by=['a','b','m','n']).reset_index(drop=True))
-
-        # NOTE: method below as computing common quadrupoles
-        # among all surveys.
-        # # concatenate columns of string
-        # def cols2str(cols):
-        #     cols = cols.astype(str)
-        #     x = cols[:,0]
-        #     for i in range(1, cols.shape[1]):
-        #         x = np.core.defchararray.add(x, cols[:,i])
-        #     return x
-
-        # # get measurements common to all surveys
-        # df0 = dfs2[0]
-        # x0 = cols2str(df0[['a','b','m','n']].values)
-        # icommon = np.ones(len(x0), dtype=bool)
-        # for df in dfs2[1:]:
-        #     x = cols2str(df[['a','b','m','n']].values)
-        #     ie = np.in1d(x0, x)
-        #     icommon = icommon & ie
-        # print(np.sum(icommon), 'in common...', end='')
-
-        # # create boolean index to match those measurements
-        # indexes = []
-        # xcommon = x0[icommon]
-        # for df in dfs2:
-        #     x = cols2str(df[['a','b','m','n']].values)
-        #     iedups = np.array(pd.Series(x).duplicated()) # cols2str() can cause duplicates and messup np.in1d()
-        #     common = np.in1d(x, xcommon)
-        #     common[np.where(iedups)[0]] = False
-        #     indexes.append(common)
             
         df0 = self.surveys[0].df.reset_index(drop=True)
         df0['tlindex0'] = df0.index.astype(int)
+        df0['irecip0'] = df0.irecip.copy()
         ie0 = np.ones(df0.shape[0], dtype=bool)
         indexes = [(ie0, ie0)]  # array of tuple
         for survey in self.surveys[1:]:
             df = survey.df.reset_index(drop=True)
             df['tlindex'] = df.index.astype(int)
-            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip']],
+            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip0']],
                            df[['a', 'b', 'm', 'n', 'tlindex','irecip']],
                            how='inner', on=['a', 'b', 'm', 'n'])
             ie0 = np.zeros(df0.shape[0], dtype=bool)
             ie0[dfm['tlindex0'].values] = True
             ie = np.zeros(df.shape[0], dtype=bool)
             ie[dfm['tlindex'].values] = True
-            if 'irecip' in dfm.columns:
-                ie[dfm['irecip'].values < 0] = False # dont keep reciprocals too 
+            # dont keep reciprocals too 
+            for i in dfm['tlindex0'].values:
+                if df0.irecip0[i] < 0: 
+                    ie0[i] = False 
+            for i in dfm['tlindex'].values:
+                if df.irecip[i] < 0: 
+                    ie[i] = False  
             indexes.append((ie0, ie))
 
         print('done in {:.3}s'.format(time.time()-t0))
@@ -3696,7 +3666,8 @@ class Project(object): # Project master class instanciated by the GUI
                                      errTot=errTot, threed=threed) # no subset for background, just use all
                 else:
                     content = content + str(protocol.shape[0]) + '\n'
-                    content = content + protocol.to_csv(sep='\t', header=False, index=False)
+                    content = content + protocol.to_csv(sep='\t', header=False, 
+                                                        index=False, lineterminator='\n')
 
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
