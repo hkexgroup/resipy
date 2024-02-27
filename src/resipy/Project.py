@@ -3433,16 +3433,20 @@ class Project(object): # Project master class instanciated by the GUI
         self.mesh = self.mesh.refine()
 
 
-    def write2in(self, param={}):
+    def write2in(self, param={}, err=None):
         """Create configuration file for inversion. Write mesh.dat and res0.dat.
 
         Parameters
         ----------
         param : dict
             Dictionnary of parameters and values for the inversion settings.
+        err: bool
+            Used to overide self.err. 
         """
         typ = self.typ
-        if (self.err is True) and ('a_wgt' not in self.param):
+        if err is None: 
+            err = self.err 
+        if (err is True) and ('a_wgt' not in self.param):
             self.param['a_wgt'] = 0
             self.param['b_wgt'] = 0
         elif (typ == 'R2') or (typ == 'R3t'): # DC case
@@ -3473,7 +3477,7 @@ class Project(object): # Project master class instanciated by the GUI
             if os.path.exists(refdir) == False:
                 os.mkdir(refdir)
             param = self.param.copy()
-            if self.err:
+            if err:
                 param['a_wgt'] = 0
                 param['b_wgt'] = 0
             else: # default DC case as timelapse not supported for IP yet
@@ -3580,6 +3584,7 @@ class Project(object): # Project master class instanciated by the GUI
             
         if err is None:
             err = self.err
+            
         errTyp = self.errTyp # either 'global' (default) or 'survey'
 
         # important changing sign of resistivity and quadrupoles so to work
@@ -3877,7 +3882,7 @@ class Project(object): # Project master class instanciated by the GUI
                 shutil.copy(r2inFile, os.path.join(wd, self.typ + '.in'))
 
         if OS == 'Windows':
-            cmd = [exePath]
+            cmd = ['powershell', '-Command', '&', '"'+exePath+'"']
         elif OS == 'Darwin':
             winetxt = 'wine'
             if getMacOSVersion():
@@ -4024,11 +4029,11 @@ class Project(object): # Project master class instanciated by the GUI
 
 
 
-    def invert(self, param={}, iplot=False, dump=None, modErr=False,
+    def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True, modelDOI=False):
         """Invert the data, first generate R2.in file, then run
-        inversion using appropriate wrapper, then return results.
+        inversion using appropriate wrapper, then return results.  
 
         Parameters
         ----------
@@ -4041,6 +4046,10 @@ class Project(object): # Project master class instanciated by the GUI
         dump : function, optinal
             Function to print the output of the inversion. To be passed to
             `R2.runR2()`.
+        err : bool, optional
+            If 'True' reciprocal error model will be used to weight the 
+            inversion. Can be used to overide self.err. Default is None (in 
+            which case self.err sets the inclusion of error weighting). 
         modErr : bool, optional
             If `True`, the model error will be compute and added before
             inversion.
@@ -4098,8 +4107,8 @@ class Project(object): # Project master class instanciated by the GUI
 
         # write configuration file
         dump('Writing .in file and protocol.dat... ')
-        self.write2in(param=param) # R2.in
-        self.write2protocol(errTot=errTot) # protocol.dat
+        self.write2in(param=param, err=err) # R2.in
+        self.write2protocol(err=err, errTot=errTot) # protocol.dat
         dump('done\n')
 
         # runs inversion
@@ -4108,7 +4117,7 @@ class Project(object): # Project master class instanciated by the GUI
             refdir = os.path.join(self.dirname, 'ref')
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
-            self.write2in(param=param)
+            self.write2in(param=param,err=err)
             self.runR2(refdir, dump=dump) # this line actually runs R2
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                         os.path.join(self.dirname, 'Start_res.dat'))
@@ -4131,7 +4140,7 @@ class Project(object): # Project master class instanciated by the GUI
                 fm0 = self.surveys[0].df['resist'].values.copy()
                 self.sequence = None
                 self.surveys = surveysBackup
-                self.write2protocol(errTot=False, fm0=fm0) # rewrite them with d-d0+f(m0)
+                self.write2protocol(err=err, errTot=False, fm0=fm0) # rewrite them with d-d0+f(m0)
         elif self.iTimeLapse == True and self.referenceMdl==True:
             print('Note: Skipping reference inversion, as reference model has already been assigned')
 
