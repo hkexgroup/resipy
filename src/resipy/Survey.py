@@ -278,13 +278,6 @@ class Survey(object):
             else:
                 self.elec = elec
 
-            # check if voltage is signed for specific formats
-            if ftype == 'BGS Prime':
-                self.checkTxSign()
-            if ftype == 'Syscal':
-                if np.all(self.df['vp'] >= 0):
-                    self.checkTxSign()
-
             # convert apparent resistivity to resistance and vice versa
             self.computeKborehole()
             if 'resist' in self.df.columns:
@@ -453,8 +446,6 @@ class Survey(object):
         # its used for indexing the electrode dataframe  
         self.isequence = fixSequence(self.sequence) 
 
-        # end 
-        
     
     def checkTxSign(self):
         """Checking the sign of the transfer resistances (2D survey only !).
@@ -470,6 +461,7 @@ class Survey(object):
         if 'recipMean0' in self.df.columns: # time-lapse: in case this method is called after importation
             recipMean0 = self.df['recipMean0'].values.copy()
             self.df.loc[ie, 'recipMean0'] = recipMean0[ie]*-1
+
         print('WARNING: change sign of ', np.sum(ie), ' Tx resistance.')
         
 
@@ -482,6 +474,7 @@ class Survey(object):
         else:
             def dump(x):
                 pass
+            
         # remove Inf and NaN
         resist = self.df['resist'].values
         iout = np.isnan(resist) | np.isinf(resist)
@@ -581,11 +574,6 @@ class Survey(object):
         self.df = pd.concat([self.df, data]).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
         self.ndata = len(self.df)
         self.setSeqIds() # need to recompute sequence 
-        if ftype == 'BGS Prime':
-            self.checkTxSign()
-        if ftype == 'Syscal':
-            if np.all(self.df['vp'] >= 0):
-                self.checkTxSign()
             
         self.dfOrigin = self.df.copy()
         self.filterDefault(False) # we assume the user input reciprocal data not another
@@ -1985,8 +1973,9 @@ class Survey(object):
         vmax : float, optional
             Maximum value for the colorbar.
         magFlag: bool, optional
-            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
-            `False`, resistance values are given with correct polarity.
+            Take the magnitude of the column in question. If True, absolute value used. 
+            # If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            # `False`, resistance values are given with correct polarity.
         darkmode : bool, optional
             Alters coloring of the plot for a darker appearance
             
@@ -1994,12 +1983,13 @@ class Survey(object):
         resist = self.df[column].values.copy()
         xpos, _, ypos = self._computePseudoDepth()
         
-        if magFlag: # in case magnitude is provided
-            self.checkTxSign()
-        
         if geom and column=='resist': # compute and applied geometric factor
             # self.computeK()
             resist = resist*self.df['K']
+
+        if magFlag: # in case magnitude is provided
+            resist = np.abs(resist)
+            # self.checkTxSign()
             
         label = r'$\rho_a$ [$\Omega.m$]' # default label 
         title = 'Apparent Resistivity\npseudo section'
@@ -2118,8 +2108,9 @@ class Survey(object):
             returned from Project.detectStrings method. Each entry in list is an 
             array like of ints defining an electrode string. 
         magFlag : bool, optional
-            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
-            `False`, resistance values are given with correct polarity.
+            Take the magnitude of the column in question. If True, absolute value used. 
+            # If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            # `False`, resistance values are given with correct polarity.
         darkmode : bool, optional
             Alters coloring of pyvista plot for a darker appearance
         pvshow : bool, optional
@@ -2156,7 +2147,8 @@ class Survey(object):
         resist = self.df[column].values
                 
         if magFlag: # for cR3t and its magnitude calculation
-            self.checkTxSign()
+            resist = np.abs(resist)
+            # self.checkTxSign()
             
         if geom: # compute and applied geometric factor
             self.computeKborehole()
