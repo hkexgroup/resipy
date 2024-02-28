@@ -1988,8 +1988,7 @@ class Survey(object):
             resist = resist*self.df['K']
 
         if magFlag: # in case magnitude is provided
-            resist = np.abs(resist)
-            # self.checkTxSign()
+            self.checkTxSign()
             
         label = r'$\rho_a$ [$\Omega.m$]' # default label 
         title = 'Apparent Resistivity\npseudo section'
@@ -2147,8 +2146,7 @@ class Survey(object):
         resist = self.df[column].values
                 
         if magFlag: # for cR3t and its magnitude calculation
-            resist = np.abs(resist)
-            # self.checkTxSign()
+            self.checkTxSign()
             
         if geom: # compute and applied geometric factor
             self.computeKborehole()
