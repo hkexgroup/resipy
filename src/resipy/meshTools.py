@@ -1934,7 +1934,7 @@ class Mesh:
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))    
     
     
-    def show3D(self,color_map = 'Spectral',#displays the mesh using matplotlib
+    def show3D(self,color_map = 'Spectral',#displays the mesh using matplotlib or pyvista 
                 color_bar = True,
                 xlim = None,
                 ylim = None,
@@ -2127,7 +2127,18 @@ class Mesh:
             if clipping:
                 nmesh = nmesh.truncateMesh(xlim, ylim, zlim) # truncating is the nly way to reduce the grid extent
             X = nmesh.df[attr].values # NEEDED as truncating change element index
-            nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
+            nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute 
+            
+            # apply threshold (do this before sending to pyvista now)
+            if pvthreshold is not None:
+                if len(pvthreshold) < 2:
+                    raise Exception('pvthreshold argument should be array like with at least two entries')
+                if pvthreshold[0] is None:
+                    pvthreshold[0] = np.nanmin(X)
+                if pvthreshold[1] is None:
+                    pvthreshold[1] = np.nanmax(X)
+                nmesh = nmesh.threshold(attr=color_bar_title, vmin=pvthreshold[0], vmax=pvthreshold[1])
+                # self.pvmesh = self.pvmesh.threshold(value=pvthreshold, scalars=attr)
             
             #save to temperory directory 
             folder = tempfile.TemporaryDirectory()
@@ -2163,15 +2174,6 @@ class Mesh:
                 self.pvmesh = self.pvmesh.cell_data_to_point_data()
                 self.pvmesh = self.pvmesh.delaunay_3d()
                 color_map = plt.cm.get_cmap(color_map, 14) # subdividing colorbar so it look more like contouring!
-            
-            # apply threshold
-            if pvthreshold is not None:
-                if isinstance(pvthreshold, list):
-                    if pvthreshold[0] is None:
-                        pvthreshold[0] = np.nanmin(X)
-                    if pvthreshold[1] is None:
-                        pvthreshold[1] = np.nanmax(X)
-                self.pvmesh = self.pvmesh.threshold(value=pvthreshold, scalars=attr)
             
             # create isosurfaces
             if len(pvcontour) > 0:
