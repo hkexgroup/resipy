@@ -4543,7 +4543,8 @@ class Project(object): # Project master class instanciated by the GUI
                     # model is good enough to explain the data (a_wgt/b_wgt
                     # error too low) so we can replace it by the initial model
                     if self.iTimeLapse:
-                        self.meshResults.append(mesh0) # TODO not sure
+                        self.meshResults.append(mesh0) 
+                        self.meshResults[-1].mesh_title = self.surveys[j].name
                 print('\r{:d}/{:d} results parsed ({:d} ok; {:d} failed)'.format(
                     j+1, len(self.surveys), idone, ifailed), end='')
             else:

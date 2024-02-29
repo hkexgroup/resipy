@@ -447,13 +447,24 @@ class Survey(object):
         self.isequence = fixSequence(self.sequence) 
 
     
-    def checkTxSign(self):
-        """Checking the sign of the transfer resistances (2D survey only !).
+    def checkTxSign(self, inplace=True):
+        """Check the sign of the measurement apparent resistivities. For example
+        this is a necessary step for surveys using the syscal instrument 
+        as the polarity of measurements is not recorded. 
+        
+        Parameters
+        ----------
+        inplace: bool 
+            If True, Change the sign of transfer if they are negative. Defualt 
+            is True. 
         """
         resist = self.df['resist'].values.copy()
         self.computeKborehole()
         K = self.df['K'].values
         ie = ((K < 0) & (resist > 0)) | ((K > 0) & (resist < 0))
+        
+        if not inplace: 
+            return ie # drop out of function now a return indexing array 
         self.df.loc[ie, 'resist'] = resist[ie]*-1
         if 'recipMean' in self.df.columns: # in case this method is called after importation
             recipMean = self.df['recipMean'].values.copy()
@@ -463,6 +474,7 @@ class Survey(object):
             self.df.loc[ie, 'recipMean0'] = recipMean0[ie]*-1
 
         print('WARNING: change sign of ', np.sum(ie), ' Tx resistance.')
+        return ie 
         
 
     def filterDefault(self,recompute_recip=True):
@@ -1973,9 +1985,8 @@ class Survey(object):
         vmax : float, optional
             Maximum value for the colorbar.
         magFlag: bool, optional
-            Take the magnitude of the column in question. If True, absolute value used. 
-            # If `True` then Tx resistance sign will be checked assuming a flat surface survey.
-            # `False`, resistance values are given with correct polarity.
+            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            `False`, resistance values are given with correct polarity.
         darkmode : bool, optional
             Alters coloring of the plot for a darker appearance
             
@@ -1985,10 +1996,11 @@ class Survey(object):
         
         if geom and column=='resist': # compute and applied geometric factor
             # self.computeK()
-            resist = resist*self.df['K']
+            resist = resist*self.df['K'].values 
 
         if magFlag: # in case magnitude is provided
-            self.checkTxSign()
+            ie = self.checkTxSign(inplace=False)
+            resist[ie] *= -1 
             
         label = r'$\rho_a$ [$\Omega.m$]' # default label 
         title = 'Apparent Resistivity\npseudo section'
@@ -2107,9 +2119,8 @@ class Survey(object):
             returned from Project.detectStrings method. Each entry in list is an 
             array like of ints defining an electrode string. 
         magFlag : bool, optional
-            Take the magnitude of the column in question. If True, absolute value used. 
-            # If `True` then Tx resistance sign will be checked assuming a flat surface survey.
-            # `False`, resistance values are given with correct polarity.
+            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            `False`, resistance values are given with correct polarity.
         darkmode : bool, optional
             Alters coloring of pyvista plot for a darker appearance
         pvshow : bool, optional
@@ -2144,16 +2155,17 @@ class Survey(object):
             
         # elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
-                
-        if magFlag: # for cR3t and its magnitude calculation
-            self.checkTxSign()
-            
+        
         if geom: # compute and applied geometric factor
             self.computeKborehole()
-            resist = resist*self.df['K']
+            resist = resist*self.df['K'].values
             resist[np.isinf(resist)] = np.nan # sometimes inf are generated
             # let's set them to nan to prevent colorscale to be meaningless
-        
+                
+        if magFlag: # for cR3t and its magnitude calculation
+            ie = self.checkTxSign(inplace=False) 
+            resist[ie] *= -1 
+            
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = 'log10(Apparent Resistivity) [Ohm.m]'
