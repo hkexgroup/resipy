@@ -81,6 +81,7 @@ r2help = {
 'sensDOI' : "<p>Sensitivity based DOI. If a dashed line will be drawn on the inverted section at 0.001*maxSensitivity."
             "Note that this is not the DOI based on the Oldenburg and Li method.</p>",
 'txSign' : "<p>Check if the polarity of provided transfer resistanses is correct in each survey and if not, automatically corrects them."
-            "<br><i>Note: this assumes a provided survey is on a flat 2D profile.</i></p>"
+            "<b>This might be necessary if the provided file format is of the Syscal type!</b>"    
+            "<br><i>Note: this assumes a provided survey is on a flat surface.</i></p>"
 }
 
