@@ -1993,14 +1993,14 @@ class Survey(object):
         """
         resist = self.df[column].values.copy()
         xpos, _, ypos = self._computePseudoDepth()
-        
-        if geom and column=='resist': # compute and applied geometric factor
-            # self.computeK()
-            resist = resist*self.df['K'].values 
 
         if magFlag: # in case magnitude is provided
             ie = self.checkTxSign(inplace=False)
             resist[ie] *= -1 
+        
+        if geom and column=='resist': # compute and applied geometric factor
+            # self.computeK()
+            resist = resist*self.df['K'].values 
             
         label = r'$\rho_a$ [$\Omega.m$]' # default label 
         title = 'Apparent Resistivity\npseudo section'
@@ -2155,16 +2155,16 @@ class Survey(object):
             
         # elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
-        
+                
+        if magFlag: # for cR3t and its magnitude calculation
+            ie = self.checkTxSign(inplace=False) 
+            resist[ie] *= -1 
+            
         if geom: # compute and applied geometric factor
             self.computeKborehole()
             resist = resist*self.df['K'].values
             resist[np.isinf(resist)] = np.nan # sometimes inf are generated
             # let's set them to nan to prevent colorscale to be meaningless
-                
-        if magFlag: # for cR3t and its magnitude calculation
-            ie = self.checkTxSign(inplace=False) 
-            resist[ie] *= -1 
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
