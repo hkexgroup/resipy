@@ -27,6 +27,7 @@ import matplotlib.path as mpath
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import cKDTree, Voronoi 
+from scipy.interpolate import interp1d
 from copy import deepcopy
 
 #import R2gui API packages 
@@ -4193,8 +4194,9 @@ def tetgen_import(file_path, order_nodes=True):
         
         
 #%% build a quad mesh        
-def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, fmd=None, pad=2, 
-              surface_x=None,surface_z=None,refine_x = None, refine_z=None):
+def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, 
+             fmd=None, pad=2, surface_x=None,surface_z=None,
+             refine_x = None, refine_z=None, model_err=False):
     """Creates a quaderlateral mesh given the electrode x and y positions.
             
     Parameters
@@ -4230,8 +4232,10 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         Default is None. Inserts points in the resulting quad mesh for more control over 
         mesh refinement at depth. Z coordinates. An error will be returned if 
         len(refine_x) != len(refine_z).
+    model_err : bool, optional 
+        If True all topography will be normalised to zero such that the returned 
+        mesh can be used to model foward modelling errors. 
         
-            
     Returns
     -------
     Mesh : class
@@ -4260,6 +4264,8 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         refine_flag = True 
     
     bh_flag = False
+    surface_idx=[]#surface electrode index
+    bur_idx=[]#buried electrode index 
     #determine the relevant node ordering for the surface electrodes? 
     if elec_type is not None:
         if not isinstance(elec_type,list):
@@ -4267,33 +4273,48 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         if len(elec_type) != len(elec_x):
             raise ValueError("mis-match in length between the electrode type and number of electrodes")
         
-        surface_idx=[]#surface electrode index
-        bur_idx=[]#buried electrode index 
         for i,key in enumerate(elec_type):
-            if key == 'electrode': surface_idx.append(i)
+            if key == 'electrode': 
+                surface_idx.append(i)
             if key == 'buried': 
                 bur_idx.append(i)
                 bh_flag = True
         
         if len(surface_idx)>0:# then surface electrodes are present
             Ex = np.array(elec_x)[surface_idx]
-            Ey = np.array(elec_z)[surface_idx]
+            Ez = np.array(elec_z)[surface_idx]
         elif len(surface_idx) == 0 and len(surface_x) > 0:
             #case where you have surface topography but no surface electrodes 
             Ex = np.array(surface_x)
-            Ey = np.array(surface_z)
-            elec = np.c_[Ex, Ey]
+            Ez = np.array(surface_z)
+            elec = np.c_[Ex, Ez]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
             Ex = np.array([elec_x[np.argmin(elec_x)], elec_x[np.argmax(elec_x)]])
-            Ey = np.array([elec_z[np.argmax(elec_z)], elec_z[np.argmax(elec_z)]])
+            Ez = np.array([elec_z[np.argmax(elec_z)], elec_z[np.argmax(elec_z)]])
     else:
-        pass
-        #elec = np.c_[elec_x,elec_y]
+        surface_idx = np.arange(len(elec_x))
+        
     elec = np.c_[elec_x,elec_z]    
     
     if bh_flag:
         bh = np.c_[np.array(elec_x)[bur_idx],np.array(elec_z)[bur_idx]]
+        
+    if model_err: 
+        # if attempting to model forward modelling errors, normalise topography
+        x_interp = np.append(elec[:,0][surface_idx],surface_x)
+        z_interp = np.append(elec[:,1][surface_idx],surface_z)
+        ifunc = interp1d(x_interp, z_interp, fill_value='extrapolate')
+        elec_z = np.array(elec_z) - ifunc(np.array(elec_x))
+        elec = np.c_[elec_x,elec_z]  
+        if len(surface_z) > 0:
+            surface_z = surface_z - ifunc(surface_x)
+        if elec_type is not None: 
+            Ez = Ez - ifunc(Ex)
+        if refine_flag: 
+            refine_z = np.array(refine_z) - ifunc(np.array(refine_x))
+        if bh_flag:
+            bh[:,1] = bh[:,1] - ifunc(bh[:,0])
         
     pad = pad # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
     # create meshx
@@ -4355,7 +4376,7 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
     # create topo
     if bh_flag: # only use surface electrodes to make the topography if buried electrodes present
         X = np.append(Ex, surface_x) 
-        Y = np.append(Ey, surface_z)
+        Y = np.append(Ez, surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
     else: # all electrodes are assumed to be on the surface 
@@ -4692,7 +4713,7 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
 #%% build a triangle mesh - using the gmsh wrapper
 def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
              show_output=True, path='exe', dump=print, whole_space=False, 
-             handle=None, **kwargs):
+             model_err = False, handle=None, **kwargs):
     """ Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
     Uses gmsh version 3.0.6.
@@ -4721,8 +4742,11 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
     whole_space: boolean, optional
-        flag for if the problem should be treated as a whole space porblem, in which case 
+        Flag for if the problem should be treated as a whole space porblem, in which case 
         electrode type is ingored and all electrodes are buried in the middle of a large mesh. 
+    model_err : bool, optional 
+        If True all topography will be normalised to zero such that the returned 
+        mesh can be used to model foward modelling errors. 
     dump : function, optional
         Function to which pass the output during mesh generation. `print()` is
         the default.
@@ -4781,15 +4805,23 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     else:
         dist_sort = np.unique(gw.find_dist(elec_x,np.zeros_like(elec_x),elec_z))
         cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance
-    if 'cl_factor' in kwargs.keys():
-        cl_factor = kwargs['cl_factor']
-    else: 
-        cl_factor = 2.0 
+        
+    # if 'cl_factor' in kwargs.keys():
+    #     cl_factor = kwargs['cl_factor']
+    # else: 
+    #     cl_factor = 2.0 
 
     bur_idx=[]#buried electrode index 
+    surface_idx = [] 
     bu_flag = False 
-    for i,key in enumerate(elec_type):
-        if key == 'buried': bur_idx.append(i); bu_flag = True 
+    if elec_type is not None: 
+        for i,key in enumerate(elec_type):
+            if key == 'buried': 
+                bur_idx.append(i); bu_flag = True 
+            elif key == 'electrode' or key == 'surface':
+                surface_idx.append(i)
+    else:
+        surface_idx = np.arange(len(elec_x))
         
     if bu_flag: 
         bux = np.array(elec_x)[np.array(bur_idx)]
@@ -4803,7 +4835,21 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
             geom_input['refine'][0] = list(geom_input['refine'][0]) + cpx.tolist()
             geom_input['refine'][1] = list(geom_input['refine'][1]) + cpz.tolist()
         else:
-            geom_input['refine'] = [cpx,cpz]           
+            geom_input['refine'] = [cpx,cpz]        
+            
+    if model_err and not whole_space: 
+        # if attempting to model forward modelling errors, normalise topography
+        x_interp = np.array(elec_x)[surface_idx]
+        z_interp = np.array(elec_z)[surface_idx]
+        if geom_input is not None: 
+            if 'surface' in geom_input.keys(): 
+                x_interp = np.append(x_interp, geom_input['surface'][0])
+                z_interp = np.append(z_interp, geom_input['surface'][1])
+        ifunc = interp1d(x_interp, z_interp, fill_value='extrapolate')
+        elec_z = np.array(elec_z) - ifunc(np.array(elec_x))
+        if geom_input is not None: 
+            for key in geom_input.keys(): 
+                geom_input[key][1] = np.array(geom_input[key][1]) - ifunc(np.array(geom_input[key][0]))
     
     #make .geo file
     file_name="mesh"
@@ -4852,8 +4898,8 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
 def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, 
               interp_method = 'triangulate', surface_refinement=None, 
               mesh_refinement=None, ball_refinement=True,
-              path='exe', dump=print, whole_space=False, handle=None, 
-              show_output=True, **kwargs):
+              path='exe', dump=print, whole_space=False, model_err=False,
+              handle=None, show_output=True, **kwargs):
     """
     Generates a tetrahedral mesh for R3t (with topography) for field surveys.
     This function expects the current working directory has path: exe/gmsh.exe.
@@ -4901,10 +4947,15 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     whole_space: boolean, optional
         flag for if the problem should be treated as a whole space porblem, in 
         which case electrode type is ingored and all electrodes are buried in 
-        the middle of a large mesh. 
+        the middle of a large mesh.
+    model_err: bool
+        If True, a flat mesh will be returned for the sake of estimating 
+        forward modelling errors. 
     dump : function, optional
         Function to which pass the output during mesh generation. `print()` is
         the default.
+    **kwargs: dict
+        Keyword arguments to be passed to functions in gmshWrap.py 
          
    Returns
     ---------- 
@@ -5054,8 +5105,8 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                 bur_elec_z_topo = interp.triangulate(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
     
             elec_z[bur_elec_idx] = elec_z[bur_elec_idx] - bur_elec_z_topo # normalise to zero surface 
-            bur_elec_z = elec_z[bur_elec_idx] - bur_elec_z_topo
-    
+            bur_elec_z = elec_z[bur_elec_idx] 
+
         elec_z[surf_elec_idx] = 0
         
     elif not whole_space:
@@ -5184,22 +5235,24 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             cbx = [0]*len(bur_elec_x)
             cby = [0]*len(bur_elec_x)
             cbz = [0]*len(bur_elec_x)
-            choice = np.arange(4)
-            for i in bur_elec_idx:
-                r = cl*1.0
-                choicex = [r, 0, -r, 0]
-                choicey = [0, -r, 0, r]
-                j = np.random.choice(choice)
-                cbx[i] = elec_x[i] + choicex[j]
-                cby[i] = elec_y[i] + choicey[j]
-                cbz[i] = elec_z[i] 
+            # setup some code to get control points spiraling round the borehole electrodes 
+            r = cl*1.0
+            choicex = [r, 0, -r, 0]
+            choicey = [0, -r, 0, r]
+            j = 0 
+            for i in range(len(bur_elec_idx)):
+                cbx[i] = bur_elec_x[i] + choicex[j]
+                cby[i] = bur_elec_y[i] + choicey[j]
+                cbz[i] = bur_elec_z[i] 
+                j += 1 
+                if j >= 4:
+                    j = 0 
                 
             cpx = np.append(cpx,cbx)
             cpy = np.append(cpy,cby)
             cpz = np.append(cpz,cbz)
             cpl = np.full_like(cpx, cl*cl_factor)
                 
-
         # one last check that no points are duplicates of electrodes 
         idist,_ = tree.query(np.c_[cpx,cpy,cpz]) 
         tokeep = [True]*len(cpx)
@@ -5270,9 +5323,12 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
-        
     
-    dump('interpolating topography onto mesh using %s interpolation...'%interp_method)
+    if model_err:
+        interp_method = None 
+        dump('Created flat mesh for forward error modelling')
+    else:
+        dump('interpolating topography onto mesh using %s interpolation...'%interp_method)
     
     #using home grown functions to interpolate / extrapolate topography on mesh
     if interp_method == 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates

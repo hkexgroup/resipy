@@ -2895,7 +2895,7 @@ class Project(object): # Project master class instanciated by the GUI
         dfelec = dfelec[~self.elec['remote']] # discard remote electrode for this
         elec = dfelec[['x','y','z']].values
         if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D survey:
-            if (len(self.surveys) > 0) & (self.iForward == False):
+            if (len(self.surveys) > 0):# & (self.iForward == False):
                 lookupDict = dict(zip(dfelec['label'], np.arange(dfelec.shape[0])))
                 array = self.surveys[0].df[['a','b','m','n']].replace(lookupDict).values.copy().astype(int) # strings don't have max/min
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
@@ -2904,16 +2904,15 @@ class Project(object): # Project master class instanciated by the GUI
                 self.fmd = (1/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
 
         else: # for 3D survey
-            dist = np.zeros((len(elec), len(elec)))
-            for i, el1 in enumerate(elec):
-                dist[:,i] = np.sqrt(np.sum((el1[None,:] - elec)**2, axis=1))
+            dist = mt.findDist(elec[:,0], elec[:,1], elec[:,2])
             self.fmd = (1/3)*np.max(dist)
 
         if self.elec['buried'].sum() > 0:
             # catch where buried electrodes are present as the fmd needs adjusting in this case 
             if self.elec['buried'].sum() == self.elec.shape[0]:
-                # if all buried, we assume surface at 0 m
-                self.fmd = np.abs(0 - np.min(elec[:,2])) + 1
+                # find max distance 
+                dist = mt.findDist(elec[:,0], elec[:,1], elec[:,2])
+                self.fmd = (1/3)*np.max(dist)
             else: # surface given by max z elec
                 self.fmd = np.abs(np.max(elec[:,2])  - np.min(elec[:,2])) + (0.5*self.fmd)
         # print('Fine Mesh Depth (relative to the surface): {:.2f} m'.format(self.fmd))
@@ -3041,6 +3040,8 @@ class Project(object): # Project master class instanciated by the GUI
         
         if typ == 'quad':
             print('Creating quadrilateral mesh...', end='')
+            if 'fmd' not in kwargs.keys():
+                kwargs['fmd'] = self.fmd 
             meshtypename = 'Quadrilateral'
             surface_x = self.topo['x'].values if surface is not None else None
             surface_z = self.topo['z'].values if surface is not None else None
@@ -5086,7 +5087,8 @@ class Project(object): # Project master class instanciated by the GUI
             fig, ax = plt.subplots()
         else:
             fig = ax.figure
-
+        
+        dump('Fine mesh depth in deisgned model is %f'%float(self.fmd))
         self.geom_input = {}
         elecColor = 'ko' if self.darkMode is False else 'wo'
         ax.plot(self.elec['x'], self.elec['z'], elecColor, label='electrode')
@@ -5703,19 +5705,28 @@ class Project(object): # Project master class instanciated by the GUI
 
         Same arguments as `Project.createMesh()`.
         """
+        if self.wholespace:
+            raise Exception('Model Error mesh function meant for halfspace problems only')
+    
+        cases = ['tetra','trian','quad'] # use cases where modelling error is a half space 
+        if self.meshParams['typ'] not in cases: 
+            raise Exception('Modelling error mesh not avialable for this mesh type yet')
+            
         # backup
         elecZ = self.elec['z'].values.copy()
         mesh = self.mesh.copy() if self.mesh is not None else None
         zlim = self.zlim.copy()
         param = self.param.copy()
         
+        kwargs['model_err'] = True # force model_err argument to be true 
+        
         # create FLAT homogeneous mesh 
-        if '2' in self.typ: # normalise to flat surface if 2D            
-            idx = (self.elec['remote'].values == False) & (self.elec['buried'].values == False)
-            ez = self.elec['z'].values[idx]
-            ex = self.elec['x'].values[idx]
-            ez_tmp = self.elec['z'].values - np.interp(self.elec['x'].values,ex,ez)
-            self.elec['z'] = ez_tmp
+        # if '2' in self.typ: # normalise to flat surface if 2D            
+        #     idx = (self.elec['remote'].values == False) & (self.elec['buried'].values == False)
+        #     ez = self.elec['z'].values[idx]
+        #     ex = self.elec['x'].values[idx]
+        #     ez_tmp = self.elec['z'].values - np.interp(self.elec['x'].values,ex,ez)
+        #     self.elec['z'] = ez_tmp
             
         # self.elec['z'] = 0
         self.createMesh(**kwargs)
@@ -5798,10 +5809,9 @@ class Project(object): # Project master class instanciated by the GUI
         elif any(self.elec['z'].values != 0): # so we have topography in this case and need a new mesh 
             dump('Creating mesh without ANY topography...\n\n')
             meshParams = self.meshParams.copy()
-            if '3' in self.typ:#change interp method 
-                meshParams['interp_method'] = None # dont do any interpolation 
-            if 'geom_input' in meshParams: # dont use geometry from here because it'll likley be incompatible on the flat mesh
-                meshParams['geom_input'] = {}
+            meshParams['model_err'] = True 
+            # if 'geom_input' in meshParams: # dont use geometry from here because it'll likley be incompatible on the flat mesh
+            #     meshParams['geom_input'] = {}
                 
             # NB: Don't use the same dump from the mesh creation tab in the UI 
             if 'show_output' in meshParams: 

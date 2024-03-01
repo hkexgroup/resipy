@@ -1783,7 +1783,7 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
             else:
                 if rz[i]>0:
                     fh.close()
-                    raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have refinement points above the surface!")
+                    raise ValueError("point z coordinate is greater than 0 in gmshWrap.py and you can't have refinement points above the surface!")
                 fh.write("Point (%i) = {%.16f, %.16f, %.16f, %.16f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
                 fh.write("Point{%i} In Volume{%i};//buried refinement point\n"%(no_pts,1))# put the point in volume 
         fh.write('//End mesh refinement points\n')

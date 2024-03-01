@@ -3311,6 +3311,7 @@ class App(QMainWindow):
         # and need to be distinct from each other (not touching each other)
         def designModel():
             self.iDesign = True
+            fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
             # read electrodes locations
             elec = self.elecTable.getTable()
             if elec['x'].isna().sum() > 0:
@@ -3320,7 +3321,7 @@ class App(QMainWindow):
             # plot the interactive model
             self.regionTable.reset()
             def func(ax):
-                self.project.designModel(ax=ax, addAction=self.regionTable.addRow)
+                self.project.designModel(ax=ax, addAction=self.regionTable.addRow, fmd=fmd)
             self.mwMesh.plot(func, aspect = self.plotAspect)
             self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             self.mwMesh.canvas.setFocus() # set focus on the canvas
