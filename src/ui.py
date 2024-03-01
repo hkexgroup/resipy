@@ -407,7 +407,7 @@ class App(QMainWindow):
                     if (k.typ == 'R2') | (k.typ == 'cR2'):
                         self.m2DRadio.setChecked(True)
                     else:
-                        if platform.machine() not in ['armv7l', 'aarch64']:
+                        if platform.machine() in ['armv7l', 'aarch64']:
                             self.m3DRadio.setChecked(False)
                         else:
                             self.m3DRadio.setChecked(True)
@@ -435,6 +435,8 @@ class App(QMainWindow):
                     else:
                         self.elecTable.initTable(self.project.elec) # load electrodes back in
                     self.tempElec = self.elecTable.getTable()
+                    self.elecDx2DTape.setEnabled(True)
+                    self.localGrid.setEnabled(True)
                     if self.project.iBorehole:
                         self.boreholeCheck.setChecked(True)
                     
@@ -6981,12 +6983,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if 'ip' in self.project.surveys[0].df.columns:
             if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                 self.ipCheck.setChecked(True)
+                self.plotPseudoIP()
             if self.ftype == 'Syscal':
                 self.dcaButton.setEnabled(True)
                 self.dcaProgress.setEnabled(True)
         if np.isnan(self.project.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
             self.topoInterpBtnFunc()
             self.updateElec()
+        self.psContourCheck.setEnabled(True)
+        self.mergElecCheck.setEnabled(True)
         self.plotPseudo()
         self.nbElecEdit.setText(str(self.project.elec.shape[0]))
         self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2]))[0]))
