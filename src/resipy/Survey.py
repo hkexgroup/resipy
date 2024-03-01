@@ -453,11 +453,11 @@ class Survey(object):
         electemp['order'] = np.arange(1, len(electemp)+1)
         electempXsort = electemp.sort_values(by='x')
         x_local = electempXsort['x'].values - electempXsort['x'].values[0]
-        electempXsort['x_orig'] = electempXsort['x'] # keep the original values in case we want to go back
+        electempXsort['x_orig'] = electempXsort['x'].values # keep the original values in case we want to go back
         electempXsort['x'] = x_local
         electempYsort = electempXsort.sort_values(by='y')
         y_local = electempYsort['y'].values - electempYsort['y'].values[0]
-        electempYsort['y_orig'] = electempXsort['y'] # keep the original values in case we want to go back
+        electempYsort['y_orig'] = electempYsort['y'].values # keep the original values in case we want to go back
         electempYsort['y'] = y_local
         self.elec = electempYsort.sort_values(by='order').drop(['order'], axis=1)
     
