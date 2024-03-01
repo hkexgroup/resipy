@@ -447,6 +447,21 @@ class Survey(object):
         self.isequence = fixSequence(self.sequence) 
 
     
+    def convertLocalGrid(self):
+        """Converts UTM grid to local grid for mesh stability"""
+        electemp = self.elec.copy()
+        electemp['order'] = np.arange(1, len(electemp)+1)
+        electempXsort = electemp.sort_values(by='x')
+        x_local = electempXsort['x'].values - electempXsort['x'].values[0]
+        electempXsort['x_orig'] = electempXsort['x'] # keep the original values in case we want to go back
+        electempXsort['x'] = x_local
+        electempYsort = electempXsort.sort_values(by='y')
+        y_local = electempYsort['y'].values - electempYsort['y'].values[0]
+        electempYsort['y_orig'] = electempXsort['y'] # keep the original values in case we want to go back
+        electempYsort['y'] = y_local
+        self.elec = electempYsort.sort_values(by='order').drop(['order'], axis=1)
+    
+    
     def checkTxSign(self, inplace=True):
         """Check the sign of the measurement apparent resistivities. For example
         this is a necessary step for surveys using the syscal instrument 

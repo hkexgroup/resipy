@@ -889,6 +889,22 @@ class Project(object): # Project master class instanciated by the GUI
         self.setElec(self.surveys[0].elec)
 
 
+    def convertLocalGrid(self):
+        """
+        Converts UTM grid to local grid for mesh stability
+        
+        Parameters
+        ----------
+        reset : bool, optional
+            reset the grid to original
+        """
+        for s in self.surveys:
+            s.convertLocalGrid() 
+
+        # reset first survey electrodes to project electrodes
+        self.setElec(self.surveys[0].elec)
+
+
     def setwd(self, dirname):
         """Set the working directory.
 

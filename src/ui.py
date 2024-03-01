@@ -1868,6 +1868,29 @@ class App(QMainWindow):
         self.importElecBtn.setAutoDefault(True)
         self.importElecBtn.clicked.connect(importElecBtnFunc)
         
+        def convertLocalGrid(state):
+            self.updateElec()
+            if state  == Qt.Checked:
+                self.elecBackUp3 = self.project.elec.copy() # backing up electrodes and surveys if checkbox is unchecked
+                self.surveysBackUp3 = self.project.surveys.copy()
+                self.project.convertLocalGrid()
+                self.infoDump('The grid is converted to local')
+            else:
+                self.project.elec = self.elecBackUp3.copy() # backing up electrodes and surveys if checkbox is unchecked
+                self.project.surveys = self.surveysBackUp3.copy()
+                self.infoDump('The grid is reverted to the original state')
+
+            self.elecTable.initTable(self.project.elec)
+            self.tempElec = None
+            self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+            self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+            self.updateElec()
+        
+        self.localGrid = QCheckBox('Local grid')
+        self.localGrid.setToolTip('Converts UTM coordinates to local grid for mesh stability')
+        self.localGrid.stateChanged.connect(convertLocalGrid)
+        self.localGrid.setEnabled(False)
+        
         self.nbElecEdit = QLineEdit()
         self.nbElecEdit.setValidator(QDoubleValidator())
         self.nbElecEdit.setEnabled(False)
@@ -1979,6 +2002,7 @@ class App(QMainWindow):
         self.elecGenLayout.addWidget(self.elecDxLabel)
         self.elecGenLayout.addWidget(self.elecDxEdit)
         self.elecGenLayout.addWidget(self.elecDx2DTape)
+        self.elecGenLayout.addWidget(self.localGrid)
         self.elecGenLayout.addWidget(self.elecDzLabel)
         self.elecGenLayout.addWidget(self.elecDzEdit)
         self.elecGenLayout.addWidget(self.elecLineLabel)
@@ -6906,6 +6930,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.activateTabs(True)
             self.tempElec = self.elecTable.getTable()
             self.elecDx2DTape.setEnabled(True)
+            self.localGrid.setEnabled(True)
             self.infoDump(fname + ' imported successfully')
         except Exception as e:
             self.loadingWidget(exitflag=True)
@@ -7000,6 +7025,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.ipCheck.setEnabled(False)
         self.elecDx2DTape.setChecked(False)
         self.elecDx2DTape.setEnabled(False)
+        self.localGrid.setChecked(False)
+        self.localGrid.setEnabled(False)
         self.importDataRecipBtn.hide()
         self.fnamesCombo.hide()
         self.fnamesComboLabel.hide()
