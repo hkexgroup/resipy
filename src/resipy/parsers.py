@@ -1190,7 +1190,7 @@ def res3invInputParser(fname):
             errFlag = False
     
     # see if there is  IP data
-    ipChecks = ['Chargeability', 'ip', 'IP', 'chargeability', 'mv/v', 'msec', 'mV/V']
+    ipChecks = ['Chargeability', 'ip', 'IP', 'chargeability', 'mv/v', 'msec', 'mV/V', '%', 'Frequency', 'frequency']
     for i in range(20): # looking at first 20 lines of the file
         if any(check in dump[i+1] for check in ipChecks): # ommit first line
             ipFlag = True
