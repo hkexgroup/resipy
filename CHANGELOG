@@ -1,3 +1,19 @@
+v3.5.2
+------
+- Remote electrodes usable with a quadrilateral mesh.
+- Apparent resistivity calculations tweaked.
+- 2D meshing defaults to 4 elements between electrodes
+- Non UTF-8 import possible for certain formats.
+- Add ability to convert UTM coordinates to local grid.
+- Bug fix: Reciprocal measurements now filtered in timelapse mode.
+- Bug fix: Sign of apparent resistivities is no longer altered.
+- Bug fix: The 3D threshold filter. 
+- Bug fix: Remote electrodes work with pseudo 3D and 2D inversions.
+- Bug fix: Better fine mesh depth calculated during forward modelling.
+- Bug fix: 3D meshing where both surface and buried electrodes are present.
+- Bug fix: Missing topography of remote electrodes
+
+
 v3.5.1
 ------
 - Improved meshing borehole surveys (2D and 3D).
