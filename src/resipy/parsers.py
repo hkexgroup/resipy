@@ -1129,6 +1129,12 @@ def res2invInputParser(file_path):
         ey_pos=[0]*num_elec
         ez_pos=[0]*num_elec
         
+    # in case the topography is incomplete for remote electrodes
+    if ((ex_pos[0] == -999999) | (ex_pos[0] == 999999)) & (np.isnan(ez_pos[0])):
+        ez_pos[0] = np.mean(ez_pos[~np.isnan(ez_pos)])
+    if ((ex_pos[-1] == -999999) | (ex_pos[-1] == 999999)) & (np.isnan(ez_pos[-1])):
+        ez_pos[-1] = np.mean(ez_pos[~np.isnan(ez_pos)])
+    
     elec = np.column_stack((ex_pos,ey_pos,ez_pos))
     
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
