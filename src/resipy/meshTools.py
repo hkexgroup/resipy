@@ -4194,7 +4194,7 @@ def tetgen_import(file_path, order_nodes=True):
         
         
 #%% build a quad mesh        
-def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, 
+def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.5, 
              fmd=None, pad=2, surface_x=None,surface_z=None,
              refine_x = None, refine_z=None, model_err=False):
     """Creates a quaderlateral mesh given the electrode x and y positions.
@@ -4263,9 +4263,15 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
     else:
         refine_flag = True 
     
+    elec_x = np.array(elec_x)
+    elec_z = np.array(elec_z)
+    elec_x_cache = None 
+    elec_z_cache = None 
+    
     bh_flag = False
-    surface_idx=[]#surface electrode index
-    bur_idx=[]#buried electrode index 
+    surface_idx = []#surface electrode index
+    bur_idx = []#buried electrode index 
+    rem_idx = [] 
     #determine the relevant node ordering for the surface electrodes? 
     if elec_type is not None:
         if not isinstance(elec_type,list):
@@ -4279,7 +4285,9 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
             if key == 'buried': 
                 bur_idx.append(i)
                 bh_flag = True
-        
+            if key == 'remote':
+                rem_idx.append(i)
+            
         if len(surface_idx)>0:# then surface electrodes are present
             Ex = np.array(elec_x)[surface_idx]
             Ez = np.array(elec_z)[surface_idx]
@@ -4315,6 +4323,13 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
             refine_z = np.array(refine_z) - ifunc(np.array(refine_x))
         if bh_flag:
             bh[:,1] = bh[:,1] - ifunc(bh[:,0])
+            
+    if len(rem_idx) > 0:
+        elec_x_cache = elec_x.copy()
+        elec_z_cache = elec_z.copy()
+        elec_x = np.delete(elec_x,rem_idx)
+        elec_z = np.delete(elec_z,rem_idx)
+        elec = np.c_[elec_x,elec_z]
         
     pad = pad # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
     # create meshx
@@ -4353,7 +4368,6 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         else:
             fmd = (max(elec[:,0]) - min(elec[:,0]))/2
         
-#    dyy = espacing/(elemx*4)
     meshz = [0]
     dyy = np.mean(np.diff(elecXsorted))/5
     for i in range(100):
@@ -4362,7 +4376,7 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         if meshz[-1] > fmd:
             break
     elemy = len(meshz)
-    elemy2 = int(elemy/2)
+    elemy2 = int(elemy*1.2)
     yy = np.ones(elemy2)*meshz[-1]
     for i in range(1, elemy2):
         yy[i] = yy[i-1]+dyy*zgf
@@ -4394,8 +4408,7 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         norm_rz = np.interp(refine_x, X, Y) - refine_z 
         meshz = np.unique(np.append(meshz,norm_rz))
     
-    ###
-    #find the columns relating to the electrode nodes? 
+    ## find the columns relating to the electrode nodes? ##
     temp_x = meshx.tolist()
     temp_y = meshz.tolist()
     elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 because of indexing in R2. 
@@ -4454,7 +4467,14 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
                 order_nodes=False) 
  
     
-    #find the node which the electrodes are actually on in terms of the mesh. 
+    #find the node which the electrodes are actually on in terms of the mesh.
+    if len(rem_idx) > 0:
+        # get original x z coordinates with the remote electrode included 
+        elec_x = elec_x_cache.copy() 
+        elec_z = elec_z_cache.copy() 
+        elec_x[rem_idx] = np.min(node_x)
+        elec_z[rem_idx] = np.min(node_z)
+        
     node_in_mesh = [0]*len(elec_x)
     for i in range(len(elec_x)):
         sq_dist = (node_x - elec_x[i])**2 + (node_z - elec_z[i])**2 # find the minimum square distance
@@ -4858,7 +4878,7 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
                                   file_path=file_name,**kwargs)
     elif whole_space:
         print("Whole space problem")
-        node_pos = gw.wholespace2d([elec_x,elec_z], geom_input = geom_input, 
+        node_pos = gw.wholespace2d([elec_x,elec_z], elec_type, geom_input = geom_input, 
                                    file_path=file_name,**kwargs)    
     
     # run gmsh

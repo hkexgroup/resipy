@@ -3020,11 +3020,6 @@ class Project(object): # Project master class instanciated by the GUI
         
         # flag for if mesh gets refined during mesh creation 
         refined = False 
-    
-        # check if remote electrodes present
-        if (self.elec['remote'].sum() > 0) & (typ == 'quad'):
-            dump('remote electrode is not supported in quadrilateral mesh for now, please use triangular mesh instead.')
-            return
 
         # define electrode types
         if buried is not None:
@@ -3033,6 +3028,7 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 print('length of argument "buried" ({:s}) does not match length'
                       ' of self.elec ({:d})'.format(len(buried), self.elec.shape[0]))
+                
         elec_x = self.elec['x'].values
         elec_y = self.elec['y'].values
         elec_z = self.elec['z'].values

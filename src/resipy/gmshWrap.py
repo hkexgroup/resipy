@@ -575,7 +575,8 @@ def wholespace2d(electrodes, padding = 20, electrode_type = None, geom_input = N
         is the elevation
     padding: float, optional
         Padding in percent on the size the fine mesh region extent. Must be bigger than 0.
-        
+    electrode_type: list
+        Electrode types. 
     geom_input: dict, optional
         Allows for further customisation of the 2D mesh, its a
         dictionary contianing surface topography, polygons and boundaries 
@@ -1134,9 +1135,9 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         if dp_len == -1:#there is no change dipole length, maybe due to 1 x coordinate 
             dp_len = dist_sort[-1]
         if fmd == -1:
-            fmd = (max(topo_z) - min(electrodes[1]))+(5*elecspacing)
+            fmd = (max(topo_z) - min(tmp_z))+(5*elecspacing)
         if cl == -1:
-            cl = elecspacing/2
+            cl = elecspacing/4
                   
     if dp_len == -1 and len(elec_x)>0:#compute maximum dipole length
         dp_len = abs(np.max(elec_x) - np.min(elec_x))
@@ -1150,7 +1151,7 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     dump("dp_len in gmshWrap.py: %f"%dp_len)
     
     if cl == -1:
-        cl = abs(np.mean(np.diff(elec_x))/2)
+        cl = abs(np.mean(np.diff(elec_x))/4)
             
     if len(topo_x) != len(topo_z):
         raise ValueError("topography x and z arrays are not the same length!")
@@ -1175,15 +1176,20 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     z_pts=np.append(topo_z,elec_z)
     flag=['topography point']*len(topo_x)
     flag=flag+(['electrode']*len(elec_x))   
+
+    # check that all non remote electrodes fall within the fine mesh region 
+    elec_x_check = np.array(electrodes[0])
+    if len(rem_idx) > 0:
+        elec_x_check = np.delete(elec_x_check, rem_idx)
     
     #deal with end case electrodes, check max topo points are outside survey bounds 
-    while min(electrodes[0]) <= min(x_pts):
+    while min(elec_x_check) <= min(x_pts):
         min_idx = np.argmin(x_pts)
         x_pts = np.append(x_pts,x_pts[min_idx] - (cl*cl_factor)) # in this case extend the survey bounds beyond the first (leftmost) electrode 
         z_pts = np.append(z_pts,z_pts[min_idx])
         flag.append('topography point')#add a flag
         
-    while max(electrodes[0]) >= max(x_pts):
+    while max(elec_x_check) >= max(x_pts):
         max_idx = np.argmax(x_pts)
         x_pts = np.append(x_pts,x_pts[max_idx] + (cl*cl_factor)) # in this case extend the survey bounds beyond the last (rightmost) electrode 
         z_pts = np.append(z_pts,z_pts[max_idx])
@@ -1548,8 +1554,8 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         #a bogus coordinate associated with it (ie. -99999)
         for k in range(len(rem_idx)):
             no_pts += 1
-            remote_x = x_pts[0]-flank + 10*np.random.rand()
-            remote_z = b_max_depth  + 10*np.random.rand()
+            remote_x = x_pts[0]-flank + (cl*cl_factor*(k+1))
+            remote_z = b_max_depth  + (cl*cl_factor)
             fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//remote electrode\n"%(no_pts,remote_x,0,remote_z))
             e_pt_idx[k] = no_pts
             elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
