@@ -1804,7 +1804,8 @@ class Survey(object):
     def computeKborehole(self,Gl = None): # ground level 
         """
         Compute geometric factor for a borehole survey assuming a flat 2D 
-        surface. Gl = ground level. 
+        surface. Gl = ground level. Calculated according to Eq 4.9 of Binley 
+        and Slater (2020). 
         """
       
         # lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
@@ -1845,23 +1846,23 @@ class Survey(object):
         
         Ax_ = Ax.copy()
         Ay_ = Ay.copy()
-        Az_ = 2*Gl-Az
+        Az_ = Az + 2*(Gl-Az) # imaginary elevation 
         
         Bx_ = Bx.copy()
         By_ = By.copy()
-        Bz_ = 2*Gl-Bz
+        Bz_ = Bz + 2*(Gl-Bz)
         
         rAM = np.sqrt((Ax-Mx)**2 + (Ay-My)**2 + (Az-Mz)**2)
         rAN = np.sqrt((Ax-Nx)**2 + (Ay-Ny)**2 + (Az-Nz)**2)
         rBM = np.sqrt((Bx-Mx)**2 + (By-My)**2 + (Bz-Mz)**2)
         rBN = np.sqrt((Bx-Nx)**2 + (By-Ny)**2 + (Bz-Nz)**2)
         
-        rA_M = np.sqrt((Ax_-Mx)**2 + (Ay_-My)**2 + (Az_-Mz)**2)
-        rA_N = np.sqrt((Ax_-Nx)**2 + (Ay_-Ny)**2 + (Az_-Nz)**2)
-        rB_M = np.sqrt((Bx_-Mx)**2 + (By_-My)**2 + (Bz_-Mz)**2)
-        rB_N = np.sqrt((Bx_-Nx)**2 + (By_-Ny)**2 + (Bz_-Nz)**2)
+        rAiM = np.sqrt((Ax_-Mx)**2 + (Ay_-My)**2 + (Az_-Mz)**2)
+        rAiN = np.sqrt((Ax_-Nx)**2 + (Ay_-Ny)**2 + (Az_-Nz)**2)
+        rBiM = np.sqrt((Bx_-Mx)**2 + (By_-My)**2 + (Bz_-Mz)**2)
+        rBiN = np.sqrt((Bx_-Nx)**2 + (By_-Ny)**2 + (Bz_-Nz)**2)
         
-        k = (1/rAM)+(1/rA_M)-(1/rAN)-(1/rA_N)-(1/rBM)-(1/rB_M)+(1/rBN)+(1/rB_N)
+        k = (1/rAM)+(1/rAiM)-(1/rAN)-(1/rAiN)-(1/rBM)-(1/rBiM)+(1/rBN)+(1/rBiN)
         K = 4*np.pi/k
         
         self.df['K'] = K 
