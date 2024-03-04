@@ -6906,36 +6906,36 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pdebug('importFile:', fname)
         if len(self.project.surveys) > 0:
             self.project.surveys = []
-        try:                
-            self.loadingWidget('Loading data, please wait...', False) # for large datasets
-            if platform.machine() not in ['armv7l', 'aarch64']:
-                self.ipCheck.setEnabled(True)
-            self.psContourCheck.setEnabled(True)
-            self.mergElecCheck.setEnabled(True)
-            self.fname = fname
-            if float(self.spacingEdit.text()) == -1:
-                spacing = None
-            else:
-                spacing = float(self.spacingEdit.text())
-    
-            self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
-                                 parser=self.parser)
-            self.writeLog('k.createSurvey("{:s}", ftype="{:s}")'.format(self.fname, self.ftype))
-            self.settingUI()
-            self.loadingWidget(exitflag=True)
-            self.importDataBtn.setText(os.path.basename(fname) + ' (Press to change)')
-            self.invNowBtn.setEnabled(True)
-            self.activateTabs(True)
-            self.tempElec = self.elecTable.getTable()
-            self.elecDx2DTape.setEnabled(True)
-            self.localGrid.setEnabled(True)
-            self.infoDump(fname + ' imported successfully')
-        except Exception as e:
-            self.loadingWidget(exitflag=True)
-            pdebug('importFile: ERROR:', e)
-            self.errorDump('Importation failed. File is not being recognized. \
-                      Make sure you have selected the right file type.')
-            pass
+        # try:                
+        self.loadingWidget('Loading data, please wait...', False) # for large datasets
+        if platform.machine() not in ['armv7l', 'aarch64']:
+            self.ipCheck.setEnabled(True)
+        self.psContourCheck.setEnabled(True)
+        self.mergElecCheck.setEnabled(True)
+        self.fname = fname
+        if float(self.spacingEdit.text()) == -1:
+            spacing = None
+        else:
+            spacing = float(self.spacingEdit.text())
+
+        self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                             parser=self.parser)
+        self.writeLog('k.createSurvey("{:s}", ftype="{:s}")'.format(self.fname, self.ftype))
+        self.settingUI()
+        self.loadingWidget(exitflag=True)
+        self.importDataBtn.setText(os.path.basename(fname) + ' (Press to change)')
+        self.invNowBtn.setEnabled(True)
+        self.activateTabs(True)
+        self.tempElec = self.elecTable.getTable()
+        self.elecDx2DTape.setEnabled(True)
+        self.localGrid.setEnabled(True)
+        self.infoDump(fname + ' imported successfully')
+        # except Exception as e:
+        #     self.loadingWidget(exitflag=True)
+        #     pdebug('importFile: ERROR:', e)
+        #     self.errorDump('Importation failed. File is not being recognized. \
+        #               Make sure you have selected the right file type.')
+        #     pass
 
             
     def settingUI(self):
