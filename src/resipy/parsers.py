@@ -1677,7 +1677,7 @@ def ericParser(file_path):
        
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    return elec,df
+    return elec, df
     
     
 #%% 
@@ -1686,8 +1686,12 @@ def lippmannParser(fname):
     """
     encodingFlag = False
     
-    with open(fname, 'r') as fh:
-        dump = fh.readlines()
+    try:
+        with open(fname, 'r') as fh:
+            dump = fh.readlines()
+    except:
+        with open(fname, 'r', errors='ignore') as fh:
+            dump = fh.readlines()
         
     #getting electrode locations
     elec_lineNum_s = [i for i in range(len(dump)) if '* Electrode positions *' in dump[i]]
