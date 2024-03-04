@@ -1606,6 +1606,7 @@ class Project(object): # Project master class instanciated by the GUI
             # each project as it's the same Survey object (with two references)
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
             e = s.elec.copy()
+            self.projs[-1].elec = e 
             e['y'] = i*lineSpacing
             prefix = '{:d} '.format(i+1)
             e['label'] = prefix + e['label']

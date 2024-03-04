@@ -763,8 +763,10 @@ def wholespace2d(electrodes, padding = 20, electrode_type = None, geom_input = N
             remote_z = min_z-flank_z + (cl*cl_factor*(k+1))
             fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//remote electrode\n"%(no_pts,remote_x,0,remote_z))
             e_pt_idx[k] = no_pts
-            elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
-            elec_z_cache = np.append(elec_z_cache,electrodes[1][rem_idx[k]])
+            original_x[rem_idx[k]] = remote_x 
+            original_z[rem_idx[k]] = remote_z 
+            elec_x_cache = np.append(elec_x_cache,original_x[rem_idx[k]])
+            elec_z_cache = np.append(elec_z_cache,original_z[rem_idx[k]])
             
         node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
         fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
@@ -1610,9 +1612,11 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
             remote_x = x_pts[0]-flank + (cl*cl_factor*(k+1))
             remote_z = b_max_depth  + (cl*cl_factor)
             fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//remote electrode\n"%(no_pts,remote_x,0,remote_z))
+            original_x[rem_idx[k]] = remote_x 
+            original_z[rem_idx[k]] = remote_z 
             e_pt_idx[k] = no_pts
-            elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
-            elec_z_cache = np.append(elec_z_cache,electrodes[1][rem_idx[k]])
+            elec_x_cache = np.append(elec_x_cache,original_x[rem_idx[k]])
+            elec_z_cache = np.append(elec_z_cache,original_z[rem_idx[k]])
             
         node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
         fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
