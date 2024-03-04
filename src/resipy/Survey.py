@@ -1763,7 +1763,13 @@ class Survey(object):
         
         # Looking for missing topography for remote electrodes
         # TODO: this might not be the right way of fixing this but helps
-        iremote = self.elec['remote'].values
+        if 'remote' in self.elec.columns: # 'remote' column exists in elec df
+            iremote = self.elec['remote'].values
+        else: # no remote column in elec df yet
+            remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                        9999999, 999999, 99999] # values asssociated with remote electrodes
+            iremote = np.in1d(elec[:,0], remote_flags)
+            iremote = np.isinf(self.elec[['x','y','z']].values).any(1) | iremote
         if np.isnan(elec[iremote,2]).any():
             elec[iremote,2] = np.average(elec[~iremote,2])
         
@@ -1808,7 +1814,13 @@ class Survey(object):
                 
         # Looking for missing topography for remote electrodes
         # TODO: this might not be the right way of fixing this but helps
-        iremote = self.elec['remote'].values
+        if 'remote' in self.elec.columns: # 'remote' column exists in elec df
+            iremote = self.elec['remote'].values
+        else: # no remote column in elec df yet
+            remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                        9999999, 999999, 99999] # values asssociated with remote electrodes
+            iremote = np.in1d(elec[:,0], remote_flags)
+            iremote = np.isinf(self.elec[['x','y','z']].values).any(1) | iremote
         if np.isnan(elec[iremote,2]).any():
             elec[iremote,2] = np.average(elec[~iremote,2])
         
