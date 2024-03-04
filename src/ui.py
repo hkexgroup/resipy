@@ -6799,10 +6799,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     
                     self.project.setElec(elec, elecList)
                     pdebug('self.project.setElec()')
-                    if self.project.elec['remote'].sum() > 0:
-                        self.meshQuadGroup.setEnabled(False)
-                    else:
-                        self.meshQuadGroup.setEnabled(True)
                     self.writeLog('#k.setElec(elec)')
                     # TODO don't know how to write to log this
                     self.project.mesh = None
@@ -6966,10 +6962,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if 'cR' in self.project.surveys[0].df.columns:
             self.filterAttrCombo.addItem('Contact Resistance (ohm)')
 
-        if self.project.elec['remote'].sum() > 0:
-            self.meshQuadGroup.setEnabled(False)
-        else:
-            self.meshQuadGroup.setEnabled(True)
         if self.boreholeCheck.isChecked() is True:
             self.project.setBorehole(True)
         else:

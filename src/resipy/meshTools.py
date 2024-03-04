@@ -4465,15 +4465,15 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.5
                 cell_type=[9],
                 original_file_path='N/A',
                 order_nodes=False) 
- 
     
     #find the node which the electrodes are actually on in terms of the mesh.
     if len(rem_idx) > 0:
         # get original x z coordinates with the remote electrode included 
         elec_x = elec_x_cache.copy() 
         elec_z = elec_z_cache.copy() 
-        elec_x[rem_idx] = np.min(node_x)
-        elec_z[rem_idx] = np.min(node_z)
+        for n,i in enumerate(rem_idx):
+            elec_x[i] = meshx[n]
+            elec_z[i] = np.min(node_z)
         
     node_in_mesh = [0]*len(elec_x)
     for i in range(len(elec_x)):
