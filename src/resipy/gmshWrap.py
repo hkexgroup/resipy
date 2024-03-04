@@ -629,7 +629,8 @@ def wholespace2d(electrodes, padding = 20, electrode_type = None, geom_input = N
     the area you are surveying, otherwise some funky errors will occur in the mesh. 
 
     """
-    
+    original_x = np.array(electrodes[0])
+    original_z = np.array(electrodes[1])   
     elec_x = electrodes[0]
     elec_z = electrodes[1]
     
@@ -648,6 +649,26 @@ def wholespace2d(electrodes, padding = 20, electrode_type = None, geom_input = N
     if cl==-1:
         dist_sort = np.unique(find_dist(elec_x,[0]*len(elec_x),elec_z))
         cl = dist_sort[0]/2 # characteristic length is 1/2 the minimum electrode distance
+        
+    rem_idx = []
+    elec_x_cache = []
+    elec_z_cache = []   
+    if electrode_type is not None: 
+        for i in range(len(electrode_type)):
+            if electrode_type[i] == 'remote':
+                rem_idx.append(i)
+            else:
+                elec_x_cache.append(elec_x[i])
+                elec_z_cache.append(elec_z[i])
+        elec_x_cache = np.array(elec_x_cache)
+        elec_z_cache = np.array(elec_z_cache)
+    else:
+        elec_x_cache = np.array(electrodes[0])
+        elec_z_cache = np.array(electrodes[1])
+    
+    if len(rem_idx) > 0:
+        elec_x = np.delete(elec_x,rem_idx)
+        elec_z = np.delete(elec_z,rem_idx)
         
     fh = open(file_path,'w') #file handle
     
@@ -722,13 +743,32 @@ def wholespace2d(electrodes, padding = 20, electrode_type = None, geom_input = N
     fh.write("Line{1,2,3,4} In Surface{1};\n")
     
     fh.write("//Electrode positions.\n")
-    node_pos = [0]*len(elec_x)
+    node_pos = np.zeros(len(elec_x),dtype=int)
     for i in range(len(elec_x)):
         no_pts += 1
         node_pos[i] = no_pts
         fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], 0, elec_z[i]))
         fh.write("Point{%i} In Surface{1};\n"%(no_pts))# put the point surface
     fh.write("//End electrodes\n")
+    
+    if len(rem_idx)>0: #then we need to add remote electrodes to the mesh
+        fh.write("\n//Remote electrodes \n")
+        e_pt_idx = [0]*len(rem_idx)
+        #put points in lower left hand corner of the outer region
+        #if an electrode does have the remote flag, then chances are it has 
+        #a bogus coordinate associated with it (ie. -99999)
+        for k in range(len(rem_idx)):
+            no_pts += 1
+            remote_x = min_x-flank_x + (cl*cl_factor*(k+1))
+            remote_z = min_z-flank_z + (cl*cl_factor*(k+1))
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//remote electrode\n"%(no_pts,remote_x,0,remote_z))
+            e_pt_idx[k] = no_pts
+            elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
+            elec_z_cache = np.append(elec_z_cache,electrodes[1][rem_idx[k]])
+            
+        node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
+        fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
+        fh.write('//End of remote electrodes.\n')
     
     fh.write("\n//Adding polygons?\n")
     no_lin=no_lns
@@ -803,7 +843,18 @@ def wholespace2d(electrodes, padding = 20, electrode_type = None, geom_input = N
     
     fh.close()
     print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
-    return np.array(node_pos)
+    
+    #sort node ordering back into the original input ordering    
+    #find the original indexes  
+    original_idx = [0]*len(node_pos)
+    for i in range(len(node_pos)):
+        idx = (np.abs(elec_x_cache - original_x[i])<1e-15) & (np.abs(elec_z_cache - original_z[i])<1e-15)
+        idx = idx.tolist()
+        original_idx[i] = idx.index(True)
+
+    ordered_node_pos = node_pos[original_idx].astype(int)
+    
+    return ordered_node_pos
 
 def wholespace3d(elec_x, elec_y, elec_z = None,
                  fmd=-1, file_path='mesh3d.geo',
@@ -1052,6 +1103,7 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     else:
         def dump(x):
             pass
+        
     dump('Generating gmsh input file...\n')
     #formalities and error checks
     if geom_input is not None: 
@@ -1061,6 +1113,9 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         geom_input = {}
     if len(electrodes[0])!=len(electrodes[1]):
         raise ValueError('The length of the electrode x and z arrays does not match')
+        
+    original_x = np.array(electrodes[0])
+    original_z = np.array(electrodes[1])
     bh_flag = False
     bu_flag = False
     #determine the relevant node ordering for the surface electrodes? 
@@ -1158,8 +1213,6 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     if len(elec_x) != len(elec_z):
         raise ValueError("electrode x and z arrays are not the same length!")
         
-    # catch duplicated nodes 
-    
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
     
@@ -1592,8 +1645,6 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         warnings.warn("looks like something has gone wrong with node orderings, total x != total nodes.")
     
     #sort node ordering back into the original input ordering    
-    original_x = np.array(electrodes[0])
-    original_z = np.array(electrodes[1])
     #find the original indexes  
     original_idx = [0]*len(node_pos)
     for i in range(len(node_pos)):

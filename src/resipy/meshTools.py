@@ -4878,7 +4878,8 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
                                   file_path=file_name,**kwargs)
     elif whole_space:
         print("Whole space problem")
-        node_pos = gw.wholespace2d([elec_x,elec_z], elec_type, geom_input = geom_input, 
+        node_pos = gw.wholespace2d([elec_x,elec_z], 20, elec_type, 
+                                   geom_input = geom_input, 
                                    file_path=file_name,**kwargs)    
     
     # run gmsh

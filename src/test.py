@@ -325,8 +325,10 @@ k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='ProtocolDC')
 #buried = df.values[:,-1].astype(bool)
 k.setBorehole(True)
 k.showPseudo()
+k.importElec(testdir + 'dc-2d-borehole/bh-elec.csv') # test where all electrodes are buried 
+k.createMesh('trian', cl=0.5, cl_factor=10, fmd=20)# wholespace mesh 
 k.importElec(testdir + 'dc-2d-borehole/elec.csv')
-k.createMesh('trian', cl=0.5, cl_factor=10, fmd=20)#, surface=np.array([[-5, 0],[5,0]]))
+k.createMesh('trian', cl=0.5, cl_factor=10, fmd=20)
 k.showMesh()
 k.invert()
 k.showIter(index=0)
