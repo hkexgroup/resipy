@@ -1761,6 +1761,12 @@ class Survey(object):
         array = self.isequence - 1 
         elec = self.elec[['x','y','z']].values
         
+        # Looking for missing topography for remote electrodes
+        # TODO: this might not be the right way of fixing this but helps
+        iremote = self.elec['remote'].values
+        if np.isnan(elec[iremote,2]).any():
+            elec[iremote,2] = np.average(elec[~iremote,2])
+        
         aposx = elec[:,0][array[:,0]]
         aposy = elec[:,1][array[:,0]]
         aposz = elec[:,2][array[:,0]]
@@ -1798,8 +1804,14 @@ class Survey(object):
         # lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
         # array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         array = self.isequence - 1 
-        elec = self.elec[['x','y','z']].values 
-    
+        elec = self.elec[['x','y','z']].values
+                
+        # Looking for missing topography for remote electrodes
+        # TODO: this might not be the right way of fixing this but helps
+        iremote = self.elec['remote'].values
+        if np.isnan(elec[iremote,2]).any():
+            elec[iremote,2] = np.average(elec[~iremote,2])
+        
         if Gl is None: 
             Gl = np.max(elec[:,2]) # take maximum electrode coordinate elevation as ground level 
             
