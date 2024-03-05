@@ -1,2 +1,2 @@
-pyR2_Version:
-3.5.1
+ResIPy_Version:
+3.5.3
