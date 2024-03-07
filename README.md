@@ -167,10 +167,6 @@ the latest release available.
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.3-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.3/ResIPy-linux)<br>
 
 *Past releases*:
-- v3.5.1
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.5.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.1/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.5.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.1/ResIPy-macOS.dmg "wine is required - see above")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.1/ResIPy-linux)<br>
 - v3.4.5
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.4.5-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.4.5-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-macOS.dmg "wine is required - see above")
