@@ -829,7 +829,7 @@ class Mesh:
             #then its a tetra mesh 
             return self.splitTetra()
         else:
-            print('Sorry not implimented for this mesh type yet')
+            print('Sorry, refine method not implimented for this mesh type')
             return 
         
         
@@ -2307,6 +2307,8 @@ class Mesh:
                 vmax = vmax,
                 vmin = vmin,
                 attr = attr)
+        elif self.type2VertsNo() == 8:
+            raise Exception('Cannot show a voxel mesh using matplotlib calls, in this version of ResIPy')
             return 
         
         t0 = time.time() # benchmark function
@@ -6076,15 +6078,9 @@ def tankMesh(elec=None,
         
     return mesh
 
-# test
-# TODO debug
-# elec = np.array([[0,2,2],[0,2,6],[0,3,2],[0,3,6],
-#                   [10,2,2],[10,2,6],[10,3,2],[10,3,6],
-#                   [3,0,2],[5,0,2],[7,0,2],[3,0,6],[5,0,6],[7,0,6],
-#                   [3,5,2],[5,5,2],[7,5,2],[3,5,6],[5,5,6],[7,5,6]
-#                   ])
-# mesh = tankMesh(elec, origin=[0,0,0], dimension=[10, 5, 7], file_path='/home/jkl/Downloads/mesh_tank',)
-# mesh.show()
+#%% voxel mesh 
+def voxelMesh(elec_x,elec_y,elec_z=None,elec_type=None):
+    pass 
 
 #%% ciruclar mesh (TODO)
 def circularMesh():
