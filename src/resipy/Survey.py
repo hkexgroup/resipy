@@ -760,9 +760,9 @@ class Survey(object):
         df2 = pd.DataFrame(sortedArray, columns=['m','n','a','b'])
         df2['index2'] = np.arange(df2.shape[0])
         df3 = pd.DataFrame(sortedArray, columns=['n','m','a','b'])
-        df3['index3'] = np.arange(df1.shape[0])
+        df3['index3'] = np.arange(df3.shape[0])
         df4 = pd.DataFrame(sortedArray, columns=['m','n','b','a'])
-        df4['index4'] = np.arange(df2.shape[0])
+        df4['index4'] = np.arange(df4.shape[0])
         dfs = [df1, df2, df3, df4]
         dfm = reduce(lambda  left,right: pd.merge(left,right,on=['a','b','m','n'], how='outer'), dfs)
         # dfm = pd.merge(df1, df2, on=['a','b','m','n'], how='outer')
