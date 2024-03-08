@@ -87,6 +87,50 @@ k.create3DSurvey(testdir + 'dc-2d-pseudo3d-synthetic/data', lineSpacing=1,
                  zigzag=False, name='mergedSurvey', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 
+#%% testing different reciprocal methods
+k = Project(typ='R2')
+k.createSurvey(testdir + 'parser/syscal-recip-test.csv', ftype='Syscal')
+k.surveys[0].computeReciprocal(alg='Bisection Search')
+df1 = k.surveys[0].df.copy()
+k.surveys[0].computeReciprocal(alg='Pandas Merge')
+df2 = k.surveys[0].df.copy()
+k.surveys[0].computeReciprocal(alg='Array Expansion')
+df3 = k.surveys[0].df.copy()
+df3['irecip'] = df3['irecip'].astype(int)  # not sure why it's float maybe for NaN?
+
+# merge them for comparison (but they might not be ordered in the same way!)
+dfm = pd.merge(df1[['a', 'b', 'm', 'n', 'irecip']],
+               df2[['a', 'b', 'm', 'n', 'irecip']],
+               on=['a', 'b', 'm', 'n'], how='outer', suffixes=('_bs', '_pd'))
+dfm = pd.merge(dfm, df3[['a', 'b', 'm', 'n', 'irecip']],
+               on=['a', 'b', 'm', 'n'], how='outer').rename(
+                   columns={'irecip': 'irecip_np'})
+
+izero = dfm['irecip_np'].eq(0)  # no reciprocal for these readings
+print('Bisection Search vs Array Expansion:')
+print('- difference in irecip (should be 0): ', dfm['irecip_bs'].sub(dfm['irecip_np']).sum())
+print('- difference in number of non-recip (should be 0)', dfm[izero]['irecip_bs'].sum())
+print('Pandas Merge vs Array Expansion:', dfm['irecip_pd'].sub(dfm['irecip_np']).sum())
+print('- difference in irecip (should be 0): ', dfm['irecip_pd'].sub(dfm['irecip_np']).sum())
+print('- difference in number of non-recip (should be 0)', dfm[izero]['irecip_pd'].sum())
+
+# check they all detects all non-reciprocal
+dfm = dfm[dfm['irecip_np'].ne(0)]
+
+if dfm['irecip_bs'].sub(dfm['irecip_np']).sum() != 0:
+    df = dfm.copy()
+    df['isort_bs'] = df['irecip_bs'].abs()
+    df['isort_np'] = df['irecip_np'].abs()
+    print(df.sort_values('isort_bs')[['a', 'b', 'm', 'n', 'irecip_bs', 'irecip_np']])
+    print(df.sort_values('isort_np')[['a', 'b', 'm', 'n', 'irecip_bs', 'irecip_np']])
+    
+if dfm['irecip_pd'].sub(dfm['irecip_np']).sum() != 0:
+    df = dfm.copy()
+    df['isort_pd'] = df['irecip_pd'].abs()
+    df['isort_np'] = df['irecip_np'].abs()
+    print(df.sort_values('isort_pd')[['a', 'b', 'm', 'n', 'irecip_pd', 'irecip_np']])
+    print(df.sort_values('isort_np')[['a', 'b', 'm', 'n', 'irecip_pd', 'irecip_np']])
+    
 timings['methods-importing'] = time.time() - tstart
 
 

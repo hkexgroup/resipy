@@ -829,7 +829,7 @@ class Mesh:
             #then its a tetra mesh 
             return self.splitTetra()
         else:
-            print('Sorry, refine method not implimented for this mesh type')
+            print('Sorry, refine method not implemented for this mesh type')
             return 
         
         
@@ -2983,7 +2983,7 @@ class Mesh:
     def moveElecNodes(self, new_x, new_y, new_z, debug=True):
         """ Move the electrodes to different nodes which are close to the given coordinates. 
         This is useful for timelapse surveys where the electrodes move through time, 
-        ideally this is implimented on a mesh which is refined near the surface. If 
+        ideally this is implemented on a mesh which is refined near the surface. If 
         no nodes are assigned to mesh, a mesh.e_nodes variable is created.  
         
         Parameters
