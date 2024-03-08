@@ -14,6 +14,7 @@ import pandas as pd
 from scipy.stats import norm, linregress
 from scipy.stats import gaussian_kde
 from scipy.linalg import lstsq
+from functools import reduce
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
@@ -763,7 +764,6 @@ class Survey(object):
         df4 = pd.DataFrame(sortedArray, columns=['m','n','b','a'])
         df4['index4'] = np.arange(df2.shape[0])
         dfs = [df1, df2, df3, df4]
-        from functools import reduce
         dfm = reduce(lambda  left,right: pd.merge(left,right,on=['a','b','m','n'], how='outer'), dfs)
         # dfm = pd.merge(df1, df2, on=['a','b','m','n'], how='outer')
         # dfm = dfm.dropna()
