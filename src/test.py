@@ -90,9 +90,11 @@ k.importElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 #%% testing different reciprocal methods
 k = Project(typ='R2')
 k.createSurvey(testdir + 'ip-2d/IP_MICP_all.csv', ftype='Syscal')
-# df = k.surveys[0].df
+# df = k.surveys[0].df.copy()
 # df[['a', 'b']] = np.sort(df[['a', 'b']].values, axis=1)
 # df[['m', 'n']] = np.sort(df[['m', 'n']].values, axis=1)
+# i2keep = ~df.duplicated(subset=['a', 'b', 'm', 'n'])
+# k.surveys[0].filterData(i2keep)
 k.surveys[0].computeReciprocal(alg='Bisection Search')
 df1 = k.surveys[0].df.copy()
 k.surveys[0].computeReciprocal(alg='Pandas Merge')

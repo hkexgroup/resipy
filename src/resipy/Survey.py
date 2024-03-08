@@ -526,6 +526,15 @@ class Survey(object):
             dump('Survey.filterDefault: {:d} measurements with A or B == M or N\n'.format(np.sum(ie)))
             self.filterData(~ie)
         
+        # remove repeated readings like ABMN, BAMN, ABNM
+        df = self.df[['a', 'b', 'm', 'n']].copy()
+        df[['a', 'b']] = np.sort(df[['a', 'b']].values, axis=1)
+        df[['m', 'n']] = np.sort(df[['m', 'n']].values, axis=1)
+        ie = df.duplicated(subset=['a', 'b', 'm', 'n'])
+        if np.sum(~ie) > 0:
+            dump('Survey.filterDefault: {:d} duplicates ABMN, BAMN or ABNM removed\n'.format(np.sum(ie)))
+        self.filterData(~ie)
+
         # we need to redo the reciprocal analysis if we've removed duplicates and ...
         if ndup > 0 or np.sum(ie) > 0:
             self.ndata = len(self.df)
