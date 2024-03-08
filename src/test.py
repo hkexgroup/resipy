@@ -89,8 +89,10 @@ k.importElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 
 #%% testing different reciprocal methods
 k = Project(typ='R2')
-k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
-# k.createSurvey(testdir + 'parser/syscal-recip-test.csv', ftype='Syscal')
+k.createSurvey(testdir + 'ip-2d/IP_MICP_all.csv', ftype='Syscal')
+# df = k.surveys[0].df
+# df[['a', 'b']] = np.sort(df[['a', 'b']].values, axis=1)
+# df[['m', 'n']] = np.sort(df[['m', 'n']].values, axis=1)
 k.surveys[0].computeReciprocal(alg='Bisection Search')
 df1 = k.surveys[0].df.copy()
 k.surveys[0].computeReciprocal(alg='Pandas Merge')
@@ -124,6 +126,12 @@ if dfm['irecip_bs'].sub(dfm['irecip_np']).sum() != 0:
     df['isort_np'] = df['irecip_np'].abs()
     print(df.sort_values('isort_bs')[['a', 'b', 'm', 'n', 'irecip_bs', 'irecip_np']])
     print(df.sort_values('isort_np')[['a', 'b', 'm', 'n', 'irecip_bs', 'irecip_np']])
+    
+    df2 = df.copy()
+    df2[['a2', 'b2']] = np.sort(df2[['a', 'b']].values, axis=1)
+    df2[['m2', 'n2']] = np.sort(df2[['m', 'n']].values, axis=1)
+    print(df2.sort_values(['a2', 'b2', 'm2', 'n2'])[['a', 'b', 'm', 'n', 'irecip_bs', 'irecip_np']])
+
     
 if dfm['irecip_pd'].sub(dfm['irecip_np']).sum() != 0:
     df = dfm.copy()
