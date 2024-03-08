@@ -1429,7 +1429,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
         surveys = []
         for fname in fnames:
-            surveys.append(Survey(fname, ftype=ftype, parser=parser,compRecip=False))
+            surveys.append(Survey(fname, ftype=ftype, parser=parser,compRecip=False,debug=False))
             dump('Imported datafile: %s'%fname)
         survey0 = surveys[0]
         
@@ -1456,6 +1456,7 @@ class Project(object): # Project master class instanciated by the GUI
         elec = pd.concat(elec, axis=0, sort=False).reset_index(drop=True)
         dfm = pd.concat(dfs, axis=0, sort=False).reset_index(drop=True)
         
+        survey0.debug = True 
         survey0.elec = elec
         survey0.df = dfm
         survey0.ndata = len(dfm)
@@ -2901,7 +2902,30 @@ class Project(object): # Project master class instanciated by the GUI
             numRemoved = self.surveys[index].filterContRes(vmin=vmin, vmax=vmax)
         return numRemoved
     
+    def computeReciprocal(self,alg='Bisection Search',forceSign=False):
+        """
+        Compute Reciprocals and store them in self.surveys[0:n].df. 
 
+        Parameters
+        ----------
+        alg : str, optional
+            Algorithm used to compute reciprocals. Choose between 
+            'Bisection Search', 'Pandas Merge' or 'Array Expansion'.
+            The default is 'Bisection Search', other string are casted to
+            'Array Expansion'.
+        forceSign: bool, optional
+            Force reciprocal and forward measurements to have the same 
+            polarity regarding the calculation of the reciprocal errors. 
+            Default is False. 
+            
+        Notes
+        -----
+        If the relevant cython code cannot be found then the function falls 
+        back to using the pandas merge approach. 
+        """
+        for s in self.surveys:
+            s.computeReciprocal(alg,forceSign)
+            
     def computeFineMeshDepth(self):
         """Compute the Fine Mesh Depth (FMD) based on electrode
         positions and the larger dipole spacing. Express as a positive number,

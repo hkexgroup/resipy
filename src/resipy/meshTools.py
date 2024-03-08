@@ -617,7 +617,6 @@ class Mesh:
                     con_mat[i][3] = con_mata[i][4] # correct the bottom of the triangle 
                     con_mat[i][4] = con_mata[i][3]
 
-        
         self.connection = np.asarray(con_mat,dtype=self.dint)
         
         if return_count:

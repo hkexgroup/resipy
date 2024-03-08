@@ -91,7 +91,11 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
         N by 1 array of floats (resistance measurements)
     p: nd array 
         N by 1 array of floats (phase measurements)
-    
+    forceSign: long
+        Boolian operator to force reciprocals to have the same polarity in the
+        calculation of the reciprocals. If 1, reciprocal pairs are forced to 
+        have the same polarity regarding reciprocal error calculations. By 
+        default forceSign == 0 (no forcing applied). 
     Notes
     -----
     The method first sorts the dipole AB and MN. Then efficiently searches
@@ -116,8 +120,8 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
             max_elec = max(conf[:,i])
     
     cdef int pad = len(str(max_elec)) # order of magnitude of max electrode number 
-    cdef long[:,:] ab = conf[:,0:2] # ab configuration 
-    cdef long[:,:] mn = conf[:,2:4] # mn configuration 
+    cdef long[:,:] ab = conf[:,0:2].copy() # ab configuration 
+    cdef long[:,:] mn = conf[:,2:4].copy() # mn configuration 
 
     cdef long[:] AB = np.zeros(ndata,dtype=int) # holds AB combination as one integer 
     cdef long[:] MN = np.zeros(ndata,dtype=int) # holds MN combination as one integer 
@@ -126,6 +130,7 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
     
     cdef np.ndarray[long, ndim=1] ifwd = np.zeros(ndata,dtype=int)
     cdef long[:] ifwdv = ifwd # flag for forward and reverse direction 
+    cdef double rj, pj # recipocal resistance and phase 
     cdef double re, rer, rm, pe # recip error, relative error, reciprocal mean, phase error  
 
     # outputs of function (so need to be in python/numpy type format)
@@ -161,7 +166,7 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
         # skip the loop if the ifwd value has already been assigned 
         if ifwdv[i] != 0:
             continue 
-        
+
         k = bisection_search(sortR,comboF[i]) # nb: only works on a sorted array
         # returned index is -1 if no match found. 
         if k != -1: # then match has been found 
@@ -172,10 +177,24 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
             # assign forward and reverse directions 
             ifwdv[i] = 1
             ifwdv[j] = -1 
+            # get the reciprocal phase and resistance measurements 
+            rj = r[j]
+            pj = p[j]
+            
+            # need to assert normal abmn >>> reciprocal mnab, else swap polarity 
+            # reciprocal of opposite polarity has configuration nmab or mnba 
+            
+            if conf[i,0] == conf[j,2] and conf[i,2] == conf[j,1]: 
+                # Case abmn >>> nmab 
+                rj *= -1 
+            elif conf[i,0] == conf[j,3] and conf[i,2] == conf[j,0]: 
+                # Case abmn >>> mnba 
+                rj *= -1 
+
             # compute reciprocal error stats  
-            re = r[j] - r[i] # reciprocal error 
-            rm = (r[i] + r[j])/2 # mean of the forward and reciprocal measurements 
-            pe = p[j] - p[i] # phase error (in the case of IP)
+            re = rj - r[i] # reciprocal error 
+            rm = (rj + r[i])/2 # mean of the forward and reciprocal measurements 
+            pe = pj - p[i] # phase error (in the case of IP)
             if re == 0 or rm == 0: # if statement needed to avoid 0 float division error 
                 rer = 0
             else:
