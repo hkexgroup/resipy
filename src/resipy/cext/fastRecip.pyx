@@ -126,8 +126,7 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
     
     cdef np.ndarray[long, ndim=1] ifwd = np.zeros(ndata,dtype=int)
     cdef long[:] ifwdv = ifwd # flag for forward and reverse direction 
-    cdef double re, rer, rm # recip error, relative error, reciprocal mean  
-    cdef double pe # phase error 
+    cdef double re, rer, rm, pe # recip error, relative error, reciprocal mean, phase error  
 
     # outputs of function (so need to be in python/numpy type format)
     cdef np.ndarray[long, ndim=1] irecip = np.zeros(ndata,dtype=int) # index of reciprocal measurement  
@@ -174,19 +173,19 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
             ifwdv[i] = 1
             ifwdv[j] = -1 
             # compute reciprocal error stats  
-            re = abs(r[i]) - abs(r[j]) # reciprocal error 
+            re = r[j] - r[i] # reciprocal error 
             rm = (r[i] + r[j])/2 # mean of the forward and reciprocal measurements 
-            pe = p[i] - p[j] # phase error (in the case of IP)
+            pe = p[j] - p[i] # phase error (in the case of IP)
             if re == 0 or rm == 0: # if statement needed to avoid 0 float division error 
                 rer = 0
             else:
                 rer = re/rm # relative error 
             
             # assign to arrays 
-            reciprocalErrv[i] = re; reciprocalErrv[j] = re 
+            reciprocalErrv[i] = re; reciprocalErrv[j] = -re 
             reciprocalErrRelv[i] = rer; reciprocalErrRelv[j] = rer 
             reciprocalMeanv[i] = rm; reciprocalMeanv[j] = rm 
-            reciprocalPhasev[i] = pe; reciprocalPhasev[j] = pe
+            reciprocalPhasev[i] = pe; reciprocalPhasev[j] = -pe
             
         else: # there is no pairing 
             ifwdv[i] = 1 # then the measurement is foward only 
