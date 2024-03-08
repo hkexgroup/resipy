@@ -2307,6 +2307,7 @@ class Mesh:
                 vmax = vmax,
                 vmin = vmin,
                 attr = attr)
+            return
         elif self.type2VertsNo() == 8:
             raise Exception('Cannot show a voxel mesh using matplotlib calls, in this version of ResIPy')
             return 
