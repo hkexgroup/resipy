@@ -757,9 +757,9 @@ class Survey(object):
         Ri[inormal] = val[inormal]
         Ri[irecip] = -val[inormal]
         
-        reciprocalErr[inormal] = R[irecip] - R[inormal]
+        reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
         reci_IP_err[inormal] = M[irecip] - M[inormal]
-        reciprocalErr[irecip] = R[irecip] - R[inormal]
+        reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
         reci_IP_err[irecip] = M[inormal] - M[irecip]
         
         # compute reciprocal mean with all valid values
@@ -839,9 +839,9 @@ class Survey(object):
         Ri[inormal] = val[inormal]
         Ri[irecip] = -val[inormal]
         
-        reciprocalErr[inormal] = R[irecip] - R[inormal]
+        reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
         reci_IP_err[inormal] = M[irecip] - M[inormal]
-        reciprocalErr[irecip] = R[irecip] - R[inormal]
+        reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
         reci_IP_err[irecip] = M[inormal] - M[irecip]
         
         # compute reciprocal mean with all valid values
