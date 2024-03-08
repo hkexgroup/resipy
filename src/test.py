@@ -89,7 +89,8 @@ k.importElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 
 #%% testing different reciprocal methods
 k = Project(typ='R2')
-k.createSurvey(testdir + 'parser/syscal-recip-test.csv', ftype='Syscal')
+k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
+# k.createSurvey(testdir + 'parser/syscal-recip-test.csv', ftype='Syscal')
 k.surveys[0].computeReciprocal(alg='Bisection Search')
 df1 = k.surveys[0].df.copy()
 k.surveys[0].computeReciprocal(alg='Pandas Merge')
