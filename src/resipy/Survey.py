@@ -758,13 +758,30 @@ class Survey(object):
         df1['index1'] = np.arange(df1.shape[0])
         df2 = pd.DataFrame(sortedArray, columns=['m','n','a','b'])
         df2['index2'] = np.arange(df2.shape[0])
-        dfm = pd.merge(df1, df2, on=['a','b','m','n'], how='outer')
-        dfm = dfm.dropna() # drom quad without reciprocal
+        df3 = pd.DataFrame(sortedArray, columns=['n','m','a','b'])
+        df3['index3'] = np.arange(df1.shape[0])
+        df4 = pd.DataFrame(sortedArray, columns=['m','n','b','a'])
+        df4['index4'] = np.arange(df2.shape[0])
+        dfs = [df1, df2, df3, df4]
+        from functools import reduce
+        dfm = reduce(lambda  left,right: pd.merge(left,right,on=['a','b','m','n'], how='outer'), dfs)
+        # dfm = pd.merge(df1, df2, on=['a','b','m','n'], how='outer')
+        # dfm = dfm.dropna()
+        dfm = dfm.dropna(subset=['index1', 'index2', 'index3', 'index4'], how='all') # drop quad without any reciprocals
+        def countna(x):
+            arr = np.array(x)
+            c = np.count_nonzero(np.isnan(arr))
+            return True if c == 2 else False # there should be only one reciprocal pair for a normal quadrupole 
+        dfm['recippair'] = dfm[['index1', 'index2', 'index3', 'index4']].apply(countna, axis=1)
+        dfm = dfm[dfm['recippair']]
+        dfm = dfm.dropna(axis=1, how='all') # dropping columns with all nans (i.e., no pair indecies)
+        indexcols = [col for col in dfm.columns if 'index' in col]
         
         # sort and keep only half
-        indexArray = np.sort(dfm[['index1', 'index2']].values.astype(int), axis=1)
+        # indexArray = np.sort(dfm[['index1', 'index2']].values.astype(int), axis=1)
+        indexArray = np.sort(dfm[indexcols].values.astype(int), axis=1)
         indexArrayUnique = np.unique(indexArray, axis=0)
-        inormal = indexArrayUnique[:,0]
+        inormal = indexArrayUnique[:,0] # I guess it doesn't matter which column is normal and which column is reciprocal; we're using np.abs below
         irecip = indexArrayUnique[:,1]
         
         val = np.arange(ndata) + 1
