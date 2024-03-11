@@ -7324,7 +7324,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             version = versionCheck.split()[1] # assuming version number is in 2nd line of version.txt
             changeLogSource = urlRequest.urlopen('https://github.com/hkexgroup/resipy/raw/master/CHANGELOG')
             changeLogTxt = changeLogSource.read().decode()
-            newChangesRaw = changeLogTxt.split('\n\n')[0].split('\n')
+            # newChangesRaw = changeLogTxt.split('\n\n')[0].split('\n')
+            newChangesRaw = changeLogTxt.split('v'+ResIPy_version)[0].split('\n')
             newChanges = ''.join('{}<br>'*len(newChangesRaw[2:])).format(*newChangesRaw[2:])
             print('online version :', version)
         except:
@@ -7343,8 +7344,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
             msg.setInformativeText('''Please download the latest version of ResIPy at:\
                                    <p><a href='https://gitlab.com/hkex/resipy#downloads'>https://gitlab.com/hkex/resipy</a></p>\
-                                   New updates:<br>\
-                                   %s''' % newChanges)
+                                   New updates in v%s:<br>\
+                                   %s''' % (version, newChanges))
             msg.setWindowTitle("New version available")
             bttnUpY = msg.addButton(QMessageBox.Yes)
             bttnUpY.setText('Update')
