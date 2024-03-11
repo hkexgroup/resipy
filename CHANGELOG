@@ -1,3 +1,10 @@
+v3.5.4
+------
+- Bug fix: Reciprocal error miscalculation
+- Bug fix: Duplicate MN/AB measurements are filtered 
+- Bug fix: All ABMN reciprocal possibilities are checked
+
+
 v3.5.3
 ------
 - Remote electrodes usable with a quadrilateral mesh.
@@ -9,7 +16,7 @@ v3.5.3
 - Bug fix: Sign of apparent resistivities is no longer altered.
 - Bug fix: The 3D threshold filter. 
 - Bug fix: Remote electrodes work with pseudo 3D and 2D inversions.
-- Bug fix: Better fine mesh depth calculated during forward modelling.
+- Bug fix: Better fine mesh depth calculated during forward modeling.
 - Bug fix: 3D meshing where both surface and buried electrodes are present.
 - Bug fix: Missing topography of remote electrodes
 
