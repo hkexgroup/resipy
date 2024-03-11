@@ -27,7 +27,6 @@ timings = {}
 
 testdir = 'examples/'
 
-
 print('======================= GENERAL METHOD TESTS =====================')
 #%% testing all importing features
 k = Project(typ='R2')

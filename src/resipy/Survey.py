@@ -14,6 +14,7 @@ import pandas as pd
 from scipy.stats import norm, linregress
 from scipy.stats import gaussian_kde
 from scipy.linalg import lstsq
+from functools import reduce
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
@@ -308,7 +309,7 @@ class Survey(object):
             return
 
         # apply basic filtering
-        self.filterDefault()
+        self.filterDefault(False) # dont compute reciprocals yet 
         if compRecip:
             self.computeReciprocal() # compute reciprocals
         
@@ -505,7 +506,7 @@ class Survey(object):
         # remove Inf and NaN
         resist = self.df['resist'].values
         iout = np.isnan(resist) | np.isinf(resist)
-        if np.sum(iout) > 0:
+        if np.sum(iout) > 0 and self.debug:
             dump('Survey.filterDefault: Number of Inf or NaN : {:d}\n'.format(np.sum(iout)))
             self.filterData(~iout)
         
@@ -513,7 +514,7 @@ class Survey(object):
         shapeBefore = self.df.shape[0]
         self.df = self.df.drop_duplicates(subset=['a','b','m','n'], keep = 'first')
         ndup = shapeBefore - self.df.shape[0]
-        if ndup > 0:
+        if ndup > 0 and self.debug:
             dump('Survey.filterDefault: {:d} duplicates removed.\n'.format(ndup))
         
         # remove quadrupoles were A or B are also potential electrodes
@@ -522,7 +523,7 @@ class Survey(object):
         ie3 = self.df['b'].values == self.df['m'].values
         ie4 = self.df['b'].values == self.df['n'].values
         ie = ie1 | ie2 | ie3 | ie4
-        if np.sum(ie) > 0:
+        if np.sum(ie) > 0 and self.debug:
             dump('Survey.filterDefault: {:d} measurements with A or B == M or N\n'.format(np.sum(ie)))
             self.filterData(~ie)
         
@@ -531,7 +532,7 @@ class Survey(object):
         df[['a', 'b']] = np.sort(df[['a', 'b']].values, axis=1)
         df[['m', 'n']] = np.sort(df[['m', 'n']].values, axis=1)
         ie = df.duplicated(subset=['a', 'b', 'm', 'n'])
-        if np.sum(~ie) > 0:
+        if np.sum(ie) > 0 and self.debug:
             dump('Survey.filterDefault: {:d} duplicates ABMN, BAMN or ABNM removed\n'.format(np.sum(ie)))
         self.filterData(~ie)
 
@@ -540,6 +541,8 @@ class Survey(object):
             self.ndata = len(self.df)
             self.setSeqIds()
             if recompute_recip: 
+                if self.debug:
+                    dump('Recomputing reciprocals becuase duplicated measurements detected')
                 self.computeReciprocal()
         
         # remove dummy for 2D case
@@ -672,11 +675,12 @@ class Survey(object):
         remove dummy measurements added for sequence optimization.
         """
         i2keep = self.df['irecip'] != 0
-        print('removeUnpaired:', end='')
+        if self.debug: 
+            print('removeUnpaired:', end='')
         self.filterData(i2keep)
         return np.sum(~i2keep)
     
-    def computeReciprocal(self, alg='Pandas Merge'):
+    def computeReciprocal(self, alg='Bisection Search'):
         """
         Compute Reciprocals and store them in self.df (the dataframe)
 
@@ -687,6 +691,10 @@ class Survey(object):
             'Bisection Search', 'Pandas Merge' or 'Array Expansion'.
             The default is 'Bisection Search', other string are casted to
             'Array Expansion'.
+        forceSign: bool, optional
+            Force reciprocal and forward measurements to have the same 
+            polarity regarding the calculation of the reciprocal errors. 
+            Default is False. (not active currently)
             
         Notes
         -----
@@ -719,6 +727,13 @@ class Survey(object):
     def computeReciprocalP(self): # pandas way
         """Compute reciprocal measurements using `pandas.merge()`.
         
+        Parameters
+        ----------
+        forceSign: bool, optional
+            Force reciprocal and forward measurements to have the same 
+            polarity regarding the calculation of the reciprocal errors. Default
+            is False. 
+        
         Notes
         -----
         Someone want to explain exactly how this code works? 
@@ -745,21 +760,42 @@ class Survey(object):
         df2 = pd.DataFrame(sortedArray, columns=['m','n','a','b'])
         df2['index2'] = np.arange(df2.shape[0])
         dfm = pd.merge(df1, df2, on=['a','b','m','n'], how='outer')
-        dfm = dfm.dropna() # drom quad without reciprocal
+        dfm = dfm.dropna()
+        
+        ###### WIP vvvvvvv
+        # df3 = pd.DataFrame(sortedArray, columns=['n','m','a','b'])
+        # df3['index3'] = np.arange(df3.shape[0])
+        # df4 = pd.DataFrame(sortedArray, columns=['m','n','b','a'])
+        # df4['index4'] = np.arange(df4.shape[0])
+        # dfs = [df1, df2, df3, df4]
+        # dfm = reduce(lambda  left,right: pd.merge(left,right,on=['a','b','m','n'], how='outer'), dfs)
+        
+        # dfm = dfm.dropna(subset=['index1', 'index2', 'index3', 'index4'], how='all') # drop quad without any reciprocals
+        # def countna(x):
+        #     arr = np.array(x)
+        #     c = np.count_nonzero(np.isnan(arr))
+        #     return True if c == 2 else False # there should be only one reciprocal pair for a normal quadrupole 
+        # dfm['recippair'] = dfm[['index1', 'index2', 'index3', 'index4']].apply(countna, axis=1)
+        # dfm = dfm[dfm['recippair']]
+        # dfm = dfm.dropna(axis=1, how='all') #dropping columns with all nans (i.e., no pair indecies) # TODO: fix this for normal only data so it doesn't drop all cols.
+        # indexcols = [col for col in dfm.columns if 'index' in col]
+        # indexArray = np.sort(dfm[indexcols].values.astype(int), axis=1)
+        ###### WIP ^^^^^^
         
         # sort and keep only half
         indexArray = np.sort(dfm[['index1', 'index2']].values.astype(int), axis=1)
         indexArrayUnique = np.unique(indexArray, axis=0)
-        inormal = indexArrayUnique[:,0]
+        inormal = indexArrayUnique[:,0] # I guess it doesn't matter which column is normal and which column is reciprocal; we're using np.abs below
         irecip = indexArrayUnique[:,1]
         
         val = np.arange(ndata) + 1
         Ri[inormal] = val[inormal]
         Ri[irecip] = -val[inormal]
-        
+
+        # compute the reciprocal error (using the magnitude of the measurements)
         reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
-        reci_IP_err[inormal] = M[irecip] - M[inormal]
         reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
+        reci_IP_err[inormal] = M[irecip] - M[inormal]
         reci_IP_err[irecip] = M[inormal] - M[irecip]
         
         # compute reciprocal mean with all valid values
@@ -803,6 +839,13 @@ class Survey(object):
     def computeReciprocalN(self): # fast vectorize version
         """Compute reciprocal measurements using numpy array expansion. 
         
+        Parameters
+        ----------
+        forceSign: bool, optional
+            Force reciprocal and forward measurements to have the same 
+            polarity regarding the calculation of the reciprocal errors. Default
+            is False. 
+        
         Notes
         -----
         The method first sorts the dipole AB and MN. Then creates a reciprocal
@@ -839,9 +882,14 @@ class Survey(object):
         Ri[inormal] = val[inormal]
         Ri[irecip] = -val[inormal]
         
+        # check expected polarity of reciprocal measurement?? code might look something like the below 
+        # flipsign = (array[inormal,0] != array[irecip,2]) & (array[inormal,1] != array[irecip,3])
+        # R[flipsign] *= -1 
+        
+        # compute the reciprocal error (using the magnitude of the measurements)
         reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
-        reci_IP_err[inormal] = M[irecip] - M[inormal]
         reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
+        reci_IP_err[inormal] = M[irecip] - M[inormal]
         reci_IP_err[irecip] = M[inormal] - M[irecip]
         
         # compute reciprocal mean with all valid values
@@ -883,6 +931,12 @@ class Survey(object):
     
     def computeReciprocalC(self): # fast vectorize version
         """Compute reciprocal measurements. using a bisection seach in cython! 
+        Parameters
+        ----------
+        forceSign: bool, optional
+            Force reciprocal and forward measurements to have the same 
+            polarity regarding the calculation of the reciprocal errors. 
+            Default is False. 
         
         Notes
         -----
