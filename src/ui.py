@@ -436,7 +436,7 @@ class App(QMainWindow):
                         self.elecTable.initTable(self.project.elec) # load electrodes back in
                     self.tempElec = self.elecTable.getTable()
                     self.elecDx2DTape.setEnabled(True)
-                    self.localGrid.setEnabled(True)
+                    # self.localGrid.setEnabled(True)
                     if self.project.iBorehole:
                         self.boreholeCheck.setChecked(True)
                     
@@ -1891,7 +1891,7 @@ class App(QMainWindow):
         self.localGrid = QCheckBox('Local grid')
         self.localGrid.setToolTip('Converts UTM coordinates to local grid for mesh stability')
         self.localGrid.stateChanged.connect(convertLocalGrid)
-        self.localGrid.setEnabled(False)
+        # self.localGrid.setEnabled(False)
         
         self.nbElecEdit = QLineEdit()
         self.nbElecEdit.setValidator(QDoubleValidator())
@@ -6928,7 +6928,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.activateTabs(True)
             self.tempElec = self.elecTable.getTable()
             self.elecDx2DTape.setEnabled(True)
-            self.localGrid.setEnabled(True)
+            # self.localGrid.setEnabled(True)
             self.infoDump(fname + ' imported successfully')
         except Exception as e:
             self.loadingWidget(exitflag=True)
@@ -7023,7 +7023,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.elecDx2DTape.setChecked(False)
         self.elecDx2DTape.setEnabled(False)
         self.localGrid.setChecked(False)
-        self.localGrid.setEnabled(False)
+        # self.localGrid.setEnabled(False)
         self.importDataRecipBtn.hide()
         self.fnamesCombo.hide()
         self.fnamesComboLabel.hide()
