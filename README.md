@@ -30,7 +30,7 @@ Notes for Mac and Linux users:
 Zip files:<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.5.4%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-windows.zip)
 [![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.5.4%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-macos.zip "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.3%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.3/ResIPy-linux.zip)<br>
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.4%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-linux.zip)<br>
 macOS Mojave and before: [![mac](https://img.shields.io/badge/macOS%20Mojave%2064bit-ResIPy%20v3.4.5%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-macos_mojave.zip "wine is required - see below")
 
 
