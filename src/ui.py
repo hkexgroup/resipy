@@ -942,6 +942,7 @@ class App(QMainWindow):
             self.pseudo3DCheck.setEnabled(False)
             self.pseudo3DCheck.setChecked(False)
             self.tabImporting.setTabEnabled(2,False) # no custom parser needed
+            self.localGrid.setEnabled(False)
             if self.loadedProjectFlag is False: # loading a project doesn't need a restart
                 self.restartFunc() # let's first from previous inversion
             self.nbElecEdit.setEnabled(True)
@@ -970,6 +971,7 @@ class App(QMainWindow):
             self.tabImporting.setTabEnabled(2,True)
             self.batchCheck.setEnabled(True)
             self.pseudo3DCheck.setEnabled(True)
+            self.localGrid.setEnabled(True)
             self.timeLapseCheck.setChecked(False) # not checked by default
             self.batchCheck.setChecked(False) # not checked by default
             self.activateTabs(False)
