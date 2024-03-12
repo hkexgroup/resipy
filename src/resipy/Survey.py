@@ -280,7 +280,7 @@ class Survey(object):
                 self.elec = elec
 
             # convert apparent resistivity to resistance and vice versa
-            self.computeKborehole()
+            self.computeK()
             if 'resist' in self.df.columns:
                 self.df['app'] = self.df['K']*self.df['resist']
             elif 'app' in self.df.columns:
@@ -302,7 +302,7 @@ class Survey(object):
             
             # house keeping 
             self.setSeqIds()
-            self.computeKborehole()
+            self.computeK()
         
         else:
             raise ValueError('No fname supplied, no df and elec supplied. Returned.')
@@ -475,7 +475,7 @@ class Survey(object):
             is True. 
         """
         resist = self.df['resist'].values.copy()
-        self.computeKborehole()
+        self.computeK()
         K = self.df['K'].values
         ie = ((K < 0) & (resist > 0)) | ((K > 0) & (resist < 0))
         
@@ -1818,10 +1818,30 @@ class Survey(object):
             ax.plot(self.df['ip'].values, '.')
             ax.set_xlabel('Measurements')
             ax.set_ylabel('Phase [mrad]')
-    
-        
+            
+            
     def computeK(self):
-        """Compute geomatrix factor (assuming flat 2D surface) and store it
+        """
+        Compute geometric factors, if any buried electrodes present then the 
+        generalised function for buried electrodes will be used, otherwise 
+        all electrodes are assumed to be on a flat surface. 
+
+        Returns
+        -------
+        K: array like
+            Geometric factors for each measurement in Survey.df (dataframe)
+
+        """
+        if 'buried' in self.elec.columns and any(self.elec['buried']):
+            if self.debug:
+                print('Computing geometric factors for buried electrodes!')
+            return self.computeKborehole()
+        else:
+            return self.computeKsurface()
+    
+    
+    def computeKsurface(self):
+        """Compute geomatrix factor (assuming flat surface) and store it
         in self.df['K'].
         """
         array = self.isequence - 1 
@@ -2267,7 +2287,7 @@ class Survey(object):
             resist[ie] *= -1 
             
         if geom: # compute and applied geometric factor
-            self.computeKborehole()
+            self.computeK()
             resist = resist*self.df['K'].values
             resist[np.isinf(resist)] = np.nan # sometimes inf are generated
             # let's set them to nan to prevent colorscale to be meaningless

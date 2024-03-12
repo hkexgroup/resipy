@@ -566,7 +566,7 @@ class Project(object): # Project master class instanciated by the GUI
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             for s in self.surveys:
-                s.computeKborehole() # recalculate K 
+                s.computeK() # recalculate K 
                 
         self.pinfo['Number of electrodes'] = len(self.elec)
         if 'iremote' in self.elec.columns: 
