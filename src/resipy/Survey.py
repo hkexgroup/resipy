@@ -136,9 +136,8 @@ def fixSequence(sequence):
     newseq = sequence.copy()
     for i in range(len(uid)):
         if uid[i] != cid[i]:
-            replaceidx = sequence==uid[i]
+            replaceidx = sequence == uid[i]
             newseq[replaceidx] = cid[i] 
-            # print(uid[i],cid[i])
     return newseq 
     
 
@@ -691,10 +690,6 @@ class Survey(object):
             'Bisection Search', 'Pandas Merge' or 'Array Expansion'.
             The default is 'Bisection Search', other string are casted to
             'Array Expansion'.
-        forceSign: bool, optional
-            Force reciprocal and forward measurements to have the same 
-            polarity regarding the calculation of the reciprocal errors. 
-            Default is False. (not active currently)
             
         Notes
         -----
@@ -727,16 +722,12 @@ class Survey(object):
     def computeReciprocalP(self): # pandas way
         """Compute reciprocal measurements using `pandas.merge()`.
         
-        Parameters
-        ----------
-        forceSign: bool, optional
-            Force reciprocal and forward measurements to have the same 
-            polarity regarding the calculation of the reciprocal errors. Default
-            is False. 
-        
         Notes
         -----
-        Someone want to explain exactly how this code works? 
+        This algorithm create two dataframes with ABMN and MNAB then use the pd.merge()
+        function to match normal and their reciprocal. The resulting merged dataframe
+        contains indexes of both ABMN and MNAB dataframes and is used to populate the irecip
+        column.
         """
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
@@ -792,9 +783,17 @@ class Survey(object):
         Ri[inormal] = val[inormal]
         Ri[irecip] = -val[inormal]
 
+        # establishing information on which swapping of electrode within dipole
+        # is expected to cause a change in sign between normal and reciprocal quad.
+        ab_diff = (array[:, 0] - sortedArray[:, 0]) != 0  # if != 0, then they were sorted
+        mn_diff = (array[:, 2] - sortedArray[:, 2]) != 0 
+        idiff = (ab_diff & mn_diff) | (~ab_diff & ~mn_diff)
+        swapped = np.ones(array.shape[0], dtype=int)
+        swapped[inormal] -= (idiff[inormal] != idiff[irecip])*2
+        
         # compute the reciprocal error (using the magnitude of the measurements)
-        reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
-        reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
+        reciprocalErr[inormal] = R[irecip] - R[inormal]*swapped[inormal]
+        reciprocalErr[irecip] = R[irecip] - R[inormal]*swapped[inormal]
         reci_IP_err[inormal] = M[irecip] - M[inormal]
         reci_IP_err[irecip] = M[inormal] - M[irecip]
         
@@ -839,13 +838,6 @@ class Survey(object):
     def computeReciprocalN(self): # fast vectorize version
         """Compute reciprocal measurements using numpy array expansion. 
         
-        Parameters
-        ----------
-        forceSign: bool, optional
-            Force reciprocal and forward measurements to have the same 
-            polarity regarding the calculation of the reciprocal errors. Default
-            is False. 
-        
         Notes
         -----
         The method first sorts the dipole AB and MN. Then creates a reciprocal
@@ -886,10 +878,18 @@ class Survey(object):
         # flipsign = (array[inormal,0] != array[irecip,2]) & (array[inormal,1] != array[irecip,3])
         # R[flipsign] *= -1 
         
+        # establishing information on which swapping of electrode within dipole
+        # is expected to cause a change in sign between normal and reciprocal quad.
+        ab_diff = (array[:, 0] - sortedArray[:, 0]) != 0  # if != 0, then they were sorted
+        mn_diff = (array[:, 2] - sortedArray[:, 2]) != 0 
+        idiff = (ab_diff & mn_diff) | (~ab_diff & ~mn_diff)
+        swapped = np.ones(array.shape[0], dtype=int)
+        swapped[inormal] -= (idiff[inormal] != idiff[irecip])*2
+        
         # compute the reciprocal error (using the magnitude of the measurements)
-        reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
-        reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
-        reci_IP_err[inormal] = M[irecip] - M[inormal]
+        reciprocalErr[inormal] = R[irecip] - R[inormal]*swapped[inormal]
+        reciprocalErr[irecip] = R[irecip] - R[inormal]*swapped[inormal]
+        reci_IP_err[inormal] = M[irecip] - M[inormal]  # TODO should we apply the swapped here too?!
         reci_IP_err[irecip] = M[inormal] - M[irecip]
         
         # compute reciprocal mean with all valid values
@@ -921,12 +921,13 @@ class Survey(object):
         self.df['recipError'] = reciprocalErr
         self.df['recipMean'] = reciprocalMean
         self.df['reci_IP_err'] = reci_IP_err
+        
         # in order to compute error model based on a few reciprocal measurements
         # we fill 'recipMean' column with simple resist measurements for lonely
         # quadrupoles (which do not have reciprocals)
         inotRecip = Ri == 0
         self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
-        
+
         return Ri
     
     def computeReciprocalC(self): # fast vectorize version

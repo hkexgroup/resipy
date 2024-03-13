@@ -89,18 +89,31 @@ k.importElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 #%% testing different reciprocal methods
 k = Project(typ='R2')
 k.createSurvey(testdir + 'ip-2d/IP_MICP_all.csv', ftype='Syscal')
-# df = k.surveys[0].df.copy()
-# df[['a', 'b']] = np.sort(df[['a', 'b']].values, axis=1)
-# df[['m', 'n']] = np.sort(df[['m', 'n']].values, axis=1)
-# i2keep = ~df.duplicated(subset=['a', 'b', 'm', 'n'])
-# k.surveys[0].filterData(i2keep)
+# k.createSurvey(testdir + 'dc-2d/protocol-strange-reciprocal.dat', ftype='ProtocolDC')
+
+rtime = {}
+t0 = time.time()
 k.surveys[0].computeReciprocal(alg='Bisection Search')
+rtime['bisection'] = time.time() - t0
+t0 = time.time()
 df1 = k.surveys[0].df.copy()
 k.surveys[0].computeReciprocal(alg='Pandas Merge')
+rtime['pandas'] = time.time() - t0
+t0 = time.time()
 df2 = k.surveys[0].df.copy()
 k.surveys[0].computeReciprocal(alg='Array Expansion')
+rtime['numpy'] = time.time() - t0
+for key in rtime:
+    print(key, '{:.1f} ms'.format(rtime[key]*1000))
 df3 = k.surveys[0].df.copy()
 df3['irecip'] = df3['irecip'].astype(int)  # not sure why it's float maybe for NaN?
+
+print('bisection:')
+print(df1[['a', 'b', 'm', 'n', 'irecip', 'resist', 'recipError']])
+print('\npandas:')
+print(df2[['a', 'b', 'm', 'n', 'irecip', 'resist', 'recipError']])
+print('\nnumpy:')
+print(df3[['a', 'b', 'm', 'n', 'irecip', 'resist', 'recipError']])
 
 # merge them for comparison (but they might not be ordered in the same way!)
 dfm = pd.merge(df1[['a', 'b', 'm', 'n', 'irecip']],
@@ -142,7 +155,35 @@ if dfm['irecip_pd'].sub(dfm['irecip_np']).sum() != 0:
     print(df.sort_values('isort_np')[['a', 'b', 'm', 'n', 'irecip_pd', 'irecip_np']])
     
 timings['methods-importing'] = time.time() - tstart
+#%%
+k = Project(typ='R2')
+k.createSurvey(testdir + 'ip-2d/IP_MICP_all.csv', ftype='Syscal')
+abmn = k.surveys[0].sequence
 
+t0 = time.time()
+# establishing information on the which swapping of electrode within dipole
+# is expected to cause a change in sign between normal and reciprocal quad.
+ab_sorted = np.sort(abmn[:, :2], axis=1)
+mn_sorted = np.sort(abmn[:, 2:], axis=1)
+ab_diff = (abmn[:, 0] - ab_sorted[:, 0]) != 0  # if != 0, then they were sorted
+mn_diff = (abmn[:, 2] - mn_sorted[:, 0]) != 0 
+idiff = (ab_diff & mn_diff) | (~ab_diff & ~mn_diff)
+
+# transform ab and mn in complex number to exclude quad without reciprocal
+ab_complex = ab_sorted[:, 0] + 1j * ab_sorted[:, 1]
+mn_complex = mn_sorted[:, 0] + 1j * mn_sorted[:, 1]
+
+# for loops?
+irecip = np.zeros(abmn.shape[0], dtype=bool)
+for i, row in enumerate(abmn):
+    ie = row[[2, 3, 0, 1]] == abmn
+    if ie.sum() > 0:
+        irecip[i] = np.where(ie)[0][0]
+    
+# match quadrupole by sorting
+
+
+print('{:.1f} ms'.format((time.time() - t0)*1000))
 
 #%% filtering
 k = Project(typ='R2')
@@ -297,7 +338,7 @@ timings['methods-meshing'] = time.time() - tstart
 # k.showPseudo(2)
 # k.showError(0)
 # k.showError(2)
-# k.showErrorDist(0)
+# k._0)
 # k.showErrorDist(2)
 # k.showInvError()
 # k.showIter()
