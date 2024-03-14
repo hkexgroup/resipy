@@ -3107,6 +3107,8 @@ class Project(object): # Project master class instanciated by the GUI
             if self.elec['buried'].values.all() and surface is None:
                 # all electrodes buried and no surface given
                 self.wholespace = True
+            else:
+                self.wholespace = False 
 
             elec_type = elec_type.tolist()
 

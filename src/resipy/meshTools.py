@@ -3612,7 +3612,7 @@ class Mesh:
         stream('done.')
         
     def saveMesh(self, fname, ftype=None):
-        """Save mesh into a file. Avaialble formats are .dat, .vtk and .node
+        """Save mesh into a file. Available formats are .dat, .vtk and .node
 
         Parameters
         ----------
@@ -4114,6 +4114,9 @@ def tetgen_import(file_path, order_nodes=True):
     file_path: str
         Maps to the mesh .node file. The program will automatically find the 
         corresponding .ele file in the same directory. 
+    order_nodes: bool, optional
+        Check ordering of the nodes on import, this ensures that the mesh will 
+        work inside of R3t / cR3t. Default is True. 
     
     Returns
     -------
@@ -4197,7 +4200,7 @@ def tetgen_import(file_path, order_nodes=True):
         
 #%% build a quad mesh        
 def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.5, 
-             fmd=None, pad=2, surface_x=None,surface_z=None,
+             fmd=None, pad=2, surface_x=None, surface_z=None,
              refine_x = None, refine_z=None, model_err=False):
     """Creates a quaderlateral mesh given the electrode x and y positions.
             
@@ -5048,16 +5051,15 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                 kwargs['geom'] = 'cy'
             if 'flank_fac' not in kwargs.keys():
                 kwargs['flank_fac'] = 10 
-        
-    if whole_space:
-        interp_method = None 
-        
-    
+                
+                
     if all(np.array(elec_y)==elec_y[0]) and surface_refinement is None:
         # cant use triangulation methods if there is no surface refinement and 
         # there is no depth in the Y axis 
         interp_method = 'nearest'
-            
+        
+    if whole_space: # if whole space problem ignore interpolation 
+        interp_method = None 
         
     # check for repeated electrodes? 
     check4repeatNodes(elec_x,elec_y,elec_z,elec_type)
