@@ -3337,7 +3337,7 @@ class Mesh:
             
         fh.close()
         
-    def toCSV(self,file_name='mesh.csv'):
+    def toCsv(self,file_name='mesh.csv'):
         """ Write a .csv file of the mesh, the first 3 columns are the element 
         centres at coordinates x,y,z and the rest of the columns are the 
         attributes in the df
@@ -3346,10 +3346,6 @@ class Mesh:
         ----------
         file_name : String, optional
             The default is 'mesh.csv'.
-
-        Returns
-        -------
-        None.
 
         """
         if isinstance(file_name,str)==False:
@@ -3379,6 +3375,72 @@ class Mesh:
             fh.write(line)
         #close file     
         fh.close()
+        
+    def xyz(self,file_name='mesh.xyz'):
+        """ Write a .xyz file of the mesh, the first 3 columns are the element 
+        centres at coordinates x,y,z and the rest of the columns are the 
+        attributes in the df
+
+        Parameters
+        ----------
+        file_name : String, optional
+            The default is 'mesh.csv'.
+
+        """
+        if isinstance(file_name,str)==False:
+            raise NameError("file_name argument must be a string")
+        x_coords=self.elmCentre[:,0]#get element coordinates
+        y_coords=self.elmCentre[:,1]
+        z_coords=self.elmCentre[:,2]
+        df = self.df.copy().reset_index()
+        keys0= self.df.keys()
+        keys=[]
+        #ignore the x y z columns if already in df
+        ignore = ['X','Y','Z']
+        for k in keys0:
+            if k not in ignore:
+                keys.append(k)
+        
+        #open file 
+        fh = open(file_name,'w')
+        fh.write('X, Y, Z') # write xyz headers 
+        [fh.write(', '+key) for key in keys] # write attribute headers 
+        fh.write('\n') # drop a line 
+        for i in range(self.numel):
+            line = '{:f},{:f},{:f}'.format(x_coords[i],y_coords[i],z_coords[i])
+            for key in keys:
+                line += ',{:}'.format(df[key][i])
+            line += '\n'
+            fh.write(line)
+        #close file     
+        fh.close()
+        
+    def toVoxet(self,file_name='mesh.vo',x0=None,y0=None,a=0):
+        if self.cell_type[0] != 11:
+            raise Exception('this kind of export only available for voxel mesh')
+        
+        if x0 is None:
+            x0 = np.min(self.node[:,0])
+        if y0 is None:
+            y0 = np.min(self.node[:,1])
+        z0 = np.min(self.node[:,2])
+            
+        fh = open(file_name,'w')
+        fh.write('GOCAD Voxet 0.01\n')
+        fh.write('AXIS_O %f %f %f\n'%(x0,y0,z0))
+        
+        # vectors desribe the orientation of the mesh axis (can be used to add some rotation)
+        fh.write('AXIS_U 0. 0. 55.\n')
+        fh.write('AXIS_V 0. 220. 0.\n')
+        fh.write('AXIS_W 220. 0. 0.\n')
+        fh.write('AXIS_MIN 0.0 0.0 0.0\n')
+        fh.write('AXIS_MAX 549. 227. 149.\n')
+        fh.write('AXIS_N 550 228 150\n')
+        fh.write('AXIS_D 1. 1. 1.\n')
+        fh.write('AXIS_NAME "Z" "Y" "X"\n')
+        fh.write('AXIS_UNIT "m" "m" "m"\n')
+        fh.write('AXIS_TYPE even even even\n')
+        
         
     @staticmethod   # find paraview location in windows    
     def findParaview():
@@ -5437,7 +5499,6 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
               mesh_refinement=None, ball_refinement=True,
               path='exe', dump=print, whole_space=False, model_err=False,
               handle=None, show_output=True, **kwargs):
-
     """
     Generates a voxel mesh, not meant to be used for ERT processing with the R*
     codes but rather can be used for the purposes of mesh visualizuation post 
@@ -5524,7 +5585,6 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             
     """
     #formalities 
-    
     if elec_z is None: 
         elec_z = np.zeros_like(elec_x)
         
@@ -5548,7 +5608,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         interp_method = None 
         
     if whole_space:
-        warnings.warn('Voxel mesh does not yet fully support whole space problems')
+        warnings.warn('Voxel mesh is not yet fully tested for whole space problems')
         interp_method = None 
         
     if surface_refinement is not None:
@@ -5633,7 +5693,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     elif interp_method == 'nearest':
         elec_z_topo = interp.nearest(elec_x, elec_y, x_interp, y_interp, z_interp)
     elif interp_method == 'spline':
-        elec_z_topo = interp.interp2d(elec_x, elec_y, x_interp, y_interp, z_interp,method='spline')
+        elec_z_topo = interp.interp2d(elec_x, elec_y, x_interp, y_interp, z_interp, method='spline')
     elif interp_method == 'triangulate':
         elec_z_topo = interp.triangulate(elec_x, elec_y, x_interp, y_interp, z_interp)
         
@@ -5641,10 +5701,6 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     dp_len = np.max(findDist(elec_x, elec_y, elec_z))
     tree = cKDTree(elec) 
     idist,_ = tree.query(elec,2) 
-    
-    def func(**kwargs):
-        return 0 
-    func(**kwargs)
     
     if 'cl' in kwargs.keys(): 
         cl = kwargs['cl']
@@ -5704,7 +5760,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     zz = []
     z = min(ez)
     for i in range(1,len(ez)):
-        while ez[i] > z:
+        while ez[i] > z and (z + cl) <=0:
             z += cl 
             zz.append(z)
         zz.append(ez[i])
@@ -6023,10 +6079,6 @@ def tankMesh(elec=None,
         os.remove(file_path.replace('.geo', '.msh'))
         
     return mesh
-
-#%% voxel mesh 
-def voxelMesh(elec_x,elec_y,elec_z=None,elec_type=None):
-    pass 
 
 #%% ciruclar mesh (TODO)
 def circularMesh():
