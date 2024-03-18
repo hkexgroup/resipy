@@ -1065,6 +1065,8 @@ class Project(object): # Project master class instanciated by the GUI
         
         settings = {'surveysInfo': self.surveysInfo,
                     'topo': self.topo.to_dict(),
+                    'coordLocal':self.coordLocal, 
+                    'coordParam':self.coordParam, 
                     'typ': self.typ,
                     'err': self.err,
                     'iBorehole': self.iBorehole,
@@ -1232,6 +1234,16 @@ class Project(object): # Project master class instanciated by the GUI
         self.custSeq = settings['custSeq']
         self.errTyp = settings['errTyp']
         self.surfaceIdx = settings['surfaceIdx']
+        # check if local coordinate flag in keys (need to do this for backward compatibility)
+        if 'coordLocal' in settings.keys(): 
+            self.coordLocal = settings['coordLocal'] 
+        else: 
+            self.coordLocal = False 
+            
+        if 'coordParam' in settings.keys():
+            self.coordParam = settings['coordParam']
+        else: 
+            self.coordParam = {'x0':None,'y0':None,'a':0}
             
         # read parameters
         with open(os.path.join(savedir, 'params.json'), 'r') as f:
@@ -6420,27 +6432,8 @@ class Project(object): # Project master class instanciated by the GUI
             # check for extension 
             if len(outputname.split('.'))<2: 
                 outputname = outputname + '.vtk'
+        self.mesh.exportMesh(outputname,self.coordLocal,self.coordParam)
         
-        mesh = self.mesh.copy() 
-        if self.coordLocal: 
-            localx, localy = mesh.node[:,0], mesh.node[:,1]
-            x0 = self.coordParam['x0']
-            y0 = self.coordParam['y0']
-            a = np.deg2rad(self.coordParam['a'])
-            utmx, utmy = invRotGridData(localx, localy, x0, y0, a)
-            mesh.node[:,0] = utmx 
-            mesh.node[:,1] = utmy 
-
-        if outputname.lower().endswith('.vtk'):
-            self.mesh.vtk(outputname)
-        elif outputname.lower().endswith('.node'):
-            self.mesh.exportTetgenMesh(prefix=outputname.replace('.node',''))
-        elif outputname.lower().endswith('.dat'):
-            self.mesh.dat(outputname)
-        else:
-            raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
-
-
 
     def _toParaview(self, fname,  paraview_loc=None): # pragma: no cover
         """Open file in paraview (might not work if paraview is not in the PATH,
@@ -6839,7 +6832,9 @@ class Project(object): # Project master class instanciated by the GUI
         fh.close()
 
     def exportMeshResults(self, dirname=None, ftype='.vtk'):
-        """Save mesh files of inversion results to a specified directory.
+        """Save mesh files of inversion results to a specified directory. If 
+        results are in a local grid, they will be converted back into thier 
+        respective utm or nationa grid coordinates. 
 
         Parameters
         ----------
@@ -6848,8 +6843,6 @@ class Project(object): # Project master class instanciated by the GUI
         ftype: str
             Type of file extension. 
         """
-        # if self.pseudo3DMeshResult is not None: 
-        #     raise Exception('exportMeshResults call does not yet work for Pseudo3D results')
             
         if dirname is None:
             dirname = self.dirname
@@ -6901,20 +6894,28 @@ class Project(object): # Project master class instanciated by the GUI
                 else: 
                     meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
                                                            self.param['zmax']])
-                    
             elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
                 meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
-            
-            meshcopy.saveMesh(file_path, title=mesh.mesh_title) # save to vtk 
+                
+            # convert to utm if needed (not for psuedo3d, that'll be handled differently)
+            if self.coordLocal and self.pseudo3DMeshResult is None: 
+                coordLocal = True 
+            else:
+                coordLocal = False 
+            meshcopy.exportMesh(file_path, None, coordLocal, self.coordParam) # save to vtk 
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
             if self.pseudo3DMeshResultList is not None:
                 file_path = os.path.join(dirname, mesh.mesh_title + '_3D' + ext)
-                self.pseudo3DMeshResultList[count-1].saveMesh(file_path, title=mesh.mesh_title)
+                self.pseudo3DMeshResultList[count-1].exportMesh(file_path, 
+                                                              None,
+                                                              self.coordLocal,
+                                                              self.coordParam)
                 
         if self.pseudo3DMeshResult is not None: 
             self.pseudo3DMeshResult.mesh_title = 'Pseudo_3D_result'
             file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + ext)
-            self.pseudo3DMeshResult.saveMesh(file_path, title='Pseudo_3D_result')
+            self.pseudo3DMeshResult.exportMesh(file_path, None, 
+                                             self.coordLocal, self.coordParam)
             amtContent += "\tannotations.append('%s')\n"%self.pseudo3DMeshResult.mesh_title
 
         if ext =='.vtk': 

@@ -3680,7 +3680,9 @@ class Mesh:
         Parameters
         ----------
         fname : str, optional 
-            File extension, if none, will be guessed from file name. 
+            Path to output save file. 
+        ftype: str, optional
+            File extension, if none, will be guessed from file name.
         """
         if not isinstance(fname,str):
             raise TypeError('fname needs to be a string!')
@@ -3711,7 +3713,49 @@ class Mesh:
             self.exportTetgenMesh(fname.replace('.node',''))
         elif ftype == 'xyz':
             self.xyz(fname) 
+        else:
+            raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
+            
+    def exportMesh(self, fname, ftype=None, coordLocal=False, coordParam=None):
+        """
+        Export mesh into with coordinate rotation data 
         
+        Parameters
+        ----------
+        fname : str, optional 
+            Path to output save file. 
+        ftype: str, optional
+            File extension, if none, will be guessed from file name.
+        coordLocal: bool, optional 
+            If True, convert mesh coordinates to a national grid system or utm. 
+        coordParam: dict, optional
+            Coordinate conversion parameters, x0, y0 and a. Stored as a dictionary. 
+        """
+        if coordLocal and coordParam is None: 
+            coordParam = {}
+            if self.elec is not None: 
+                if self.iremote is not None:
+                    iremote = self.iremote 
+                else: 
+                    iremote = [False]*self.elec.shape[0]
+                coordParam['x0'] = np.min(self.elec[:,0][~iremote])
+                coordParam['y0'] = np.min(self.elec[:,1][~iremote])
+                coordParam['a'] = 0 
+                
+        if coordLocal: 
+            mesh = self.copy() 
+            x0 = coordParam['x0']
+            y0 = coordParam['y0']
+            a = np.rad2deg(coordParam['a'])
+            utmx, utmy = interp.invRotGridData(
+                mesh.node[:,0], 
+                mesh.node[:,1], 
+                x0, y0, a)
+            mesh.node[:,0] = utmx 
+            mesh.node[:,1] = utmy 
+            mesh.saveMesh(fname,ftype)
+        else:
+            self.saveMesh(fname,ftype)
         
     def writeRindex(self,fname):
         """Write out the neighbourhood matrix for R3t. 
