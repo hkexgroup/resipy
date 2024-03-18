@@ -3430,11 +3430,11 @@ class Mesh:
         fh.write('AXIS_O %f %f %f\n'%(x0,y0,z0))
         
         # vectors desribe the orientation of the mesh axis (can be used to add some rotation)
-        fh.write('AXIS_U 0. 0. 55.\n')
-        fh.write('AXIS_V 0. 220. 0.\n')
-        fh.write('AXIS_W 220. 0. 0.\n')
+        fh.write('AXIS_U 0. 0. %f\n'%np.max(self.node[:,0]))
+        fh.write('AXIS_V 0. %f 0.\n'%np.max(self.node[:,1]))
+        fh.write('AXIS_W %f 0. 0.\n'%np.max(self.node[:,2]))
         fh.write('AXIS_MIN 0.0 0.0 0.0\n')
-        fh.write('AXIS_MAX 549. 227. 149.\n')
+        fh.write('AXIS_MAX %f %f %f\n'%(np.max(self.node[:,0]),np.max(self.node[:,1]),np.max(self.node[:,2])))
         fh.write('AXIS_N 550 228 150\n')
         fh.write('AXIS_D 1. 1. 1.\n')
         fh.write('AXIS_NAME "Z" "Y" "X"\n')
@@ -3674,18 +3674,19 @@ class Mesh:
         stream('done.')
         
     def saveMesh(self, fname, ftype=None):
-        """Save mesh into a file. Available formats are .dat, .vtk and .node
+        """Save mesh into a file. Available formats are .dat, .vtk, .csv and 
+        .node
 
         Parameters
         ----------
-        fname : TYPE
-            DESCRIPTION.
+        fname : str, optional 
+            File extension, if none, will be guessed from file name. 
         """
         if not isinstance(fname,str):
             raise TypeError('fname needs to be a string!')
         
         #determine file type 
-        atypes = ['dat','node','vtk','csv']
+        atypes = ['dat','node','vtk','csv', 'xyz']
         if ftype is None:#guess
             for a in atypes:
                 if fname.endswith('.' + a):
@@ -3708,6 +3709,8 @@ class Mesh:
             self.toCSV(fname)
         elif ftype == 'node':
             self.exportTetgenMesh(fname.replace('.node',''))
+        elif ftype == 'xyz':
+            self.xyz(fname) 
         
         
     def writeRindex(self,fname):

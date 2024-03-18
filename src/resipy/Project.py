@@ -43,6 +43,7 @@ from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
 from resipy.saveData import (write2Res2DInv, write2csv, writeSrv)
+from resipy.interpolation import rotGridData, invRotGridData
 
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
@@ -334,6 +335,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.meshParams = {} # mesh parameters passed to mesh creation scheme
         self.wholespace = False # flag for whole space problem 
         self.topo = pd.DataFrame(columns=['x','y','z']) # store additional topo points
+        self.coordLocal = False # flag is local coordinate conversion required 
+        self.coordParam = {'x0':None, 'y0':None, 'a':None} # coordinate conversion parameters 
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.invLog = '' # to save inversion output - all R2.out files
@@ -491,7 +494,60 @@ class Project(object): # Project master class instanciated by the GUI
             
         return elec
 
+    def setCoordConv(self,flag=False,x0=None,y0=None,a=0):
+        """
+        Set that the project should be imported and exported according to a 
+        coordinate conversion system. Generally UTM coordinates will cause 
+        stability issues with mesh generation and the finite element solutions 
+        used in the R* codes, hence the we use a local coordinate system. 
+        Call this function before creating the mesh. 
 
+        Parameters
+        ----------
+        flag : bool, optional
+            flag if coordinate conversion system is required. 
+            The default is False.
+        x0 : float, optional
+            Reference X coordinate in UTM system. The default is None. If left 
+            as none, then the minimum X coordinate of the electrodes will be 
+            used. 
+        y0 : TYPE, optional
+            Reference Y coordinate in UTM system. The default is None. If left 
+            as none, then the minimum Y coordinate of the electrodes will be 
+            used. 
+        a : float, optional
+            Rotation angle in degrees. The default is 0.
+        """
+        self.coordLocal = flag 
+        self.coordParam = {} 
+        self.coordParam['x0'] = x0 
+        self.coordParam['y0'] = y0 
+        self.coordParam['a'] = a 
+        if self.coordLocal and self.elec is not None:
+            if self.coordParam['x0'] is None: 
+                x0 = np.min(self.elec.x.values)
+                self.coordParam['x0'] = x0 
+                
+            if self.coordParam['y0'] is None: 
+                y0 = np.min(self.elec.y.values)
+                self.coordParam['y0'] = y0 
+                
+            if self.coordParam['a'] is None: 
+                self.coordParam['a'] = 0 
+                
+            x0 = self.coordParam['x0']
+            y0 = self.coordParam['y0']
+            a = np.deg2rad(self.coordParam['a'])
+            
+            localx, localy = rotGridData(self.elec.x.values, self.elec.y.values, x0, y0, a)
+            self.elec.loc[:,'x'] = localx 
+            self.elec.loc[:,'y'] = localy 
+            for s in self.surveys: 
+                localx, localy = rotGridData(s.elec.x.values, s.elec.y.values, x0, y0, a)
+                s.elec.loc[:,'x'] = localx 
+                s.elec.loc[:,'y'] = localy 
+                s.computeK() 
+                
     
     def setElec(self, elec, elecList=None):
         """Set electrodes. Automatically identified remote electrode.
@@ -562,6 +618,31 @@ class Project(object): # Project master class instanciated by the GUI
                 self.elec = self._num2elec(np.zeros((len(initElec),3)))
             for i, survey in enumerate(self.surveys):
                 survey.elec = self._findRemote(self._num2elec(elecList[i])) # plus identification of remote electrode
+
+        # do coordinate conversion if local grid required 
+        if self.coordLocal and self.elec is not None:
+            if self.coordParam['x0'] is None: 
+                x0 = np.min(self.elec.x.values)
+                self.coordParam['x0'] = x0 
+                
+            if self.coordParam['y0'] is None: 
+                y0 = np.min(self.elec.y.values)
+                self.coordParam['y0'] = y0 
+                
+            if self.coordParam['a'] is None: 
+                self.coordParam['a'] = 0 
+                
+            x0 = self.coordParam['x0']
+            y0 = self.coordParam['y0']
+            a = np.deg2rad(self.coordParam['a'])
+            
+            localx, localy = rotGridData(self.elec.x.values, self.elec.y.values, x0, y0, a)
+            self.elec.loc[:,'x'] = localx 
+            self.elec.loc[:,'y'] = localy 
+            for s in self.surveys: 
+                localx, localy = rotGridData(s.elec.x.values, s.elec.y.values, x0, y0, a)
+                s.elec.loc[:,'x'] = localx 
+                s.elec.loc[:,'y'] = localy 
 
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
@@ -891,7 +972,8 @@ class Project(object): # Project master class instanciated by the GUI
 
     def convertLocalGrid(self):
         """
-        Converts UTM grid to local grid for mesh stability
+        Converts UTM grid to local grid for stability in mesh generation and 
+        the finite element solution. 
         
         Parameters
         ----------
@@ -3068,6 +3150,27 @@ class Project(object): # Project master class instanciated by the GUI
                 self.topo = pd.DataFrame(surface, columns=['x','z'])
             else:
                 self.topo = pd.DataFrame(surface, columns=['x','y','z'])
+                
+            if self.coordLocal: 
+                # need to convert surface to local coordinates 
+                surface = surface.copy() 
+                if surface.shape[1] == 2: 
+                    utmy = np.zeros(surface.shape[0])
+                else: 
+                    utmy = surface[:,1]
+                utmx = surface[:,0]
+                x0 = self.coordParam['x0']
+                y0 = self.coordParam['y0']
+                a = np.deg2rad(self.coordParam['a'])
+                localx, localy = rotGridData(utmx, utmy, x0, y0, a)
+                surface[:,0] = localx 
+                if surface.shape[1] == 3:
+                    surface[:,1] = localy 
+                    # reassign topo 
+                    self.topo = pd.DataFrame(surface, columns=['x','y','z'])
+                else:
+                    self.topo = pd.DataFrame(surface, columns=['x','z'])
+
         
         # estimate depth of fine mesh
         if fmd is None:
@@ -6295,6 +6398,47 @@ class Project(object): # Project master class instanciated by the GUI
                 self.mesh.dat(outputname)
             else:
                 raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
+                
+                
+    def exportMesh(self, outputname=None):
+        """Export mesh as a different file format, with coordinate conversion
+        if Project.coordLocal set to True. 
+
+        Parameters
+        ----------
+        outputname : str, optional
+            Output path with extension. Available mesh format are:
+                - .vtk (Paraview)
+                - .node (Tetgen)
+                - .dat (R* codes)
+            If not provided the mesh is saved in the working directory
+            as mesh.vtk.
+        """
+        if outputname is None: 
+            outputname = 'mesh.vtk'
+        if isinstance(outputname,str):
+            # check for extension 
+            if len(outputname.split('.'))<2: 
+                outputname = outputname + '.vtk'
+        
+        mesh = self.mesh.copy() 
+        if self.coordLocal: 
+            localx, localy = mesh.node[:,0], mesh.node[:,1]
+            x0 = self.coordParam['x0']
+            y0 = self.coordParam['y0']
+            a = np.deg2rad(self.coordParam['a'])
+            utmx, utmy = invRotGridData(localx, localy, x0, y0, a)
+            mesh.node[:,0] = utmx 
+            mesh.node[:,1] = utmy 
+
+        if outputname.lower().endswith('.vtk'):
+            self.mesh.vtk(outputname)
+        elif outputname.lower().endswith('.node'):
+            self.mesh.exportTetgenMesh(prefix=outputname.replace('.node',''))
+        elif outputname.lower().endswith('.dat'):
+            self.mesh.dat(outputname)
+        else:
+            raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
 
 
 
@@ -6694,6 +6838,108 @@ class Project(object): # Project master class instanciated by the GUI
         fh.write('def end_cue(self): pass\n')
         fh.close()
 
+    def exportMeshResults(self, dirname=None, ftype='.vtk'):
+        """Save mesh files of inversion results to a specified directory.
+
+        Parameters
+        ----------
+        dirname: str
+            Directory in which results will be saved. Default is the working directory.
+        ftype: str
+            Type of file extension. 
+        """
+        # if self.pseudo3DMeshResult is not None: 
+        #     raise Exception('exportMeshResults call does not yet work for Pseudo3D results')
+            
+        if dirname is None:
+            dirname = self.dirname
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+        amtContent = ''
+        if len(self.meshResults) == 0:
+            self.getResults()
+        count=0
+        ext = '.vtk'
+        if 'vtk' in ftype.lower():
+            ext = 'vtk'
+        elif 'dat' in ftype.lower(): 
+            ext = '.dat'
+        elif 'node' in ftype.lower(): 
+            ext = '.node'
+        elif 'xyz' in ftype.lower(): 
+            ext = '.xyz'
+        elif 'csv' in ftype.lower(): 
+            ext = '.csv'
+        # add file types as appropiate! 
+        
+        
+        # check param for truncation variables 
+        for key in ['num_xz_poly','num_xy_poly']:
+            if key not in self.param.keys():
+                self.param[key] = 0 
+        for key in ['zmin','zmax']:
+            if key not in self.param.keys():
+                self.param[key] = None 
+            
+        # loop through and export meshes as vtk files 
+        for mesh, s in zip(self.meshResults, self.surveys):
+            count+=1
+            meshcopy = mesh.copy()
+            
+            if self.iTimeLapse:
+                fname = 'time_step{:0>4}'.format(count) + ext 
+            else:
+                fname = mesh.mesh_title + ext 
+            file_path = os.path.join(dirname, fname) 
+            if self.trapeziod is not None and self.pseudo3DMeshResult is None:
+                meshcopy = meshcopy.crop(self.trapeziod)
+            elif '3' in self.typ and self.param['num_xy_poly'] > 2: 
+                meshcopy = meshcopy.crop(self.param['xy_poly_table'])
+                meshcopy.elec = None 
+                if self.param['zmin'] is None or self.param['zmax'] is None:
+                    pass # cant truncate mesh with out z limits 
+                else: 
+                    meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
+                                                           self.param['zmax']])
+                    
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
+                meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
+            
+            meshcopy.saveMesh(file_path, title=mesh.mesh_title) # save to vtk 
+            amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
+            if self.pseudo3DMeshResultList is not None:
+                file_path = os.path.join(dirname, mesh.mesh_title + '_3D' + ext)
+                self.pseudo3DMeshResultList[count-1].saveMesh(file_path, title=mesh.mesh_title)
+                
+        if self.pseudo3DMeshResult is not None: 
+            self.pseudo3DMeshResult.mesh_title = 'Pseudo_3D_result'
+            file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + ext)
+            self.pseudo3DMeshResult.saveMesh(file_path, title='Pseudo_3D_result')
+            amtContent += "\tannotations.append('%s')\n"%self.pseudo3DMeshResult.mesh_title
+
+        if ext =='.vtk': 
+            # write out paraview animation track 
+            fh = open(os.path.join(dirname,'amt_track.py'),'w')
+            fh.write('from paraview.simple import *\n')
+            fh.write('def start_cue(self):\n')
+            fh.write('\tglobal annotations\n')
+            fh.write('\tglobal maxIndex\n')
+            fh.write("\ttextSource = paraview.simple.FindSource('Text1')\n")
+            fh.write("\tif textSource is None:\n")
+            fh.write("\t\tText()\n")
+            fh.write("\tannotations = []\n")
+            fh.write(amtContent)
+            fh.write('\tmaxIndex=len(annotations)\n')
+            fh.write('def tick(self):\n')
+            fh.write('\tglobal annotations\n')
+            fh.write('\tglobal maxIndex\n')
+            fh.write('\tindex = int( self.GetClockTime() )\n')
+            fh.write('\tif index >= maxIndex :\n')
+            fh.write('\t\tindex = maxIndex - 1\n')
+            fh.write("\ttextSource = paraview.simple.FindSource('Text1')\n")
+            fh.write('\ttextSource.Text = annotations[index]\n')
+            fh.write('def end_cue(self): pass\n')
+            fh.close()
 
 
     def saveCwd(self, outputdir):
