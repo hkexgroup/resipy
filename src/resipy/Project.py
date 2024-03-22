@@ -333,7 +333,9 @@ def fitXYangle(x,y):
     ymdl = (m*xmdl) + c 
     dx = xmdl[0] - xmdl[1]
     dy = ymdl[0] - ymdl[1]
-    a = bearing(dx,dy)
+    a = bearing(dx,dy) + 90 
+    if a > 360:
+        a -= 360 
     return a 
     
 
@@ -525,7 +527,7 @@ class Project(object): # Project master class instanciated by the GUI
         return elec
     
 
-    def setCoordConv(self,flag=False,x0=None,y0=None,a=0):
+    def setCoordConv(self,flag=False,x0=None,y0=None,a=None):
         """
         Set that the project should be imported and exported according to a 
         coordinate conversion system. Generally UTM coordinates will cause 
@@ -593,7 +595,8 @@ class Project(object): # Project master class instanciated by the GUI
                 y0 = self.coordParam['y0'] 
                 
             if self.coordParam['a'] is None and a is None:  
-                if '2' in self.typ: #and any(self.elec.y != self.elec.y[0]):
+                # print('Auto fitting A')
+                if '2' in self.typ and any(self.elec.y != self.elec.y[0]):
                     a = fitXYangle(self.elec.x.values, self.elec.y.values)
                 else: 
                     a = 0 
