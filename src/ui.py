@@ -942,7 +942,7 @@ class App(QMainWindow):
             self.pseudo3DCheck.setEnabled(False)
             self.pseudo3DCheck.setChecked(False)
             self.tabImporting.setTabEnabled(2,False) # no custom parser needed
-            self.localGrid.setEnabled(False)
+            # self.localGrid.setEnabled(False)
             if self.loadedProjectFlag is False: # loading a project doesn't need a restart
                 self.restartFunc() # let's first from previous inversion
             self.nbElecEdit.setEnabled(True)
@@ -971,7 +971,7 @@ class App(QMainWindow):
             self.tabImporting.setTabEnabled(2,True)
             self.batchCheck.setEnabled(True)
             self.pseudo3DCheck.setEnabled(True)
-            self.localGrid.setEnabled(True)
+            # self.localGrid.setEnabled(True)
             self.timeLapseCheck.setChecked(False) # not checked by default
             self.batchCheck.setChecked(False) # not checked by default
             self.activateTabs(False)
@@ -1009,8 +1009,10 @@ class App(QMainWindow):
 
         self.ftype = 'ProtocolDC' # by default
         self.fformat = 'DAT (Tab delimited) (*.dat)' # default
+        self.iMerged = False # using the merged data format (by default is False)
 
         def ftypeComboFunc(index):
+            self.iMerged = False 
             if index == 0:
                 self.ftype = 'ProtocolDC'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
@@ -1046,10 +1048,14 @@ class App(QMainWindow):
                 self.fformat = 'srv (*.srv *.SRV)'
             elif index == 11:
                 self.ftype = 'DAS-1'
-                self.fformat = 'Data (*.dat *.data *.DAT *.DATA *.txt)'
+                self.fformat = 'Data (*.dat *.data *.DAT *.DATA *.txt *.TXT)'
             elif index == 12:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
+            elif index == 13:
+                self.ftype = 'Merged'
+                self.fformat = 'Files (*.csv *.CSV *.txt *.TXT)'
+                self.iMerged = True 
             else:
                 self.ftype = '' # let to be guessed
         self.ftypeComboLabel = QLabel('File format:')
@@ -1068,6 +1074,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('E4D')
         self.ftypeCombo.addItem('DAS-1')
         self.ftypeCombo.addItem('Custom')
+        self.ftypeCombo.addItem('Merged')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
         self.ftypeCombo.setFixedWidth(150)
         self.ftypeCombo.setToolTip('Select data format.')
@@ -1079,8 +1086,14 @@ class App(QMainWindow):
         self.spacingEdit.setToolTip('Electrode spacing.')
 
         def getdir():
-            fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)', self.datadir, self.fformat)
-            # fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
+            if self.iMerged: # special case where files are listed in a csv file 
+                fnames, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File',
+                                                       self.datadir, self.fformat)
+            else: 
+                fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)',
+                                                         self.datadir, self.fformat)
+            # fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 
+            # 'Choose the directory containing the data', directory=self.datadir)
             
             if fnames != []:
                 fdir = os.path.dirname(fnames[0])
@@ -1088,7 +1101,20 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
-                    if self.project.iBatch is False:
+                    if self.iMerged:
+                        self.project.createMergedSurveys(fnames, ftype=self.ftype, dump=self.infoDump)
+                        self.writeLog('k.createMergedSurveys({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
+                        self.iTimeLapse = self.project.iTimeLapse
+                        if self.iTimeLapse:
+                            self.infoDump('Merged time-lapse survey created.')
+                            self.timeLapseCheck.setChecked(True)
+                        else:
+                            self.infoDump('Merged survey created.')
+                            self.timeLapseCheck.setChecked(False)
+                        self.batchCheck.setEnabled(False)
+                        self.pseudo3DCheck.setEnabled(False)
+                        self.pseudo3DCheck.setChecked(False)
+                    elif self.iTimelapse:
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
                             return
@@ -1155,6 +1181,9 @@ class App(QMainWindow):
         
 
         def importDataBtnFunc():
+            if self.iMerged: # if special case of getting a merged file use get dir function instead
+                getdir()
+                return 
             pdebug('importDataBtnFunc: ftype=', self.ftype)
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, self.fformat)
             if fname != '':
@@ -1414,9 +1443,11 @@ class App(QMainWindow):
             pdebug('ipCheckFunc: mode =', self.project.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
+        # self.ipCheckLabel = QLabel('<b>Induced Polarization</b>')
         self.ipCheck.stateChanged.connect(ipCheckFunc)
         self.ipCheck.setEnabled(False)
         self.ipCheck.setToolTip('Check if you have IP data or want IP forward modeling')
+        # self.ipCheckLabel.setToolTip('Check if you have IP data or want IP forward modeling')
 
         self.fnamesComboLabel = QLabel('Choose a dataset to plot:')
         self.fnamesComboLabel.hide()
@@ -1579,6 +1610,10 @@ class App(QMainWindow):
         
         self.hbox5 = QHBoxLayout()
         self.hbox5.setAlignment(Qt.AlignRight)
+        # self.ipboxcheck = QHBoxLayout()
+        # self.ipboxcheck.addWidget(self.ipCheckLabel)
+        # self.ipboxcheck.addWidget(self.ipCheck)
+        # self.hbox5.addWidget(self.ipCheckLabel, alignment=Qt.AlignLeft)
         self.hbox5.addWidget(self.ipCheck, Qt.AlignLeft)
         self.hbox5.addWidget(self.mergElecCheck)
         self.hbox5.addWidget(self.psContourCheck)
@@ -1701,7 +1736,7 @@ class App(QMainWindow):
                         self.setTable(tt, c0, r0)
 
             def initTable(self, tt):
-                pdebug('elecTable.initTable():', tt)
+                pdebug('elecTable.initTable():\n', tt)
                 self.clear() # this clears out the headers as well
                 self.nrow = tt.shape[0]
                 print(self.nrow)
@@ -1717,7 +1752,7 @@ class App(QMainWindow):
             def setTable(self, tt, c0=0, r0=0):
                 if type(tt) == type(pd.DataFrame()):
                     tt = tt[['label','x','y','z']].values
-                pdebug('elecTable.setTable():', self.nrow, self.ncol, tt.shape)
+                pdebug('elecTable.setTable():\n', self.nrow, self.ncol, tt.shape)
                 nanFlag = False # to inform the user that their topography is messed up!
                 for i in range(c0, min([self.ncol, c0+tt.shape[1]])):
                     for j in range(r0, min([self.nrow, r0+tt.shape[0]])):
@@ -1857,6 +1892,12 @@ class App(QMainWindow):
         self.elecLabel.setWordWrap(True)
 
         def importElecBtnFunc():
+            self.localCoordCheck.setChecked(False) # force the local grid back to default 
+            self.project.coordLocal = False 
+            self.project.coordParam = {'x0':None, 'y0':None, 'a':None} 
+            self.localCoordCheck.setEnabled(True)
+            self.project.elec = None # clear project electrodes 
+            self.localCoordLabel.setText('<b>Convert to local grid</b>')
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,
                                                    'Open File', 
                                                    self.datadir,
@@ -1868,32 +1909,98 @@ class App(QMainWindow):
                     nbElec = None
                 self.elecTable.readTable(fname, nbElec=nbElec)
                 self.writeLog('k.importElec("{:s}")'.format(fname))
+                    
         self.importElecBtn = QPushButton('Import from CSV files with headers: label (or line, number), x, y, z, buried')
         self.importElecBtn.setAutoDefault(True)
         self.importElecBtn.clicked.connect(importElecBtnFunc)
         
-        def convertLocalGrid(state):
-            self.updateElec()
-            if state  == Qt.Checked:
-                self.elecBackUp3 = self.project.elec.copy() # backing up electrodes and surveys if checkbox is unchecked
-                self.surveysBackUp3 = self.project.surveys.copy()
-                self.project.convertLocalGrid()
-                self.infoDump('The grid is converted to local')
-            else:
-                self.project.elec = self.elecBackUp3.copy() # backing up electrodes and surveys if checkbox is unchecked
-                self.project.surveys = self.surveysBackUp3.copy()
-                self.infoDump('The grid is reverted to the original state')
+        # def convertLocalGrid(state):
+        #     self.updateElec()
+        #     if state  == Qt.Checked:
+        #         self.elecBackUp3 = self.project.elec.copy() # backing up electrodes and surveys if checkbox is unchecked
+        #         self.surveysBackUp3 = self.project.surveys.copy()
+        #         self.project.convertLocalGrid()
+        #         self.infoDump('The grid is converted to local')
+        #     else:
+        #         self.project.elec = self.elecBackUp3.copy() # backing up electrodes and surveys if checkbox is unchecked
+        #         self.project.surveys = self.surveysBackUp3.copy()
+        #         self.infoDump('The grid is reverted to the original state')
 
-            self.elecTable.initTable(self.project.elec)
-            self.tempElec = None
-            self.nbElecEdit.setText(str(self.project.elec.shape[0]))
-            self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
-            self.updateElec()
+        #     self.elecTable.initTable(self.project.elec)
+        #     self.tempElec = None
+        #     self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+        #     self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+        #     self.updateElec()
         
-        self.localGrid = QCheckBox('Local grid')
-        self.localGrid.setToolTip('Converts UTM coordinates to local grid for mesh stability')
-        self.localGrid.stateChanged.connect(convertLocalGrid)
+        # self.localGrid = QCheckBox('Local grid')
+        # self.localGrid.setToolTip('Converts UTM coordinates to local grid for mesh stability')
+        # self.localGrid.stateChanged.connect(convertLocalGrid)
         # self.localGrid.setEnabled(False)
+        
+        ## convert coordinates to a local grid if needed 
+        def applyCoordinateConv(state):
+            if self.project.elec is None: 
+                # updates the electrodes from the UI table into the project class
+                self.updateElec() 
+            x0t = self.localRefX.text()
+            y0t = self.localRefY.text()
+            at = self.localAngle.text()
+            if x0t == '':
+                x0 = None
+            else:
+                x0 = float(x0t)
+            if y0t == '':
+                y0 = None
+            else:
+                y0 = float(y0t)
+            if at == '':
+                a = None
+            else:
+                a = float(at)
+            if state  == Qt.Checked:
+                self.project.setCoordConv(True, x0, y0, a)
+                self.infoDump('The grid is converted to local')
+                self.writeLog('k.setCoordConv(True, {:}, {:}, {:})'.format(x0,y0,a))
+            else:
+                self.project.setCoordConv(False, x0, y0, a)
+                self.infoDump('The grid is reverted to the original state')
+                self.writeLog('k.setCoordConv(True, {:}, {:}, {:})'.format(x0,y0,a))
+                
+            coordParam = self.project.coordParam
+            self.localRefX.setText(str(coordParam['x0']))
+            self.localRefY.setText(str(coordParam['y0']))
+            self.localAngle.setText(str(coordParam['a']))
+
+            self.elecTable.setTable(self.project.elec) # update the electrode table 
+            # self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+            # self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+            
+            
+        self.localCoordLabel = QLabel('<b><font color="gray">Convert to local grid</font></b>')
+        self.localCoordCheck = QCheckBox('\t\t\t\t')
+        self.localCoordCheck.setToolTip('Converts UTM / National Grid coordinates to local grid for solution stability')
+        self.localCoordLabel.setToolTip('Converts UTM / National Grid coordinates to local grid for solution stability')
+        self.localCoordCheck.stateChanged.connect(applyCoordinateConv)
+        self.localCoordCheck.setEnabled(False)
+        
+        self.localRefX = QLineEdit()
+        self.localRefX.setValidator(QDoubleValidator())
+        self.localRefX.setEnabled(True)
+        self.localRefXLabel = QLabel('Reference X coordinate:')
+        self.localRefX.setToolTip('Sets reference X coordinate (in UTM or National Grid), by default minimum electrode X coordinate is taken')
+        
+        self.localRefY = QLineEdit()
+        self.localRefY.setValidator(QDoubleValidator())
+        self.localRefY.setEnabled(True)
+        self.localRefYLabel = QLabel('Reference Y coordinate:')
+        self.localRefY.setToolTip('Sets reference Y coordinate (in UTM or National Grid), by default minimum electrode Y coordinate is taken')
+        
+        self.localAngle = QLineEdit()
+        self.localAngle.setValidator(QDoubleValidator())
+        self.localAngle.setEnabled(True)
+        self.localAngleLabel = QLabel('Rotation Angle (Degrees):')
+        self.localAngle.setToolTip('Rotation angle in degrees, in 2D this is computed automatically')
+        self.localAngleLabel.setToolTip('Rotation angle in degrees, in 2D this is computed automatically')
         
         self.nbElecEdit = QLineEdit()
         self.nbElecEdit.setValidator(QDoubleValidator())
@@ -1999,14 +2106,14 @@ class App(QMainWindow):
         
         # layout
         self.topoLayout = QVBoxLayout()
-
+        # row with electrode generation parameters 
         self.elecGenLayout = QHBoxLayout()
         self.elecGenLayout.addWidget(self.nbElecLabel)
         self.elecGenLayout.addWidget(self.nbElecEdit)
         self.elecGenLayout.addWidget(self.elecDxLabel)
         self.elecGenLayout.addWidget(self.elecDxEdit)
         self.elecGenLayout.addWidget(self.elecDx2DTape)
-        self.elecGenLayout.addWidget(self.localGrid)
+        # self.elecGenLayout.addWidget(self.localGrid)
         self.elecGenLayout.addWidget(self.elecDzLabel)
         self.elecGenLayout.addWidget(self.elecDzEdit)
         self.elecGenLayout.addWidget(self.elecLineLabel)
@@ -2014,8 +2121,20 @@ class App(QMainWindow):
         self.elecGenLayout.addWidget(self.elecLineSpacingLabel)
         self.elecGenLayout.addWidget(self.elecLineSpacingEdit)
         self.elecGenLayout.addWidget(self.elecGenButton)
+        # row with coordinate conversion parameters 
+        self.coordConvLayout = QHBoxLayout()
+        self.coordConvLayout.addWidget(self.localCoordLabel)
+        self.coordConvLayout.addWidget(self.localCoordCheck)
+        self.coordConvLayout.addWidget(self.localRefXLabel)
+        self.coordConvLayout.addWidget(self.localRefX)
+        self.coordConvLayout.addWidget(self.localRefYLabel)
+        self.coordConvLayout.addWidget(self.localRefY)
+        self.coordConvLayout.addWidget(self.localAngleLabel)
+        self.coordConvLayout.addWidget(self.localAngle)
+        
         self.topoLayout.addWidget(self.elecLabel)
         self.topoLayout.addLayout(self.elecGenLayout)
+        self.topoLayout.addLayout(self.coordConvLayout)
         self.topoLayout.addWidget(self.importElecBtn)
         self.topoLayout.addWidget(self.elecTable)
         
@@ -6959,6 +7078,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.filterAttrCombo.addItem('Reciprocal Error')
             self.plotError()
             self.errHist()
+        
+        if self.ftype == 'Merged':
+            self.importDataRecipBtn.hide() # cant show import reciprocal button if using merged surveys 
+            
         if 'dev' in self.project.surveys[0].df.columns:
             self.filterAttrCombo.addItem('Stacking Error (Dev.)')
         if 'cR' in self.project.surveys[0].df.columns:
@@ -7024,7 +7147,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.ipCheck.setEnabled(False)
         self.elecDx2DTape.setChecked(False)
         self.elecDx2DTape.setEnabled(False)
-        self.localGrid.setChecked(False)
+        # self.localGrid.setChecked(False)
         # self.localGrid.setEnabled(False)
         self.importDataRecipBtn.hide()
         self.fnamesCombo.hide()

@@ -314,6 +314,7 @@ class Mesh:
         self.originalFilePath = original_file_path # originalFilePath 
         self.eNodes  = None # node number that electrodes occupy 
         self.elec = None
+        self.elec_type = None 
         self.iremote = None # specify which electrode is remote
         self.idirichlet = None # specify idirichlet node 
         self.cax = None # store mesh.show() output for faster mesh.draw()
@@ -3376,7 +3377,7 @@ class Mesh:
         #close file     
         fh.close()
         
-    def xyz(self,file_name='mesh.xyz'):
+    def xyz(self,file_name='mesh.xyz',coordParam=None):
         """ Write a .xyz file of the mesh, the first 3 columns are the element 
         centres at coordinates x,y,z and the rest of the columns are the 
         attributes in the df
@@ -3389,14 +3390,33 @@ class Mesh:
         """
         if isinstance(file_name,str)==False:
             raise NameError("file_name argument must be a string")
-        x_coords=self.elmCentre[:,0]#get element coordinates
-        y_coords=self.elmCentre[:,1]
-        z_coords=self.elmCentre[:,2]
+        if self.cell_type[0] != 11:
+            warnings.warn('xyz export intended for voxel meshes only')
+            
+        # setup coordinate parameters if not given 
+        if coordParam is None: 
+            coordParam = {}
+            coordParam['a'] = 0 
+            if self.elec is not None: 
+                if self.iremote is not None:
+                    iremote = self.iremote 
+                else: 
+                    iremote = [False]*self.elec.shape[0]
+                coordParam['x0'] = np.min(self.elec[:,0][~iremote])
+                coordParam['y0'] = np.min(self.elec[:,1][~iremote])
+            else:
+                coordParam['x0'] = np.min(self.node[:,0])
+                coordParam['y0'] = np.min(self.node[:,1])
+                
+        self.cellCentres() 
+        x_coords=self.df.X.values#get element coordinates
+        y_coords=self.df.Y.values
+        z_coords=self.df.Z.values 
         df = self.df.copy().reset_index()
         keys0= self.df.keys()
         keys=[]
         #ignore the x y z columns if already in df
-        ignore = ['X','Y','Z']
+        ignore = ['X','Y','Z','param','elm_id','cellType','region']
         for k in keys0:
             if k not in ignore:
                 keys.append(k)
@@ -3415,7 +3435,81 @@ class Mesh:
         #close file     
         fh.close()
         
+    def toVoxelMesh(self,elec=None,elec_type=None, **kwargs):
+        """
+        Returns a special kind of mesh optimised for visualasation inside of 
+        GIS software like Geovisionary. 
+
+        Parameters
+        ----------
+        elec : array like, pd.DataFrame, optional
+            Electrode coordinates. The default is None.
+        elec_type : list, optional
+            List of electrode types, i.e. 'surface' or 'buried'. The default is
+            None (all electrodes are surface electrodes).
+
+        Raises
+        ------
+        Exception
+            If no electrode coordinates provided. 
+
+        Returns
+        -------
+        mesh : class
+            Mesh object with voxel elements 
+
+        """
+        if elec is None:
+            elec = self.elec 
+            
+        if elec is None:
+            raise Exception('need to provide some electrodes to produce a voxel mesh')
+        try: 
+            elec_x = elec[:,0]
+            elec_y = elec[:,1]
+            elec_z = elec[:,2]
+        except: 
+            elec_x = elec.x.values 
+            elec_y = elec.y.values 
+            elec_z = elec.z.values 
+        if elec_type is None:
+            elec_type = self.elec_type 
+            
+        mesh = voxelMesh(elec_x, elec_y, elec_z, elec_type, **kwargs, 
+                         force_regular=True)
+        mesh.cellCentres() 
+        self.cellCentres()
+        for column in self.df.columns:
+            if column in ['X','Y','Z','param','elm_id','cellType','region']: 
+                continue 
+            inew = interp.triangulate3d(mesh.df.X, mesh.df.Y, mesh.df.Z, 
+                                        self.df.X, self.df.Y, self.df.Z, 
+                                        self.df[column])
+            mesh.df[column] = inew 
+            
+        return mesh
+    
+    
     def toVoxet(self,file_name='mesh.vo',x0=None,y0=None,a=0):
+        """
+        Not yet working! 
+
+        Parameters
+        ----------
+        file_name : TYPE, optional
+            DESCRIPTION. The default is 'mesh.vo'.
+        x0 : TYPE, optional
+            DESCRIPTION. The default is None.
+        y0 : TYPE, optional
+            DESCRIPTION. The default is None.
+        a : TYPE, optional
+            DESCRIPTION. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
         if self.cell_type[0] != 11:
             raise Exception('this kind of export only available for voxel mesh')
         
@@ -3674,8 +3768,9 @@ class Mesh:
         stream('done.')
         
     def saveMesh(self, fname, ftype=None):
-        """Save mesh into a file. Available formats are .dat, .vtk, .csv and 
-        .node
+        """Save mesh into a file. Available formats are .dat, .vtk, .csv, .xyz,
+        and .node. .xyz is a special case where the mesh should be transformed 
+        into a voxel mesh first. 
 
         Parameters
         ----------
@@ -3696,10 +3791,11 @@ class Mesh:
                     break
         
         if ftype not in atypes:
-            raise NameError('Unregocnised mesh file format, avaialable types are %s'%str(atypes))
+            raise NameError('Unregocnised mesh file format(%s), avaialable types are %s'%(ftype,str(atypes)))
         
         #add extension if not already there 
-        if not fname.endswith('.'+ftype):
+        if not fname.endswith('.' + ftype):
+            # print('adding file extension')
             fname = fname + '.' + ftype
             
         #call save file function 
@@ -3716,7 +3812,8 @@ class Mesh:
         else:
             raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
             
-    def exportMesh(self, fname, ftype=None, coordLocal=False, coordParam=None):
+    def exportMesh(self, fname, ftype=None, coordLocal=False, coordParam=None, 
+                   voxel=False, meshParam=None):
         """
         Export mesh into with coordinate rotation data 
         
@@ -3733,6 +3830,7 @@ class Mesh:
         """
         if coordLocal and coordParam is None: 
             coordParam = {}
+            coordParam['a'] = 0 
             if self.elec is not None: 
                 if self.iremote is not None:
                     iremote = self.iremote 
@@ -3740,13 +3838,36 @@ class Mesh:
                     iremote = [False]*self.elec.shape[0]
                 coordParam['x0'] = np.min(self.elec[:,0][~iremote])
                 coordParam['y0'] = np.min(self.elec[:,1][~iremote])
-                coordParam['a'] = 0 
+            else:
+                coordParam['x0'] = np.min(self.node[:,0])
+                coordParam['y0'] = np.min(self.node[:,1])
                 
-        if coordLocal: 
+        xyz = False 
+        if ftype is not None and 'xyz' in ftype: 
+            # special case where we want to enforce two things 
+            # 1) export is a voxel mesh 
+            # 2) xyz file is written in local coordinates with a conversion file 
+            xyz = True 
+        
+        kwargs = {} 
+        kwargs['cl_factor'] = 1 # force mesh to the extent of the electrodes 
+        if meshParam is not None: 
+            if 'cl' in meshParam.keys():
+                kwargs['cl'] = meshParam['cl']
+            if 'fmd' in meshParam.keys():
+                kwargs['fmd'] = meshParam['fmd']
+                
+        if voxel or xyz: 
+            mesh = self.toVoxelMesh(**kwargs)
+        else:
             mesh = self.copy() 
+            
+        # if xyz:
+        #     mesh.xyz(fname,coordParam)
+        if coordLocal: 
             x0 = coordParam['x0']
             y0 = coordParam['y0']
-            a = np.rad2deg(coordParam['a'])
+            a = coordParam['a']
             utmx, utmy = interp.invRotGridData(
                 mesh.node[:,0], 
                 mesh.node[:,1], 
@@ -3755,7 +3876,7 @@ class Mesh:
             mesh.node[:,1] = utmy 
             mesh.saveMesh(fname,ftype)
         else:
-            self.saveMesh(fname,ftype)
+            mesh.saveMesh(fname,ftype)
         
     def writeRindex(self,fname):
         """Write out the neighbourhood matrix for R3t. 
@@ -4595,7 +4716,8 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.5
         
         node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
     mesh.setElecNode(node_in_mesh) # add nodes to the mesh class
-
+    mesh.elec_type = elec_type
+    
     # OVERWRITE elec_node using node_in_mesh that doesn't assume surface
     # electrode but snap them to node based on distance
     elec_node = np.c_[np.arange(len(node_in_mesh))+1, node_in_mesh]
@@ -5026,7 +5148,8 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     if elec_type is not None:
         iremote = np.array([a == 'remote' for a in elec_type])
         mesh.iremote = iremote
-
+    mesh.elec_type = elec_type
+    
     return mesh
 
 #%% 3D tetrahedral mesh 
@@ -5537,6 +5660,7 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     else:
         #add nodes to mesh
         mesh.setElecNode(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
+    mesh.elec_type = elec_type
     
     return mesh
 
@@ -5591,7 +5715,11 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         Function to which pass the output during mesh generation. `print()` is
         the default.
     **kwargs: dict
-        Keyword arguments to be passed to functions in gmshWrap.py 
+        Keyword arguments to be passed to functions in gmshWrap.py. Pass cl=x
+        to force the voxel mesh characteristic length. 
+    force_regular: bool, optional 
+        If passed as True, then return voxel mesh will be made of elements which 
+        are of the same size. 
          
     Returns
     ---------- 
@@ -5754,17 +5882,22 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     else: 
         cl = min(idist[:,1])/4 
     
-    if 'fmd' in kwargs.keys(): # compute depth of investigation if not given 
+    if 'fmd' in kwargs.keys() and kwargs['fmd'] is not None: # compute depth of investigation if not given 
         fmd = kwargs['fmd']
     else:
         fmd = dp_len/3 # maximum possible dipole length / 3
         if whole_space: 
             fmd = abs(max(elec_z) - min(elec_z))*1.1 
     
-    if 'cl_factor' in kwargs.keys():
+    if 'cl_factor' in kwargs.keys() and kwargs['cl_factor'] is not None:
         cl_factor = kwargs['cl_factor']
     else:
         cl_factor = 5 
+        
+    if 'force_regular' in kwargs.keys():
+        force_regular = kwargs['force_regular']
+    else:
+        force_regular = False 
 
     elec_z = elec_z - elec_z_topo
     elec_z = np.round(elec_z,6) # nuke near zero values 
@@ -5788,7 +5921,8 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         while ex[i] > x:
             x += cl 
             xx.append(x)
-        xx.append(ex[i])
+        if not force_regular: 
+            xx.append(ex[i])
         
     dump('Generated %i unique nodes in X direction'%len(xx))
     
@@ -5799,7 +5933,8 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         while ey[i] > y:
             y += cl 
             yy.append(y)
-        yy.append(ey[i])
+        if not force_regular: 
+            yy.append(ey[i])
     
     dump('Generated %i unique nodes in Y direction'%len(yy))
         
@@ -5810,7 +5945,8 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         while ez[i] > z and (z + cl) <=0:
             z += cl 
             zz.append(z)
-        zz.append(ez[i])
+        if not force_regular: 
+            zz.append(ez[i])
         
     dump('Generated %i unique nodes in Z direction'%len(zz)) 
     
@@ -5883,6 +6019,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         iremote[i] = True 
     
     mesh.setElecNode(enodes, iremote)
+    mesh.elec_type = elec_type
     
     return mesh 
 

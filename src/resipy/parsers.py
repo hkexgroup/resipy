@@ -485,6 +485,13 @@ def primeParserTab(fname, espacing=1):
     """
     Parses data from a PRIME file with the .tab extension - jamyd91
     Also works for the ResIMGR system. 
+    
+    Parameters
+    ----------
+    fname: str
+        File name (or path) of PRIME / ResIMGR file 
+    espacing: int, float, optional 
+        Electrode spacing (if no geometry given)
     """
         
     fh = open(fname,'r')
