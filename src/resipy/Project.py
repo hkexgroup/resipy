@@ -891,17 +891,18 @@ class Project(object): # Project master class instanciated by the GUI
         return True
         
         
-    def detectStrings(self, tolerance=5, max_itr=None):
-        """Automatically detect electrode strings 
+    def detectStrings(self, tolerance=15, max_itr=None):
+        """Automatically detect electrode strings. If all electrodes lie on the same
+        Y plane then the function assumes the problem is a borehole problem. 
 
         Parameters
         ----------
         tolerance : float, optional
             Maximum (+/-) bearing (ie directional angle) tolerance each subsiquent
-            electrode may have. The default is 5.
+            electrode may have. The default is 15.
         max_itr : int, optional
             Maximum number of searches that can be performed to find colinear
-            nieghbouring electrodes. The default is None.
+            nieghbouring electrodes. The default is number of electrodes plus 10.
 
         Raises
         ------
@@ -923,17 +924,19 @@ class Project(object): # Project master class instanciated by the GUI
         iremote = self.elec['remote'].values
         x = self.elec['x'].values[~iremote]
         y = self.elec['y'].values[~iremote]
+        
+        # deal with borehole case 
+        if all(y[0] == y):
+            print('Detecting strings for a borehole problem!')
+            y = self.elec['z'].values[~iremote]
+            
+        # decide maximum number of iterations 
         if max_itr is None:
             max_itr = len(x)+10
-        # init - nb couple of commented lines are in here for displaying the selected electrode strings 
-        # fig, ax = plt.subplots()
-        # ax.scatter(x,y,c='k')
-        # ax.set_aspect('equal')
         
         # mid point of survey 
         xm = np.mean(x)
         ym = np.mean(y)
-        # ax.scatter(xm,ym,c='b',s=2)
         dist = np.sqrt((x-xm)**2 + (y-ym)**2) # distance to all other points in survey
         
         # find neighbours 
@@ -1363,6 +1366,7 @@ class Project(object): # Project master class instanciated by the GUI
             If true, estimate the amount of RAM required to do the inversion. 
             Default is True. 
         **kwargs: Keyword arguments to be passed to Survey()
+        
         """
         self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, debug=debug, **kwargs))
         self.surveysInfo.append(info)
@@ -1418,7 +1422,8 @@ class Project(object): # Project master class instanciated by the GUI
         dirname : str
             Directory with files to be parsed.
         ftype : str, optional
-            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','ResInv',
+            'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         info : dict, optional
             Dictionnary of info about the survey.
         spacing : float, optional
@@ -1453,7 +1458,8 @@ class Project(object): # Project master class instanciated by the GUI
         dirname : str or list of str
             Directory with files to be parsed or list of file to be parsed.
         ftype : str, optional
-            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','ResInv',
+            'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         info : dict, optional
             Dictionnary of info about the survey. Put inverse_type = 1 to allow
             for a changing number of measurements between surveys.
@@ -1549,7 +1555,8 @@ class Project(object): # Project master class instanciated by the GUI
             If `True` then one survey out of two will be flipped.
             #TODO not implemented yet
         ftype : str, optional
-            Type of the survey to choose which parser to use.
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','ResInv',
+            'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         name : str, optional
             Name of the merged 3D survey.
         """
@@ -1625,12 +1632,12 @@ class Project(object): # Project master class instanciated by the GUI
         Parameters
         ----------
         fname : str
-            file path to .csv file. 
-        ftype: str, reccomended 
-            file type, see ResIPy docs for types of file type avialable. Will be 
+            File path to .csv file. 
+        ftype: str, optional
+            File type, see ResIPy docs for types of file type avialable. Will be 
             overwritten if specified in the survey details file. 
-        delimiter: str
-            delimiter used in merge 
+        delimiter: str, optional
+            Delimiter used in merge file. Defaults to ','. 
             
         Notes
         -----
@@ -1644,7 +1651,9 @@ class Project(object): # Project master class instanciated by the GUI
             File type, should correspond to the file 'ftype' for each file (they
             might be different for some reason, though best avoided). If not
             passed the file type can be set be the variable at the top of this
-            function. 
+            function. Type of files avialable are: Either 'Syscal','ProtocolDC',
+            'ResInv','BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund',
+            'Lippmann' or 'ARES'.
         
         sid: int, optional 
             Survey index, used for making timelapse surveys from multiple files
@@ -1654,7 +1663,7 @@ class Project(object): # Project master class instanciated by the GUI
         finfo = pd.read_csv(fname,sep=delimiter) # file info dataframe 
         
         if 'fpath' not in finfo.columns: 
-            raise Exception('file paths are not defined in survey')
+            raise Exception('file paths are not defined in survey merge file')
             
         if 'ftype' not in finfo.columns: 
             finfo['ftype'] = ftype 
@@ -5794,40 +5803,43 @@ class Project(object): # Project master class instanciated by the GUI
         dump('Writing protocol.dat... ')
         seq = self.sequence
 
-        # let's check if IP that we have a positive geometric factor
-        if self.typ[0] == 'c': # NOTE this doesn't work for borehole
-            lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-            seqdf = pd.DataFrame(seq).rename(columns = {0:'a', 1:'b', 2:'m', 3:'n'})
-            array = seqdf[['a','b','m','n']].astype(str).replace(lookupDict).values.astype(int)
-            elec = self.elec[['x','y','z']].values.copy()
+        ## let's check if IP that we have a positive geometric factor
+        ## EH? Why do this - Jimmy
+        ## commented out for now as not a generalised solution and did not work 
+        ## for 3D problems. 
+        # if self.typ[0] == 'c': # NOTE this doesn't work for borehole
+        #     lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        #     seqdf = pd.DataFrame(seq).rename(columns = {0:'a', 1:'b', 2:'m', 3:'n'})
+        #     array = seqdf[['a','b','m','n']].astype(str).replace(lookupDict).values.astype(int)
+        #     elec = self.elec[['x','y','z']].values.copy()
             
-            aposx = elec[:,0][array[:,0]]
-            aposy = elec[:,1][array[:,0]]
-            aposz = elec[:,2][array[:,0]]
+        #     aposx = elec[:,0][array[:,0]]
+        #     aposy = elec[:,1][array[:,0]]
+        #     aposz = elec[:,2][array[:,0]]
             
-            bposx = elec[:,0][array[:,1]]
-            bposy = elec[:,1][array[:,1]]
-            bposz = elec[:,2][array[:,1]]
+        #     bposx = elec[:,0][array[:,1]]
+        #     bposy = elec[:,1][array[:,1]]
+        #     bposz = elec[:,2][array[:,1]]
             
-            mposx = elec[:,0][array[:,2]]
-            mposy = elec[:,1][array[:,2]]
-            mposz = elec[:,2][array[:,2]]
+        #     mposx = elec[:,0][array[:,2]]
+        #     mposy = elec[:,1][array[:,2]]
+        #     mposz = elec[:,2][array[:,2]]
             
-            nposx = elec[:,0][array[:,3]]
-            nposy = elec[:,1][array[:,3]]
-            nposz = elec[:,2][array[:,3]]
+        #     nposx = elec[:,0][array[:,3]]
+        #     nposy = elec[:,1][array[:,3]]
+        #     nposz = elec[:,2][array[:,3]]
             
-            AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
-            BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
-            AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
-            BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
+        #     AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
+        #     BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
+        #     AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
+        #     BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
             
-            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        #     K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
             
-            ie = K < 0
-            seq2 = seq.copy()
-            seq[ie,2] = seq2[ie,3] # swap if K is < 0
-            seq[ie,3] = seq2[ie,2]
+        #     ie = K < 0
+        #     seq2 = seq.copy()
+        #     seq[ie,2] = seq2[ie,3] # swap if K is < 0
+        #     seq[ie,3] = seq2[ie,2]
             
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq],
                                 columns=['index','a','b','m','n'])
@@ -5842,7 +5854,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False)
+            protocol.to_csv(f, sep='\t', header=False, index=False,lineterminator='\n')
         dump('done\n')
 
         # fun the inversion
@@ -5941,15 +5953,6 @@ class Project(object): # Project master class instanciated by the GUI
         
         kwargs['model_err'] = True # force model_err argument to be true 
         
-        # create FLAT homogeneous mesh 
-        # if '2' in self.typ: # normalise to flat surface if 2D            
-        #     idx = (self.elec['remote'].values == False) & (self.elec['buried'].values == False)
-        #     ez = self.elec['z'].values[idx]
-        #     ex = self.elec['x'].values[idx]
-        #     ez_tmp = self.elec['z'].values - np.interp(self.elec['x'].values,ex,ez)
-        #     self.elec['z'] = ez_tmp
-            
-        # self.elec['z'] = 0
         self.createMesh(**kwargs)
         self.modErrMesh = self.mesh.copy()
         self.modErrMeshNE = self.param['node_elec'].copy()

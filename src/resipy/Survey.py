@@ -2522,7 +2522,7 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                to_csv(protocol, f, sep='\t', header=False, index=False)
+                to_csv(protocol, f, sep='\t', header=False, index=False, lineterminator='\n')
         
         return protocol
         
