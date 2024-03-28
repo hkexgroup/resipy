@@ -104,7 +104,6 @@ try:
 except Exception as e:
     pass
 
-
 # little class for managing multiple processes (for parallel inversion)
 class ProcsManagement(object): # little class to handle the kill
     def __init__(self, r2object):
@@ -675,7 +674,6 @@ class Project(object): # Project master class instanciated by the GUI
                     self.elec = self.elec.replace(to_replace=dico)
             
             for survey in self.surveys: 
-                survey.ndata = len(survey.df)
                 survey.setSeqIds() 
                 
                 
@@ -1110,7 +1108,6 @@ class Project(object): # Project master class instanciated by the GUI
             self.bigSurvey = Survey(df=self.surveys[0].df, elec=self.surveys[0].elec)
             self.bigSurvey.df = df.copy() 
             self.bigSurvey.dfOrigin = df.copy()
-            self.bigSurvey.ndata = df.shape[0]
 
         self.elec = pd.read_csv(os.path.join(savedir, 'elec.csv'))
         self.elec['label'] = self.elec['label'].astype(str)
@@ -1383,7 +1380,6 @@ class Project(object): # Project master class instanciated by the GUI
             c = c + df2.shape[0]
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
-        self.bigSurvey.ndata = df.shape[0]
         
         # flag that data has been added 
         self.pinfo['Data'] = True 
@@ -1459,7 +1455,6 @@ class Project(object): # Project master class instanciated by the GUI
         survey0.debug = True 
         survey0.elec = elec
         survey0.df = dfm
-        survey0.ndata = len(dfm)
         survey0.dfOrigin = dfm # for raw phase plot
         survey0.dfReset = dfm # for reseting filters on res
         survey0.dfPhaseReset = dfm # for reseting filters on IP
@@ -1566,7 +1561,6 @@ class Project(object): # Project master class instanciated by the GUI
                 c = c + df2.shape[0]
             self.bigSurvey.df = df.copy() # override it
             self.bigSurvey.dfOrigin = df.copy()
-            self.bigSurvey.ndata = df.shape[0]
         
         # flag that data has been added 
         self.pinfo['Data'] = True 
@@ -3986,6 +3980,7 @@ class Project(object): # Project master class instanciated by the GUI
         # create essential attribute
         self.irunParallel2 = True
         self.procs = []
+        ts = []
 
         # kill management
         self.proc = ProcsManagement(self)
@@ -4001,23 +3996,23 @@ class Project(object): # Project master class instanciated by the GUI
         while self.irunParallel2:
             while wds and len(self.procs) < ncores:
                 wd = wds.pop()
-                #print('------task', wd)
+                # NOTE: we need to PIPE stdout and sterr to avoid being
+                # flooded by R2 output. 'All ok' is only printed in stderr
                 if OS == 'Windows':
-                    p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                    p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True, startupinfo=startupinfo, stdout=PIPE, stderr=PIPE)
                 else:
-                    p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True)
+                    p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True, stdout=PIPE, stderr=PIPE)
                 self.procs.append(p)
-#                t = Thread(target=dumpOutput, args=(p.stdout,))
-#                t.daemon = True # thread dies with the program
-#                t.start()
-#                ts.append(t)
+                # t = Thread(target=dumpOutput, args=(p.stdout,))
+                # t.daemon = True # thread dies with the program
+                # t.start()
+                # ts.append(t)
 
             for p in self.procs:
                 if done(p):
                     #print('------done!!', p)
                     self.procs.remove(p)
                     c = c+1
-                    # TODO get RMS and iteration number here ?
                     dump('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
 
             if not self.procs and not wds:
@@ -4807,8 +4802,12 @@ class Project(object): # Project master class instanciated by the GUI
         Dataframe with the dataset name, and the RMS decrease for each iteration.
         """
         fname = os.path.join(self.dirname, self.typ + '.out')
+        lines = []
+        if self.iTimeLapse:    
+            with open(os.path.join(self.dirname, 'ref', self.typ + '.out'), 'r') as f:
+                lines += f.readlines()
         with open(fname, 'r') as f:
-            lines = f.readlines()
+            lines += f.readlines()
         name = ''
         idataset = 0
         iiter = 0
@@ -4839,7 +4838,7 @@ class Project(object): # Project master class instanciated by the GUI
                     iiter = 0
                     idataset += 1
                     if idataset <= len(self.surveys):
-                        name = self.surveys[idataset-1].name
+                        name = self.surveys[idataset - 1].name
                     else:
                         name = 'dataset{:03.0f}'.format(idataset)
                 elif line[0] == 'End' and self.typ != 'R3t':
