@@ -254,7 +254,6 @@ class Survey(object):
 
             # assign dataframe and check the types of a,b,m,n (all labels must be string)
             self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
-            self.ndata = self.df.shape[0]
             
             # set sequence according to if electrode labels present or not 
             self.setSeqIds() 
@@ -288,7 +287,6 @@ class Survey(object):
         # we provide df and elec dataframes
         elif df is not None and elec is not None:
             self.df = df # assuming dataframe is already well formatted
-            self.ndata = self.df.shape[0]
 
             # check elec dataframe
             if 'remote' not in elec.columns:
@@ -356,7 +354,6 @@ class Survey(object):
 #         if 'label' not in dfelec.columns:
 #             dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
 #         survey.elec = dfelec
-#         survey.ndata = df.shape[0]
 #         survey.computeReciprocal()
 #         survey.filterDefault()
 #         survey.dfReset = survey.df.copy()
@@ -406,19 +403,20 @@ class Survey(object):
             l = int(t[0])
             n = int(t[1])
             return l,n 
-        
-        if self.ndata == 0:
+
+        ndata = self.df.shape[0]
+        if ndata == 0:
             self.sequence = None 
             self.isequence = None 
             return 
         
         if self.hasLineNumbers(): 
-            an = np.zeros((self.ndata,4),dtype=int) # array of electrode numbers 
-            al = np.zeros((self.ndata,4),dtype=int) # array of electrode lines 
-            aa = np.zeros((self.ndata,4),dtype=int) # array of additonal numbers 
+            an = np.zeros((ndata, 4),dtype=int) # array of electrode numbers 
+            al = np.zeros((ndata, 4),dtype=int) # array of electrode lines 
+            aa = np.zeros((ndata, 4),dtype=int) # array of additonal numbers 
             cache = {}
             for a,char in enumerate(['a','b','m','n']):
-                for i in range(self.ndata):
+                for i in range(ndata):
                     l,n = labeltoint(self.df[char].values[i])
                     if l not in cache.keys():
                         cache[l] = 0 
@@ -437,9 +435,9 @@ class Survey(object):
             self.sequence = an + aa
             
         else:
-            self.sequence = np.zeros((self.ndata,4),dtype=int)
+            self.sequence = np.zeros((ndata,4),dtype=int)
             for a,char in enumerate(['a','b','m','n']):
-                for i in range(self.ndata):
+                for i in range(ndata):
                     self.sequence[i,a] = int(self.df[char].values[i])
            
         # now need a sequence which is ordered normally with no gaps 
@@ -537,7 +535,6 @@ class Survey(object):
 
         # we need to redo the reciprocal analysis if we've removed duplicates and ...
         if ndup > 0 or np.sum(ie) > 0:
-            self.ndata = len(self.df)
             self.setSeqIds()
             if recompute_recip: 
                 if self.debug:
@@ -610,7 +607,6 @@ class Survey(object):
         
         data = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
         self.df = pd.concat([self.df, data]).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
-        self.ndata = len(self.df)
         self.setSeqIds() # need to recompute sequence 
             
         self.dfOrigin = self.df.copy()
@@ -644,7 +640,6 @@ class Survey(object):
                                  'Reset the filters and redo the filterings, first reciprocity then phase.')
             return
         else:
-            # self.ndata = len(i2keep)
             if 'irecip' in self.df.columns:
                 # get a list of measurement that would be affected by the removal
                 recip2reset = self.df[~i2keep]['irecip'].values*-1
@@ -653,7 +648,6 @@ class Survey(object):
                 self.df.reset_index(drop=True, inplace=True)
             else:
                 self.df.reset_index(inplace=True)
-            self.ndata = len(self.df)
             self.setSeqIds() # not super efficient, but works 
             # self.sequence = self.sequence.copy()[i2keep,:]
             # self.isequence = self.isequence.copy()[i2keep,:]
@@ -731,7 +725,7 @@ class Survey(object):
         """
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
-        ndata = self.ndata
+        ndata = self.df.shape[0]
         array = self.isequence - 1 
         
         R = np.copy(resist)
@@ -846,7 +840,7 @@ class Survey(object):
         """
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
-        ndata = self.ndata
+        ndata = self.df.shape[0]
         array = self.isequence - 1 
         
         R = np.copy(resist)
@@ -946,7 +940,7 @@ class Survey(object):
         """
         resist = np.asarray(self.df['resist'].values,dtype=float)
         phase = np.asarray(-self.kFactor*self.df['ip'].values,dtype=float) #converting chargeability to phase shift
-        ndata = self.ndata
+        ndata = self.df.shape[0]
         array = np.asarray(self.isequence - 1, dtype=int)
         
         # print(type(phase))
@@ -1145,7 +1139,6 @@ class Survey(object):
         merged when called this method.
         """
         self.df = pd.merge(self.df, self.filterDataIP[['a','b','m','n']].copy(), how='inner', on=['a','b','m','n'])
-        self.ndata = len(self.df)
         self.setSeqIds()
     
     @staticmethod
@@ -2574,10 +2567,8 @@ class Survey(object):
         flag3d: bool, optional
             If true, function exits before 
         """
-        # self.ndata = len(self.df)
-        # self.setSeqIds()
         array = self.isequence - 1 
-        if self.ndata == 0:
+        if self.df.shape[0] == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
         
         percFact = 1
