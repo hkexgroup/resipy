@@ -6513,6 +6513,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.projectInfoLayout.addWidget(self.projectInfoText)
         self.tabProjectInfo.setLayout(self.projectInfoLayout)
         self.tabs.currentChanged.connect(getSummary)
+        
+        #%% Post processing - export data tab 
+        self.tabExportData = QTabWidget()
+        self.tabs.addTab(self.tabExportData,'Export Outputs')
 
 
         #%% Help tab
@@ -6855,10 +6859,22 @@ combination of multiple sequence is accepted as well as importing a custom seque
     def topoInterpBtnFunc(self):
         dfelec = self.elecTable.getTable()
         elec = dfelec[['x','y','z']].values
+        
+        # get topography table as a N by 3 numpy array 
         if self.topoTable.useNarray:
             topo = self.topoTable.xyz
         else:
             topo = self.topoTable.getTable()[['x','y','z']].values
+            
+        # translate topography to local grid if coordLocal given. 
+        if self.project.coordLocal and topo.shape[0] > 0: 
+            x0 = self.project.coordParam['x0']
+            y0 = self.project.coordParam['y0']
+            a = self.project.coordParam['a']
+            utmx = topo[:,0]
+            utmy = topo[:,1]
+            topo[:,0], topo[:,1] = rotGridData(utmx, utmy, x0, y0, a)
+            
         inan = ~np.isnan(elec[:,2])
         inan2 = ~np.isnan(topo[:,2])
         points = np.r_[elec[inan,:2], topo[inan2,:2]]
@@ -7664,6 +7680,7 @@ if __name__ == '__main__':
     from resipy import Project
     from resipy.r2help import r2help
     from resipy.parsers import geomParser 
+    from resipy.interpolation import rotGridData
     splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)
     app.processEvents()
