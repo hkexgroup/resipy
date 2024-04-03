@@ -359,6 +359,9 @@ class Mesh:
         #point data attributes 
         ptdf = {'x':node_x,'y':node_y,'z':node_z}
         self.ptdf = pd.DataFrame(ptdf)
+        
+        # number of voxels in the xyz directions, only relevant to the voxel mesh type 
+        self.nvoxel = {'x':None, 'y':None, 'z':None}
     
     def copy(self):
         """Return a copy of mesh object. 
@@ -3392,6 +3395,8 @@ class Mesh:
             raise NameError("file_name argument must be a string")
         if self.cell_type[0] != 11:
             warnings.warn('xyz export intended for voxel meshes only')
+        if not file_name.lower().endswith('.xyz'):
+            file_name += '.xyz'
             
         # setup coordinate parameters if not given 
         if coordParam is None: 
@@ -3432,8 +3437,19 @@ class Mesh:
                 line += ',{:}'.format(df[key][i])
             line += '\n'
             fh.write(line)
-        #close file     
+        # close file     
         fh.close()
+        
+        # write out voxel information 
+        if self.nvoxel['x'] is None: 
+            return # exit function if nvoxel not populated 
+        
+        voxel_info_file = file_name.lower().replace('.xyz','_voxel_info.txt')
+        fh = open(voxel_info_file,'w')
+        for key in self.nvoxel.keys(): 
+            fh.write('%s : %i\n'%(key,int(self.nvoxel['x'])))
+        fh.close() 
+        
         
     def toVoxelMesh(self,elec=None,elec_type=None, **kwargs):
         """
@@ -6020,6 +6036,11 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     
     mesh.setElecNode(enodes, iremote)
     mesh.elec_type = elec_type
+    
+    #set the number of voxels in the xyz directions 
+    mesh.nvoxel['x'] = len(xx)-1 
+    mesh.nvoxel['y'] = len(yy)-1 
+    mesh.nvoxel['z'] = len(zz)-1 
     
     return mesh 
 

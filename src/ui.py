@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame, 
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar, QDialog,
-    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser, QMenu)#, QAction, qApp, QButtonGroup, QListWidget, QShortcut)
+    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser, QMenu, QSpacerItem)#, QAction, qApp, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor, QPalette#, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl, QObject#, QProcess#, QSize
 from PyQt5.QtCore import Qt
@@ -1114,7 +1114,7 @@ class App(QMainWindow):
                         self.batchCheck.setEnabled(False)
                         self.pseudo3DCheck.setEnabled(False)
                         self.pseudo3DCheck.setChecked(False)
-                    elif self.iTimelapse:
+                    elif self.iTimeLapse:
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
                             return
@@ -6496,7 +6496,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.tabPostProcessing.setLayout(postProcessingLayout)
 
         #%% Project information (summary) tab 
-        
         def getSummary():
             if self.project is None: 
                 text = 'No data has been imported' 
@@ -6514,10 +6513,139 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.tabProjectInfo.setLayout(self.projectInfoLayout)
         self.tabs.currentChanged.connect(getSummary)
         
-        #%% Post processing - export data tab 
+        #%% Post processing - export tab 
         self.tabExportData = QTabWidget()
-        self.tabs.addTab(self.tabExportData,'Export Outputs')
+        self.tabs.addTab(self.tabExportData,'Export')
+        self.exportGrid = QGridLayout() # main grid 
 
+        ## left hand side of tab
+        gcolumn = 0 
+        nrow = 0 
+        self.exportPadderLabel = QLabel('\t')
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        gcolumn += 1 
+        self.exportLabel = QLabel("<b>Export various ResIPy inputs/outputs</b>")
+        self.exportGrid.addWidget(self.exportLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(QLabel('<b>Pre-processing<\b>'),nrow,gcolumn)
+        
+        # exporting the api log 
+        self.exportPyLogButton = QPushButton('Export Python Log (.py)') 
+        self.exportPyLogLabel = QLabel('Export the Python API calls made by ResIPy graphical user interface')
+        self.exportPyLogButton.clicked.connect(self.saveLog)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPyLogLabel, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPyLogButton, nrow, gcolumn)
+        
+        # exporting the pre-processed data 
+        self.exportPpDataButton = QPushButton('Export Pre-Processed Data') 
+        self.exportPpDataLabel = QLabel('Export the pre-processed data used by R2, cR2, R3t or cR3t during inversion')
+        # self.exportPpDataButton.clicked.connect(self.saveLog) #TODO connect function 
+        self.exportPpDataCheckBoxes = QHBoxLayout()
+        self.exportPpDataErrorCheck = QCheckBox('Include Errors')
+        self.exportPpDataRecipCheck = QCheckBox('Include Reciprocals')
+        self.exportPpDataCheckBoxes.addWidget(self.exportPpDataErrorCheck)
+        self.exportPpDataCheckBoxes.addWidget(self.exportPpDataRecipCheck)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPpDataLabel, nrow, gcolumn)
+        nrow +=1 
+        self.exportGrid.addLayout(self.exportPpDataCheckBoxes, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPpDataButton, nrow, gcolumn)
+        
+        # export mesh (only)
+        self.exportMeshButton = QPushButton('Export Mesh') 
+        self.exportMeshLabel = QLabel('Export the Mesh used by resipy in various formats')
+        self.exportMeshBox = QHBoxLayout()
+        self.exportLocalGridMeshCheck = QCheckBox('Force Local Grid')
+        self.exportLocalGridMeshCheck.setToolTip('Force outputs to be in a local grid if coordinates were given in terms of UTM')
+        self.exportMeshBox.addWidget(self.exportLocalGridMeshCheck)
+        self.exportVoxelMeshCheck = QCheckBox('Force Voxel')
+        self.exportVoxelMeshCheck.setToolTip('Force outputs to be in a voxel like grid rather than an unstructured mesh')
+        self.exportMeshBox.addWidget(self.exportVoxelMeshCheck)
+        # self.exportMeshButton.clicked.connect(self.saveLog) #TODO connect function 
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportMeshLabel, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addLayout(self.exportMeshBox, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportMeshButton, nrow, gcolumn)
+        
+        ## right hand side of the tab
+        gcolumn += 1 
+        nrow = 0
+        nrow += 1 
+        gcolumn += 1 
+        # add column at the end 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        gcolumn -= 1 
+        # add padding at start of column 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        self.exportGrid.addWidget(QLabel('<b>Post-processing<\b>'),nrow,gcolumn)
+        
+        # save working directory 
+        self.exportWdButton = QPushButton('Save working directory') 
+        self.exportWdLabel = QLabel('Save current working directory to a folder of choice on your system')
+        # self.exportMeshButton.clicked.connect(self.saveLog) #TODO connect function 
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportWdLabel, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportWdButton, nrow, gcolumn)
+        
+        # export electrode locations 
+        self.exportElecButton = QPushButton('Export Electrodes (xyz, vtk, csv)') 
+        self.exportElecLabel = QLabel('Export the electrodes coordinates')
+        self.exportElecBox = QHBoxLayout()
+        self.exportLocalGridElecCheck = QCheckBox('Force Local Grid')
+        self.exportLocalGridElecCheck.setToolTip('Force outputs to be in a local grid if coordinates were given in terms of UTM')
+        self.exportElecBox.addWidget(self.exportLocalGridElecCheck)
+        # self.exportResultsButton.clicked.connect(self.saveLog) #TODO connect function 
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportElecLabel, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addLayout(self.exportElecBox, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportElecButton, nrow, gcolumn)
+        
+        # export results 
+        self.exportResultsButton = QPushButton('Export Results (xyz, vtk, csv)') 
+        self.exportResultsLabel = QLabel('Export the resulting resistivity domain in various formats')
+        self.exportResultsBox = QHBoxLayout()
+        self.exportLocalGridResultsCheck = QCheckBox('Force Local Grid')
+        self.exportLocalGridResultsCheck.setToolTip('Force outputs to be in a local grid if coordinates were given in terms of UTM')
+        self.exportResultsBox.addWidget(self.exportLocalGridResultsCheck)
+        self.exportVoxelResultsCheck = QCheckBox('Force Voxel')
+        self.exportVoxelResultsCheck.setToolTip('Force outputs to be in a voxel like grid rather than an unstructured mesh')
+        self.exportResultsBox.addWidget(self.exportVoxelResultsCheck)
+
+        # self.exportResultsButton.clicked.connect(self.saveLog) #TODO connect function 
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportResultsLabel, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addLayout(self.exportResultsBox, nrow, gcolumn)
+        nrow += 1 
+        self.exportGrid.addWidget(self.exportResultsButton, nrow, gcolumn)
+        
+        # add all layouts to tab 
+        self.exportGrid.setRowStretch(self.exportGrid.rowCount()+1, 1)
+        self.tabExportData.setLayout(self.exportGrid)
+        
 
         #%% Help tab
         self.tabHelp = QTabWidget()

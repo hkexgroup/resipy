@@ -6482,7 +6482,7 @@ class Project(object): # Project master class instanciated by the GUI
                 raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
                 
                 
-    def exportMesh(self, outputname=None, voxel=False):
+    def exportMesh(self, outputname=None, voxel=False, _forceLocal=False):
         """Export mesh as a different file format, with coordinate conversion
         if Project.coordLocal set to True. 
 
@@ -6495,13 +6495,24 @@ class Project(object): # Project master class instanciated by the GUI
                 - .dat (R* codes)
             If not provided the mesh is saved in the working directory
             as mesh.vtk.
+        voxel: bool, optional 
+            If True, mesh will be converted to voxel format. 
+        _forceLocal: bool, optional
+            Forces outputs in the local grid format is self.coordLocal == True. 
         """
         if outputname is None: 
             outputname = 'mesh.vtk'
+            
         if isinstance(outputname,str):
             # check for extension 
             if len(outputname.split('.'))<2: 
                 outputname = outputname + '.vtk'
+                
+        # force local grid output in the UI
+        if _forceLocal and self.coordLocal:
+            self.mesh.exportMesh(outputname,False,self.coordParam, voxel)
+            return 
+            
         self.mesh.exportMesh(outputname,self.coordLocal,self.coordParam, voxel)
         
 
@@ -6901,7 +6912,8 @@ class Project(object): # Project master class instanciated by the GUI
         fh.write('def end_cue(self): pass\n')
         fh.close()
 
-    def exportMeshResults(self, dirname=None, ftype='.vtk', voxel=False):
+    def exportMeshResults(self, dirname=None, ftype='.vtk', voxel=False, 
+                          _forceLocal=False):
         """Save mesh files of inversion results to a specified directory. If 
         results are in a local grid, they will be converted back into thier 
         respective utm or nationa grid coordinates. 
@@ -6914,6 +6926,9 @@ class Project(object): # Project master class instanciated by the GUI
             Type of file extension. 
         voxel: bool, optional
             Force export to be in a voxel format. 
+        _forceLocal: bool, optional
+            Force output to be in a local grid if self.coordLocal is True. Meant 
+            for use with the UI. 
         """
             
         if dirname is None:
@@ -6936,6 +6951,12 @@ class Project(object): # Project master class instanciated by the GUI
         elif 'csv' in ftype.lower(): 
             ext = '.csv'
         # add file types as appropiate! 
+        
+        # force local grid output in the UI
+        coordLocalFlipped = False 
+        if _forceLocal and self.coordLocal:
+            self.coordLocal = False 
+            coordLocalFlipped = True 
         
         
         # check param for truncation variables 
@@ -7040,6 +7061,10 @@ class Project(object): # Project master class instanciated by the GUI
             fh.write('\ttextSource.Text = annotations[index]\n')
             fh.write('def end_cue(self): pass\n')
             fh.close()
+            
+        # force local grid output in the UI
+        if _forceLocal and coordLocalFlipped:
+            self.coordLocal = True 
 
 
     def saveCwd(self, outputdir):
