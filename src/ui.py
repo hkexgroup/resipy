@@ -590,8 +590,8 @@ class App(QMainWindow):
                     self.writeLog('k.typ = {:s}'.format(self.project.typ))
                 # importing tab
                 self.elecDx2DTape.show()
-                self.elecTable.setColumnHidden(2, True)
-                self.topoTable.setColumnHidden(2, True)
+                # self.elecTable.setColumnHidden(2, True)
+                # self.topoTable.setColumnHidden(2, True)
                 self.regular3DCheck.setChecked(False)
                 self.pseudo3DCheck.setVisible(True)
                 if pvfound:
@@ -667,8 +667,8 @@ class App(QMainWindow):
                 self.elecDx2DTape.hide()
                 self.elecLineEdit.setEnabled(True)
                 self.elecLineSpacingEdit.setEnabled(True)
-                self.elecTable.setColumnHidden(2, False)
-                self.topoTable.setColumnHidden(2, False)
+                # self.elecTable.setColumnHidden(2, False)
+                # self.topoTable.setColumnHidden(2, False)
                 if self.project is not None:
                     if self.project.elec is not None:
                         self.elecTable.initTable(self.project.elec)
@@ -857,7 +857,7 @@ class App(QMainWindow):
                 self.pseudoLayout.setCurrentIndex(1)
                 self.elecLineEdit.setEnabled(True)
                 self.elecLineSpacingEdit.setEnabled(True)
-                self.elecTable.setColumnHidden(2, False)
+                # self.elecTable.setColumnHidden(2, False)
                 self.topoTable.hide() # we can't add extra topo points in here, we don't know which mesh they belong to
                 self.regionTable.hide() # we can't add regions at this level - future: set/design/create individual 2D meshes then create a pseudo 3D mesh
                 self.topoBtn.hide()
@@ -885,7 +885,7 @@ class App(QMainWindow):
                 self.pseudoLayout.setCurrentIndex(0)
                 self.elecLineEdit.setEnabled(False)
                 self.elecLineSpacingEdit.setEnabled(False)
-                self.elecTable.setColumnHidden(2, True)
+                # self.elecTable.setColumnHidden(2, True)
                 self.topoTable.show()
                 self.regionTable.show()
                 self.topoBtn.show()
@@ -1089,9 +1089,13 @@ class App(QMainWindow):
             if self.iMerged: # special case where files are listed in a csv file 
                 fnames, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File',
                                                        self.datadir, self.fformat)
+                if fnames == '':
+                    return 
             else: 
                 fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)',
                                                          self.datadir, self.fformat)
+                if len(fnames) == 0:
+                    return 
             # fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 
             # 'Choose the directory containing the data', directory=self.datadir)
             
@@ -1102,6 +1106,8 @@ class App(QMainWindow):
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
                     if self.iMerged:
+                        self.timeLapseCheck.stateChanged.disconnect() # disconnect timelapse checker 
+                        # self.pseudo3DCheck.stateChanged.disconnect() # might need to disconnect pseudo3d checker too
                         self.project.createMergedSurveys(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.writeLog('k.createMergedSurveys({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
                         self.iTimeLapse = self.project.iTimeLapse
@@ -1114,6 +1120,9 @@ class App(QMainWindow):
                         self.batchCheck.setEnabled(False)
                         self.pseudo3DCheck.setEnabled(False)
                         self.pseudo3DCheck.setChecked(False)
+                        # reconnect timelapse/pseudo3d functions 
+                        self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
+                        # self.pseudo3DCheck.stateChanged.connect(pseudo3DFunc)
                     elif self.iTimeLapse:
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
@@ -1882,7 +1891,7 @@ class App(QMainWindow):
 
 
         self.elecTable = ElecTable(parent=self)
-        self.elecTable.setColumnHidden(2, True)
+        # self.elecTable.setColumnHidden(2, True)
         self.elecLabelTextP1 = '<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV with headers matching: label,x,y,z,buried.' \
             'The last column (buried) is 1 if checked (= buried electrode) and 0 if not (=surface electrode).' \
                 'You can also use the form below to generate ' \
@@ -2076,12 +2085,13 @@ class App(QMainWindow):
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
 
         self.topoTable = ElecTable(selfInit=True, parent=self)
-        self.topoTable.setColumnHidden(2, True) # Y
+        self.topoTable.setColumnHidden(2, False) # Y
         self.topoTable.setColumnHidden(0, True) # elec label
         self.topoTable.setColumnHidden(4, True) # buried
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
-                           into a cell.</i>')
+                           into a cell. If using a local grid, then \
+                           coordinates will be internally translated.</i>')
                            
         def topoBtnFunc():
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,'Open File', directory=self.datadir)
@@ -2102,7 +2112,6 @@ class App(QMainWindow):
         self.topoInterpBtn.setToolTip('The topography points will be used to find '
                                   'the Z coordinates of the electrodes using '
                                   'linear interpolation.')
-        
         
         # layout
         self.topoLayout = QVBoxLayout()
@@ -5940,43 +5949,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.aspectCheck.stateChanged.connect(aspectCheckFunc)
         self.aspectCheck.setToolTip('Check for equal aspect of the axis'
                                     '\nUncheck for auto aspect.')
-
-        def saveBtnFunc():
-            fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
-            if fdir != '':
-                self.loadingWidget('Saving data...')
-                if self.project.typ[-1] == '2':
-                    edge_color = self.displayParams['edge_color']
-                    sens = self.displayParams['sens']
-                    sensPrc = self.displayParams['sensPrc']
-                    attr = self.displayParams['attr']
-                    contour = self.displayParams['contour']
-                    clipCorners = self.displayParams['clipCorners']
-                    vmin = self.displayParams['vmin']
-                    vmax = self.displayParams['vmax']
-                    cmap = self.displayParams['cmap']
-                    self.project.saveInvPlots(outputdir=fdir, edge_color=edge_color,
-                                       contour=contour, sens=sens, attr=attr,
-                                       vmin=vmin, vmax=vmax, color_map=cmap,
-                                       sensPrc=sensPrc, clipCorners=clipCorners)
-                    self.writeLog('k.saveInvPlots(outputdir="{:s}", edge_color="{:s}",'
-                                  ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s},'
-                                  ' vmax={:s}, color_map="{:s}", sensPrc={:.2f})'.format(
-                                  fdir, edge_color, str(contour), str(sens), attr,
-                                  str(vmin), str(vmax), cmap, sensPrc))
-                    if self.pseudo3DCheck.isChecked():
-                        fname = os.path.join(fdir, 'Pseudo_3D_result.png')
-                        self.vtkWidget.screenshot(fname, transparent_background=True)
-                self.project.saveVtks(fdir)
-                self.writeLog('k.saveVtks("{:s}")'.format(fdir))
-            self.project.saveData(fdir)
-            self.writeLog('k.saveData("{:s}")'.format(fdir))
-            self.loadingWidget(exitflag=True)
-            self.infoDump('All data and graphs saved successfully!')
-        self.saveBtn = QPushButton('Save Data')
-        self.saveBtn.clicked.connect(saveBtnFunc)
-        self.saveBtn.setToolTip('Save current graph to the working directory.')
         
+        # short cut to export tab 
+        def change2ExportTab():
+            self.tabs.setCurrentIndex(6)
+            self.errorGraphs.setCurrentIndex(2)
+        self.exportShortCut = QPushButton('Export')
+        self.exportShortCut.clicked.connect(change2ExportTab)
         
         # 3D specific options for pyvista
         self.pvthreshLabel = QLabel('Threshold:')
@@ -6225,7 +6204,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.sensWidget)
         optsLayout.addWidget(self.edgeCheck)
         optsLayout.addWidget(self.aspectCheck)
-        optsLayout.addWidget(self.saveBtn)
+        # optsLayout.addWidget(self.saveBtn)
+        optsLayout.addWidget(self.exportShortCut)
         
         opt3dLayout = QHBoxLayout()
         for o in opt3d:
@@ -6495,28 +6475,160 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         self.tabPostProcessing.setLayout(postProcessingLayout)
 
-        #%% Project information (summary) tab 
-        def getSummary():
-            if self.project is None: 
-                text = 'No data has been imported' 
-                self.projectInfoText.setText(text)
-                return 
-            self.projectInfoText.setText(self.project.summary())
-        
-        self.tabProjectInfo = QTabWidget()
-        self.tabs.addTab(self.tabProjectInfo, 'Summary')
-        self.projectInfoLayout = QVBoxLayout()
-        self.projectInfoLayout.setAlignment(Qt.AlignTop)
-        self.projectInfoText = QTextBrowser()
-        # self.projectInfoText.setText(getSummary())
-        self.projectInfoLayout.addWidget(self.projectInfoText)
-        self.tabProjectInfo.setLayout(self.projectInfoLayout)
-        self.tabs.currentChanged.connect(getSummary)
         
         #%% Post processing - export tab 
         self.tabExportData = QTabWidget()
-        self.tabs.addTab(self.tabExportData,'Export')
+        self.errorGraphs.addTab(self.tabExportData,'Export')
         self.exportGrid = QGridLayout() # main grid 
+        
+        ## old save button function 
+        # def saveBtnFunc():
+        #     fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
+        #     if fdir != '':
+        #         self.loadingWidget('Saving data...')
+        #         if self.project.typ[-1] == '2':
+        #             edge_color = self.displayParams['edge_color']
+        #             sens = self.displayParams['sens']
+        #             sensPrc = self.displayParams['sensPrc']
+        #             attr = self.displayParams['attr']
+        #             contour = self.displayParams['contour']
+        #             clipCorners = self.displayParams['clipCorners']
+        #             vmin = self.displayParams['vmin']
+        #             vmax = self.displayParams['vmax']
+        #             cmap = self.displayParams['cmap']
+        #             self.project.saveInvPlots(outputdir=fdir, edge_color=edge_color,
+        #                                contour=contour, sens=sens, attr=attr,
+        #                                vmin=vmin, vmax=vmax, color_map=cmap,
+        #                                sensPrc=sensPrc, clipCorners=clipCorners)
+        #             self.writeLog('k.saveInvPlots(outputdir="{:s}", edge_color="{:s}",'
+        #                           ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s},'
+        #                           ' vmax={:s}, color_map="{:s}", sensPrc={:.2f})'.format(
+        #                           fdir, edge_color, str(contour), str(sens), attr,
+        #                           str(vmin), str(vmax), cmap, sensPrc))
+        #             if self.pseudo3DCheck.isChecked():
+        #                 fname = os.path.join(fdir, 'Pseudo_3D_result.png')
+        #                 self.vtkWidget.screenshot(fname, transparent_background=True)
+        #         self.project.saveVtks(fdir)
+        #         self.writeLog('k.saveVtks("{:s}")'.format(fdir))
+        #     self.project.saveData(fdir)
+        #     self.writeLog('k.saveData("{:s}")'.format(fdir))
+        #     self.loadingWidget(exitflag=True)
+        #     self.infoDump('All data and graphs saved successfully!')
+        # self.saveBtn = QPushButton('Save Data')
+        # self.saveBtn.clicked.connect(saveBtnFunc)
+        # self.saveBtn.setToolTip('Save current graph to the working directory.')
+        
+        def copyWdFunc():
+            fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 
+                                                    'Choose the directory to export graphs and working directory', 
+                                                    directory=self.datadir)
+            if fdir != '':
+                self.loadingWidget('Copying working directory...')
+                if self.project.typ[-1] == '2':
+                    edge_color = self.displayParams['edge_color']
+                    sens = self.displayParams['sens']
+                    sensPrc = self.displayParams['sensPrc']
+                    attr = self.displayParams['attr']
+                    contour = self.displayParams['contour']
+                    clipCorners = self.displayParams['clipCorners']
+                    vmin = self.displayParams['vmin']
+                    vmax = self.displayParams['vmax']
+                    cmap = self.displayParams['cmap']
+                    self.project.saveInvPlots(outputdir=fdir, edge_color=edge_color,
+                                        contour=contour, sens=sens, attr=attr,
+                                        vmin=vmin, vmax=vmax, color_map=cmap,
+                                        sensPrc=sensPrc, clipCorners=clipCorners)
+                    self.writeLog('k.saveInvPlots(outputdir="{:s}", edge_color="{:s}",'
+                                  ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s},'
+                                  ' vmax={:s}, color_map="{:s}", sensPrc={:.2f})'.format(
+                                  fdir, edge_color, str(contour), str(sens), attr,
+                                  str(vmin), str(vmax), cmap, sensPrc))
+                    if self.pseudo3DCheck.isChecked():
+                        fname = os.path.join(fdir, 'Pseudo_3D_result.png')
+                        self.vtkWidget.screenshot(fname, transparent_background=True)
+                # self.project.saveVtks(fdir)
+                # self.writeLog('k.saveVtks("{:s}")'.format(fdir))
+                self.project.saveData(fdir)
+                self.writeLog('k.saveData("{:s}")'.format(fdir))
+                self.loadingWidget(exitflag=True)
+                self.infoDump('Successfully! copied working directory')
+                
+        def savePPdataFunc():
+            dataout,_ = QFileDialog.getSaveFileName(
+                self, 
+                'Open File', 
+                self.datadir,
+                'CSV (*.csv);;DAT (*.dat);;SRV (*.srv) ')
+            
+            ftype = str(self.exportPpDataFtypeMenu.currentText())
+            if dataout != '':
+                self.loadingWidget('Saving conditioned data...')
+                includeError = False 
+                includeRecip = False 
+                if self.exportPpDataErrorCheck.isChecked(): 
+                    includeError = True 
+                if self.exportPpDataRecipCheck.isChecked(): 
+                    includeRecip = True 
+                    
+                self.project.exportData(dataout, ftype, includeError, includeRecip)
+                self.writeLog('k.exportData("{:s}","{:s}",{:s},{:s})'.format(dataout,ftype, str(includeError),str(includeRecip)))
+                self.infoDump('Exported pre processed data.')
+                    
+                
+        def saveMeshFunc():
+            mfpathout, _ = QFileDialog.getSaveFileName(
+                self, 
+                'Open File', 
+                self.datadir,
+                'VTK (*.vtk);;NODE (*.node);;DAT (*.dat)')
+            if mfpathout != '':
+                voxel = False 
+                _forceLocal = False 
+                self.loadingWidget('Saving mesh file...')
+                if self.exportVoxelMeshCheck.isChecked():
+                    voxel = True 
+                if self.exportLocalGridMeshCheck.isChecked(): 
+                    _forceLocal = True 
+                self.project.exportMesh(mfpathout,voxel,_forceLocal)
+                self.writeLog('k.exportMesh("{:s}",{:s},{:s})'.format(mfpathout,str(voxel),str(_forceLocal)))
+                
+        def exportElecBtnFunc():
+            fpathout, _ = QFileDialog.getSaveFileName(
+                self, 
+                'Open File', 
+                self.datadir,
+                'VTK (*.vtk);;CSV (*.csv);;DAT (*.dat)')
+            
+            if fpathout != '': 
+                _forceLocal = False 
+                self.loadingWidget('Exporting electrodes...')
+                if self.exportLocalGridElecCheck.isChecked(): 
+                    _forceLocal = True 
+                self.project.exportElec(fpathout,_forceLocal)
+                self.writeLog('k.exportElec("{:s}",{:s})'.format(fpathout,str(_forceLocal)))
+                
+        def exportMeshResultsBtnFunc():
+            fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 
+                                                    'Choose the directory to save inversion result(s)', 
+                                                    directory=self.datadir)
+            
+            ftype = str(self.exportResultsFtypeMenu.currentText())
+            if fdir != '':
+                self.loadingWidget('Exporting mesh results...')
+                voxel = False 
+                _forceLocal = False 
+                self.loadingWidget('Saving mesh result file(s)...')
+                if self.exportVoxelResultsCheck.isChecked():
+                    voxel = True 
+                if self.exportLocalGridResultsCheck.isChecked(): 
+                    _forceLocal = True 
+                self.project.exportMeshResults(dirname=fdir, 
+                                               ftype=ftype, 
+                                               voxel=voxel, 
+                                               _forceLocal=_forceLocal)
+                self.writeLog('k.exportMeshResults("{:s}","{:s}",{:s},{:s})'.format(fdir,ftype,str(voxel),str(_forceLocal)))
+                self.infoDump('Successfully saved meshed results!')
+            
 
         ## left hand side of tab
         gcolumn = 0 
@@ -6545,12 +6657,18 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # exporting the pre-processed data 
         self.exportPpDataButton = QPushButton('Export Pre-Processed Data') 
         self.exportPpDataLabel = QLabel('Export the pre-processed data used by R2, cR2, R3t or cR3t during inversion')
-        # self.exportPpDataButton.clicked.connect(self.saveLog) #TODO connect function 
+        self.exportPpDataButton.clicked.connect(savePPdataFunc) 
         self.exportPpDataCheckBoxes = QHBoxLayout()
         self.exportPpDataErrorCheck = QCheckBox('Include Errors')
         self.exportPpDataRecipCheck = QCheckBox('Include Reciprocals')
         self.exportPpDataCheckBoxes.addWidget(self.exportPpDataErrorCheck)
         self.exportPpDataCheckBoxes.addWidget(self.exportPpDataRecipCheck)
+        self.exportPpDataFtypeMenu = QComboBox() 
+        self.exportPpDataFtypeMenu.addItem('protocol')
+        self.exportPpDataFtypeMenu.addItem('srv')
+        self.exportPpDataFtypeMenu.addItem('csv')
+        self.exportPpDataFtypeMenu.addItem('ResInv')
+        self.exportPpDataCheckBoxes.addWidget(self.exportPpDataFtypeMenu)
         nrow += 1 
         self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
         nrow += 1 
@@ -6570,7 +6688,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportVoxelMeshCheck = QCheckBox('Force Voxel')
         self.exportVoxelMeshCheck.setToolTip('Force outputs to be in a voxel like grid rather than an unstructured mesh')
         self.exportMeshBox.addWidget(self.exportVoxelMeshCheck)
-        # self.exportMeshButton.clicked.connect(self.saveLog) #TODO connect function 
+        self.exportMeshButton.clicked.connect(saveMeshFunc)
         nrow += 1 
         self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
         nrow += 1 
@@ -6596,9 +6714,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # save working directory 
         self.exportWdButton = QPushButton('Save working directory') 
         self.exportWdLabel = QLabel('Save current working directory to a folder of choice on your system')
-        # self.exportMeshButton.clicked.connect(self.saveLog) #TODO connect function 
+        self.exportWdButton.clicked.connect(copyWdFunc) 
         nrow += 1 
-        self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
+        self.exportGrid.addWidget(self.exportPadderLabel, nrow,gcolumn)
         nrow += 1 
         self.exportGrid.addWidget(self.exportWdLabel, nrow, gcolumn)
         nrow += 1 
@@ -6611,7 +6729,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportLocalGridElecCheck = QCheckBox('Force Local Grid')
         self.exportLocalGridElecCheck.setToolTip('Force outputs to be in a local grid if coordinates were given in terms of UTM')
         self.exportElecBox.addWidget(self.exportLocalGridElecCheck)
-        # self.exportResultsButton.clicked.connect(self.saveLog) #TODO connect function 
+        self.exportElecButton.clicked.connect(exportElecBtnFunc) 
         nrow += 1 
         self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
         nrow += 1 
@@ -6631,20 +6749,51 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportVoxelResultsCheck = QCheckBox('Force Voxel')
         self.exportVoxelResultsCheck.setToolTip('Force outputs to be in a voxel like grid rather than an unstructured mesh')
         self.exportResultsBox.addWidget(self.exportVoxelResultsCheck)
-
-        # self.exportResultsButton.clicked.connect(self.saveLog) #TODO connect function 
+        self.exportResultsFtypeMenu = QComboBox() 
+        self.exportResultsFtypeMenu.addItem('.vtk')
+        self.exportResultsFtypeMenu.addItem('.csv')
+        self.exportResultsFtypeMenu.addItem('.xyz')
+        self.exportResultsFtypeMenu.addItem('.dat')
+        # self.exportResultsFtypeMenu.addItem('.node') # not sure if we need .node here 
+        # self.exportResultsFtypeMenu.setFixedWidth(150)
+        self.exportResultsButton.clicked.connect(exportMeshResultsBtnFunc) 
+        self.exportResultsBox.addWidget(self.exportResultsFtypeMenu)
+        
+        # formatting the buttons etc... 
         nrow += 1 
         self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
         nrow += 1 
         self.exportGrid.addWidget(self.exportResultsLabel, nrow, gcolumn)
         nrow += 1 
         self.exportGrid.addLayout(self.exportResultsBox, nrow, gcolumn)
+        
         nrow += 1 
         self.exportGrid.addWidget(self.exportResultsButton, nrow, gcolumn)
         
         # add all layouts to tab 
         self.exportGrid.setRowStretch(self.exportGrid.rowCount()+1, 1)
         self.tabExportData.setLayout(self.exportGrid)
+        
+
+        #%% Project information (summary) tab 
+        def getSummary():
+            if self.project is None: 
+                text = 'No data has been imported' 
+                self.projectInfoText.setText(text)
+                return 
+            self.projectInfoText.setText(self.project.summary())
+        
+        self.tabProjectInfo = QTabWidget()
+        self.tabs.addTab(self.tabProjectInfo, 'Summary')
+        self.projectInfoLayout = QVBoxLayout()
+        self.projectInfoLayout.setAlignment(Qt.AlignTop)
+        self.projectInfoText = QTextBrowser()
+        # self.projectInfoText.setText(getSummary())
+        self.projectInfoLayout.addWidget(self.projectInfoText)
+        self.tabProjectInfo.setLayout(self.projectInfoLayout)
+        self.tabs.currentChanged.connect(getSummary)
+        
+
         
 
         #%% Help tab
@@ -7062,7 +7211,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         self.project.setPseudo3DElec(pd.concat(elecList, axis=0, ignore_index=True))
                         elecList = self.project._create2DLines() # convert to horizontal 2D lines
                     
-                    self.project.setElec(elec, elecList)
+                    self.project.setElec(elec, elecList, True)
                     pdebug('self.project.setElec()')
                     self.writeLog('#k.setElec(elec)')
                     # TODO don't know how to write to log this

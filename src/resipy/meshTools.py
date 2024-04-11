@@ -3151,11 +3151,16 @@ class Mesh:
             raise TypeError('Advanced mesh format not avialable with 2D meshes currently')
             
         # element parameters 
-        param = np.asarray(self.df['param'],dtype=int)
-        try: 
-            zone = np.asarray(self.df['zones'],dtype=int)
-        except:
-            zone = np.ones(self.numel,dtype=int)
+        if 'param' in self.df.columns: 
+            param = np.asarray(self.df['param'],dtype=int)
+        else:
+            param = np.arange(self.numel) + 1 
+        
+        if 'zones' in self.df.columns: 
+            zone = np.asarray(self.df['zones'],dtype=self.dint)
+        else: 
+            zone = np.ones(self.numel,dtype=self.dint) 
+        
         nzones = len(np.unique(zone))
             
         adv_flag = int(iadvanced)
@@ -3163,7 +3168,7 @@ class Mesh:
         if self.neigh_matrix is None:
             self.computeNeigh()
         neigh = self.neigh_matrix.copy()
-        neigh = mc.sortNeigh(neigh) # organise for (c)R3t input  
+        neigh = mc.sortNeigh(neigh,zone) # organise for (c)R3t input  
         neigh += 1 # add one for FOTRAN indexing 
         
         if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
@@ -3820,7 +3825,7 @@ class Mesh:
         elif ftype == 'vtk':
             self.vtk(fname)
         elif ftype == 'csv':
-            self.toCSV(fname)
+            self.toCsv(fname)
         elif ftype == 'node':
             self.exportTetgenMesh(fname.replace('.node',''))
         elif ftype == 'xyz':
@@ -3859,7 +3864,7 @@ class Mesh:
                 coordParam['y0'] = np.min(self.node[:,1])
                 
         xyz = False 
-        if ftype is not None and 'xyz' in ftype: 
+        if ftype is not None and ftype.endswith('xyz'): 
             # special case where we want to enforce two things 
             # 1) export is a voxel mesh 
             # 2) xyz file is written in local coordinates with a conversion file 
@@ -4295,7 +4300,7 @@ def dat_import(file_path='mesh.dat', order_nodes=True):
     for i in range(numel):
         line = fid.readline().split()#read in line data
         elm_no[i] = int(line[0])
-        zone[i] = int(line[-1])
+        zone[i] = int(npere+2)
         ref=1 # read through each node index 
         if i==0 and not flag_3d and len(line)==7: # we have a special case of a quad mesh .dat file
             npere=4
@@ -4947,21 +4952,27 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
     addry = [r,0,-r,0]
     addrx = [0,r,0,-r]
     
-    for i in range(nelec):
-        dx0 = elec_x[idx[i,1]] - elec_x[i] 
-        dx1 = elec_x[idx[i,2]] - elec_x[i]
-        dy0 = elec_y[idx[i,1]] - elec_y[i]
-        dy1 = elec_y[idx[i,2]] - elec_y[i]
-        
-        q0 = quad(dx0, dy0) # quadrant 
-        q1 = quad(dx1, dy1) # quadrant 
-        qs = [q0,q1]
-        
-        # avoid adding points in any known quadrant 
-        for j in range(4):
-            if j not in qs: 
+    if nelec < 4:
+        for i in range(nelec):
+            for j in range(4):
                 xstack.append(elec_x[i] + addrx[j]) 
                 ystack.append(elec_y[i] + addry[j]) 
+    else: 
+        for i in range(nelec):
+            dx0 = elec_x[idx[i,1]] - elec_x[i] 
+            dx1 = elec_x[idx[i,2]] - elec_x[i]
+            dy0 = elec_y[idx[i,1]] - elec_y[i]
+            dy1 = elec_y[idx[i,2]] - elec_y[i]
+            
+            q0 = quad(dx0, dy0) # quadrant 
+            q1 = quad(dx1, dy1) # quadrant 
+            qs = [q0,q1]
+            
+            # avoid adding points in any known quadrant 
+            for j in range(4):
+                if j not in qs: 
+                    xstack.append(elec_x[i] + addrx[j]) 
+                    ystack.append(elec_y[i] + addry[j]) 
                 
     xstack = np.array(xstack)
     ystack = np.array(ystack)
@@ -4979,7 +4990,6 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
                     continue 
                 repeats[j] = True 
         
-    
     return xstack[~repeats], ystack[~repeats]
 
 #%% build a triangle mesh - using the gmsh wrapper

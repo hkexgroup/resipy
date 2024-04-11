@@ -363,6 +363,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None # will be assigned when creating a survey
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
+        self.bigSurvey = None # big combined survey created in the case of timelapse mode 
         self.mesh = None # mesh object (one per Project instance)
         self.meshParams = {} # mesh parameters passed to mesh creation scheme
         self.wholespace = False # flag for whole space problem 
@@ -628,7 +629,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # s.computeK() # doubt there would be a need to recompute k 
                 
     
-    def setElec(self, elec, elecList=None):
+    def setElec(self, elec, elecList=None, _uiOverideCoordLocal=False):
         """Set electrodes. Automatically identified remote electrode.
 
         Parameters
@@ -641,6 +642,9 @@ class Project(object): # Project master class instanciated by the GUI
             is to be used in the advanced use case where electrodes move which
             each survey. Each entry of the list is a numpy array the same format
             of 'elec', which is then assigned to each survey class.
+        _uiOverideCoordLocal: bool, optional
+            UI command only, set to to True when updating the project electrodes
+            in the UI. 
         """
         if elecList is None: # same electrode set shared by all surveys (most common case)
             ok = False
@@ -704,9 +708,10 @@ class Project(object): # Project master class instanciated by the GUI
                 survey.elec = self._findRemote(self._num2elec(elecList[i])) # plus identification of remote electrode
 
         # do coordinate conversion if local grid required 
-        if self.coordLocal and self.elec is not None:
-            self.coordLocal = False # will be reset to true in the following function 
-            self.setCoordConv(True)
+        if not _uiOverideCoordLocal: 
+            if self.coordLocal and self.elec is not None:
+                self.coordLocal = False # will be reset to true in the following function 
+                self.setCoordConv(True)
 
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
@@ -1689,6 +1694,10 @@ class Project(object): # Project master class instanciated by the GUI
             for j in sidx: 
                 self.addData(index=c, fname=finfo.fpath[j], ftype=finfo.ftype[j])
                 # add data for each survey 
+            if c == 0:
+                self.bigSurvey = Survey(finfo.fpath[i], ftype=finfo.ftype[i])
+                for j in sidx: 
+                    self.bigSurvey.addData(fname=finfo.fpath[j], ftype=finfo.ftype[j])
             c += 1 
 
         elecids = []
@@ -1724,7 +1733,6 @@ class Project(object): # Project master class instanciated by the GUI
             
             # create bigSurvey (useful if we want to fit a single error model
             # based on the combined data of all the surveys)
-            self.bigSurvey = self.surveys[0]
             df = self.bigSurvey.df.copy()
             for i in range(1,len(self.surveys)):
                 df2 = self.surveys[i].df
@@ -1737,6 +1745,8 @@ class Project(object): # Project master class instanciated by the GUI
             self.bigSurvey.df = df.copy() # override it
             self.bigSurvey.dfOrigin = df.copy()
             self.bigSurvey.ndata = df.shape[0]
+        else:
+            self.bigSurvey = None 
         
         # flag that data has been added 
         self.pinfo['Data'] = True 
@@ -3851,8 +3861,8 @@ class Project(object): # Project master class instanciated by the GUI
             # a bit simplistic but assign error to all based on Transfer resistance
             # let's assume it's False all the time for now
             content = ''
-            df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean']]
-            df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0'})
+            df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean','resError']]
+            df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0','resError':'resError0'})
             for i, s in enumerate(self.surveys):
                 if 'resist0' in s.df.columns:
                     s.df = s.df.drop('resist0', axis=1)
@@ -3888,6 +3898,14 @@ class Project(object): # Project master class instanciated by the GUI
                                             ip=False, # no IP timelapse possible for now
                                             isubset=indexes[i][1], threed=threed,
                                             fm0=fm00)
+                
+                # need to do a guassian propogration of errors if the case we have 
+                # errors and difference inversion 
+                if err and self.param['reg_mode'] == 2 and errTyp!='global':
+                    resError0 = df0['resError0'][indexes[i][0]].values 
+                    resError = protocol['resError'].values 
+                    protocol.loc[:,'resError'] = np.sqrt(resError**2 + resError0**2)
+                
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
                     if os.path.exists(refdir) == False:
@@ -6513,8 +6531,59 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh.exportMesh(outputname,False,self.coordParam, voxel)
             return 
             
-        self.mesh.exportMesh(outputname,self.coordLocal,self.coordParam, voxel)
+        self.mesh.exportMesh(outputname, None, self.coordLocal,self.coordParam, voxel)
         
+    def exportElec(self, outputname=None, _forceLocal=False):
+        """Export electrodes as a different file format, with coordinate conversion
+        if Project.coordLocal set to True. 
+
+        Parameters
+        ----------
+        outputname : str, optional
+            Output path with extension. Available mesh format are:
+                - .vtk (Paraview)
+                - .dat (R* codes)
+                - .csv (general)
+            If not provided the electrode coordinates are saved in the working directory
+            as electrodes.vtk.
+        _forceLocal: bool, optional
+            Forces outputs in the local grid format is self.coordLocal == True. 
+        """
+        if self.elec is None: # cant run function with electrodes object being populated 
+            warnings.warn('No electrode dataframe has been set, cannot export electrodes!')
+            return # so return 
+        
+        if outputname is None: #' set default file name for output 
+            outputname = 'electrodes.vtk'
+            
+        if not isinstance(outputname, str):
+            raise Exception('Output name must be a string!')
+        
+        if len(outputname.split('.')) == 1: 
+            outputname += '.vtk'
+
+        eleccopy = self.elec.copy() 
+        
+        # force local grid output in the UI
+        if not _forceLocal and self.coordLocal:
+            localx = eleccopy.x.values
+            localy = eleccopy.y.values 
+            eleccopy['x'], eleccopy['y'] = invRotGridData(
+                localx, localy, 
+                self.coordParam['x0'],
+                self.coordParam['y0'],
+                self.coordParam['a']
+                )
+            
+        if outputname.endswith('.csv'):
+            eleccopy.to_csv(outputname,index=False)
+        elif outputname.endswith('.dat'):
+            eleccopy.to_csv(outputname,index=False,sep='\t')
+        elif outputname.endswith('.vtk'):
+            mt.points2vtk(eleccopy.x, eleccopy.y, eleccopy.z, outputname, 'Electrodes')
+        else:
+            raise Exception('Unrecognised output extension type')
+            
 
     def _toParaview(self, fname,  paraview_loc=None): # pragma: no cover
         """Open file in paraview (might not work if paraview is not in the PATH,
@@ -7094,6 +7163,84 @@ class Project(object): # Project master class instanciated by the GUI
 
         """
         self.saveCwd(outputdir)
+        
+    def exportData(self, outputname=None, ftype='protocol', err=False, 
+                   recip=False):
+        """
+        Export preconditioned data used by ResIPy into another format (
+        different to project.saveData).
+
+        Parameters
+        ----------
+        outputname : str, optional
+            Outputname. The default is None. If not given then the function falls
+            back on the survey name. If set then a number will be appended to the 
+            file name in the case of time-lapse (or batch) surveys. 
+        ftype : str, optional
+            Export File type, choose from either protocol, srv, csv, ResInv. 
+            The default is 'protocol'.
+        err : bool, optional
+            Flag to include errors. The default is False.
+        recip : bool, optional
+            Flag to include reciprocals. The default is False.
+        """
+        
+        # check the ftype 
+        ext = '.dat'
+        if ftype == 'protocol':
+            ext == '.dat'
+        elif ftype == 'ResInv':
+            ext = '.dat'
+        elif ftype == 'srv':
+            ext = '.srv'
+        elif ftype == 'csv':
+            ext == '.csv'
+        else:
+            raise Exception('unknown file type')
+            
+        flag3d = False 
+        if '3' in self.typ:
+            flag3d = True 
+            
+        for i,s in enumerate(self.surveys): 
+            if recip:
+                isubset = [True]*len(s.df)
+            else:
+                isubset = None 
+                
+            protocol = s.write2protocol(err=err, isubset=isubset, threed=flag3d)
+            
+            # decide on file outputname 
+            if outputname is None: 
+                fout = s.name 
+                if fout == '':
+                    fout = 'SurveyData'
+                    if len(self.surveys) > 1:
+                        fout = 'SurveyData_{:0>3d}'.format(i)
+            else:
+                fout = outputname 
+                if fout.endswith(ext):
+                    fout = fout.replace(ext,'')
+                if len(self.surveys) > 1: 
+                    fout += '_{:0>3d}'.format(i)
+                    
+            if not fout.endswith(ext):
+                fout += ext 
+                
+            # write to file 
+            if ftype == 'protocol':
+                protocol.to_csv(fout, index=False, sep='\t', lineterminator='\n')
+            elif ftype == 'ResInv':
+                param = {'lineTitle':s.name}
+                write2Res2DInv(param, fout, protocol, 
+                               self.elec[['x','y','z']].values)
+            elif ftype =='srv':
+                writeSrv(fout, protocol, self.elec[['x','y','z']].values)
+            elif ftype =='csv':
+                protocol.to_csv(fout, index=False, sep=',', lineterminator='\n')
+                
+        return 
+                
 
     def showParam(self):
         """Print parameters in `R2.param` dictionary.

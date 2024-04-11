@@ -495,8 +495,6 @@ def mshParse47(fname,debug=True):
             
     elm_id = [i+1 for i in range(real_no_elements)]
     cell_type = [vtk_type]*real_no_elements
-    cell_type = [vtk_type]*real_no_elements
-    cell_type = [vtk_type]*real_no_elements
     
     mesh_dict = {'num_elms':real_no_elements,
                 'num_nodes':numnp,
@@ -1171,6 +1169,12 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         topo_x = [elec_x[min_idx] - 5*np.mean(np.diff(np.unique(elec_x))),
                   elec_x[max_idx] + 5*np.mean(np.diff(np.unique(elec_x)))]
         topo_z = [elec_z[min_idx],elec_z[max_idx]]
+        if bh_flag or bu_flag: 
+            distances = find_dist(electrodes[0], np.zeros_like(electrodes[0]), electrodes[1])
+            dist_sort = np.unique(distances)
+            elecspacing = dist_sort[1]
+            topo_x = [elec_x[min_idx] - 2*elecspacing,
+                      elec_x[max_idx] + 2*elecspacing]
     else:
         topo_x = geom_input['surface'][0]
         topo_z = geom_input['surface'][1]
@@ -1186,9 +1190,9 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         distances = find_dist(tmp_x[idx], tmp_y[idx], tmp_z[idx])
         dist_sort = np.unique(distances)
         elecspacing = dist_sort[1]
-        if max(topo_x)-min(topo_x) < elecspacing and len(topo_x) != 1: # they have the same x coordinate 
-            topo_x = [min(electrodes[0]) - 5*elecspacing,
-                      max(electrodes[0]) + 5*elecspacing]
+        # if max(topo_x)-min(topo_x) < elecspacing and len(topo_x) != 1: # they have the same x coordinate 
+        #     topo_x = [min(electrodes[0]) - 2*elecspacing,
+        #               max(electrodes[0]) + 2*elecspacing]
         if dp_len == -1:#there is no change dipole length, maybe due to 1 x coordinate 
             dp_len = dist_sort[-1]
         if fmd == -1:

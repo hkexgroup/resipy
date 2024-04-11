@@ -1833,6 +1833,8 @@ class Survey(object):
             Geometric factors for each measurement in Survey.df (dataframe)
 
         """
+        if self.isequence.shape[0] != len(self.df):
+            self.setSeqIds()
         if 'buried' in self.elec.columns and any(self.elec['buried']):
             if self.debug:
                 print('Computing geometric factors for buried electrodes!')
@@ -2575,7 +2577,9 @@ class Survey(object):
             If true, function exits before 
         """
         # self.ndata = len(self.df)
-        # self.setSeqIds()
+        if len(self.df) != self.isequence.shape[0]:
+            self.setSeqIds()
+            
         array = self.isequence - 1 
         if self.ndata == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
