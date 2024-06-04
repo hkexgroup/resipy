@@ -6265,6 +6265,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.aspectCheck)
         # optsLayout.addWidget(self.saveBtn)
         optsLayout.addWidget(self.exportShortCut)
+
         for o in opt2d:
             optsLayout.addWidget(o)
         
