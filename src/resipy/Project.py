@@ -923,7 +923,6 @@ class Project(object): # Project master class instanciated by the GUI
             a list of integers which are the indices of the respective electrodes
             in self.elec
         """
-        # compute bearing 
         iremote = self.elec['remote'].values
         x = self.elec['x'].values[~iremote]
         y = self.elec['y'].values[~iremote]
