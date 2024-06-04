@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.5.4' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.5.5' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -34,7 +34,7 @@ OS = platform.system()
 sys.path.append(os.path.relpath('..'))
 
 #import ResIPy resipy packages
-from resipy.Survey import Survey
+from resipy.Survey import Survey, polyfit 
 from resipy.parsers import geomParser
 from resipy.r2in import write2in
 import resipy.meshTools as mt
@@ -43,6 +43,7 @@ from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
 from resipy.saveData import (write2Res2DInv, write2csv, writeSrv)
+from resipy.interpolation import rotGridData, invRotGridData
 
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
@@ -167,7 +168,7 @@ def systemCheck(dump=print):
     Parameters
     ----------
     dump : function
-        stdout pointer
+        stdout dump 
     
     Returns
     -------
@@ -281,11 +282,11 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             'wineCheck':wineCheck,
             'GPU':mt.gpuinfo}
 
-def pointer(x):
+def donothing(x):
     pass
-sysinfo = systemCheck(dump=pointer)
+sysinfo = systemCheck(dump=donothing)
 
-#%% useful functions
+#%% useful functions for directory management 
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):
@@ -303,7 +304,39 @@ def cdist(a):
     z = np.array([complex(x[0], x[1]) for x in a])
     return np.abs(z[...,np.newaxis]-z)
 
+#%% geometrical functions 
+def bearing(dx,dy):
+    if dx == 0 and dy == 0:
+        raise ValueError('both dx and dy equal 0 - check no 2 electrodes occupy same xy coordinates')
+    elif dx == 0 and dy > 0:
+        return 0
+    elif dx == 0 and dy < 0:
+        return 180
+    elif dx > 0 and dy == 0:
+        return 90
+    elif dx < 0 and dy == 0:
+        return 270
+    elif dx > 0 and dy > 0: 
+        return np.rad2deg(np.arctan(dx/dy))
+    elif dx > 0 and dy < 0: 
+        return 180 + np.rad2deg(np.arctan(dx/dy))
+    elif dx < 0 and dy < 0: 
+        return 180 + np.rad2deg(np.arctan(dx/dy))
+    elif dx < 0 and dy > 0: 
+        return 360 + np.rad2deg(np.arctan(dx/dy))
 
+# fit an angle to a line in the XY plane 
+def fitXYangle(x,y):
+    m,c = polyfit(x,y,1)
+    xmdl = np.array([np.min(x),np.max(x)]) 
+    ymdl = (m*xmdl) + c 
+    dx = xmdl[0] - xmdl[1]
+    dy = ymdl[0] - ymdl[1]
+    a = bearing(dx,dy) + 90 
+    if a > 360:
+        a -= 360 
+    return a 
+    
 
 #%% main Project class (called 'R2' in previous versions)
 class Project(object): # Project master class instanciated by the GUI
@@ -329,10 +362,13 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None # will be assigned when creating a survey
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
+        self.bigSurvey = None # big combined survey created in the case of timelapse mode 
         self.mesh = None # mesh object (one per Project instance)
         self.meshParams = {} # mesh parameters passed to mesh creation scheme
         self.wholespace = False # flag for whole space problem 
         self.topo = pd.DataFrame(columns=['x','y','z']) # store additional topo points
+        self.coordLocal = False # flag is local coordinate conversion required 
+        self.coordParam = {'x0':None, 'y0':None, 'a':None} # coordinate conversion parameters 
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.invLog = '' # to save inversion output - all R2.out files
@@ -409,6 +445,7 @@ class Project(object): # Project master class instanciated by the GUI
             text += '\n'
             
         return text 
+    
             
     def __str__(self):
         return self.summary() 
@@ -466,7 +503,6 @@ class Project(object): # Project master class instanciated by the GUI
         return elec
     
     
-    
     def _findRemote(self, elec):
         """Flag remote electrodes.
         
@@ -489,10 +525,110 @@ class Project(object): # Project master class instanciated by the GUI
             print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
             
         return elec
-
-
     
-    def setElec(self, elec, elecList=None):
+
+    def setCoordConv(self,flag=False,x0=None,y0=None,a=None):
+        """
+        Set that the project should be imported and exported according to a 
+        coordinate conversion system. Generally UTM coordinates will cause 
+        stability issues with mesh generation and the finite element solutions 
+        used in the R* codes, hence the we use a local coordinate system. 
+        Call this function before creating the mesh. 
+
+        Parameters
+        ----------
+        flag : bool, optional
+            Flag if coordinate conversion system is required. 
+            The default is False. If flag is false but Project.coordLocal is 
+            True then the function can be used to rvert electrode coordinates 
+            back to their initial position.
+        x0 : float, optional
+            Reference X coordinate in UTM system. The default is None. If left 
+            as none, then the minimum X coordinate of the electrodes will be 
+            used. 
+        y0 : float, optional
+            Reference Y coordinate in UTM system. The default is None. If left 
+            as none, then the minimum Y coordinate of the electrodes will be 
+            used. 
+        a : float, optional
+            Rotation angle in degrees. The default is 0.
+        """
+        if flag and self.coordLocal:
+            warnings.warn('Coordinate conversion has already been set! Are you sure want to try this again?')
+            return 
+        revert = False 
+        if not flag and self.coordLocal:
+            warnings.warn('reverting coordinates back to their original positions')
+            revert = True 
+            
+        self.coordLocal = flag 
+        
+         #check coordParam is in the right format / data type 
+        if self.coordParam is None:
+            self.coordParam = {'x0':None, 'y0':None, 'a':None} 
+        if len(self.coordParam.keys()) < 3:
+            self.coordParam = {'x0':None, 'y0':None, 'a':None} 
+            
+        # update coordParam if conversion parameters are given 
+        if x0 is not None:
+            self.coordParam['x0'] = x0 
+        if y0 is not None: 
+            self.coordParam['y0'] = y0 
+        if a is not None:
+            self.coordParam['a'] = a 
+            
+        # if electrodes assigned to project, check if they need moving 
+        if self.elec is not None: 
+            # get some default conversion parameters if not provided 
+            if self.coordParam['x0'] is None and x0 is None: 
+                x0 = np.min(self.elec.x.values)
+                self.coordParam['x0'] = x0 
+                # print('Auto setting x0')
+            elif self.coordParam['x0'] is not None: 
+                x0 = self.coordParam['x0'] 
+                
+            if self.coordParam['y0'] is None and y0 is None: 
+                y0 = np.min(self.elec.y.values)
+                self.coordParam['y0'] = y0 
+                # print('Auto setting y0')
+            elif self.coordParam['y0'] is not None: 
+                y0 = self.coordParam['y0'] 
+                
+            if self.coordParam['a'] is None and a is None:  
+                # print('Auto fitting A')
+                if '2' in self.typ and any(self.elec.y != self.elec.y[0]):
+                    a = fitXYangle(self.elec.x.values, self.elec.y.values)
+                else: 
+                    a = 0 
+                self.coordParam['a'] = a 
+            elif self.coordParam['a'] is not None: 
+                a = self.coordParam['a'] 
+                
+            if self.coordLocal: # move electrodes is local coordinates required 
+                localx, localy = rotGridData(self.elec.x.values, self.elec.y.values, x0, y0, a)
+                elec = self.elec.copy()
+                elec.loc[:,'x'] = localx 
+                elec.loc[:,'y'] = localy 
+                self.elec = elec 
+                for s in self.surveys: 
+                    localx, localy = rotGridData(s.elec.x.values, s.elec.y.values, x0, y0, a)
+                    s.elec.loc[:,'x'] = localx 
+                    s.elec.loc[:,'y'] = localy 
+                    s.computeK() 
+            elif revert: # revert coordinates back using inverse rotation 
+                utmx, utmy = invRotGridData(self.elec.x.values, self.elec.y.values, x0, y0, a)
+                elec = self.elec.copy()
+                elec.loc[:,'x'] = utmx
+                elec.loc[:,'y'] = utmy 
+                self.elec = elec 
+                for s in self.surveys: 
+                    utmx, utmy = invRotGridData(s.elec.x.values, s.elec.y.values, x0, y0, a)
+                    s.elec.loc[:,'x'] = utmx 
+                    s.elec.loc[:,'y'] = utmy 
+                    # s.computeK() # doubt there would be a need to recompute k 
+                
+    
+    def setElec(self, elec, elecList=None, _uiOverideCoordLocal=False):
         """Set electrodes. Automatically identified remote electrode.
 
         Parameters
@@ -505,6 +641,9 @@ class Project(object): # Project master class instanciated by the GUI
             is to be used in the advanced use case where electrodes move which
             each survey. Each entry of the list is a numpy array the same format
             of 'elec', which is then assigned to each survey class.
+        _uiOverideCoordLocal: bool, optional
+            UI command only, set to to True when updating the project electrodes
+            in the UI. 
         """
         if elecList is None: # same electrode set shared by all surveys (most common case)
             ok = False
@@ -514,8 +653,13 @@ class Project(object): # Project master class instanciated by the GUI
                     ok = True
                 else: # check intersection of labels
                     if len(self.surveys) > 0:
-                        s1 = np.unique(elec['label'].values)
-                        s2 = np.unique(self.surveys[0].df[['a','b','m','n']].values.flatten())
+                        s = self.surveys[0]
+                        if s.hasLineNumbers():
+                            s1 = np.unique(elec['label'].values)
+                            s2 = np.unique(s.df[['a','b','m','n']].values.flatten())
+                        else:
+                            s1 = np.unique(elec['label'].astype(float).astype(int).values)
+                            s2 = np.unique(s.df[['a','b','m','n']].astype(float).astype(int).values)
                         x = np.intersect1d(s1, s2)
                         if len(x) == len(s2):
                             ok = True
@@ -561,6 +705,12 @@ class Project(object): # Project master class instanciated by the GUI
                 self.elec = self._num2elec(np.zeros((len(initElec),3)))
             for i, survey in enumerate(self.surveys):
                 survey.elec = self._findRemote(self._num2elec(elecList[i])) # plus identification of remote electrode
+
+        # do coordinate conversion if local grid required 
+        if not _uiOverideCoordLocal: 
+            if self.coordLocal and self.elec is not None:
+                self.coordLocal = False # will be reset to true in the following function 
+                self.setCoordConv(True)
 
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
@@ -744,17 +894,18 @@ class Project(object): # Project master class instanciated by the GUI
         return True
         
         
-    def detectStrings(self, tolerance=5, max_itr=None):
-        """Automatically detect electrode strings 
+    def detectStrings(self, tolerance=15, max_itr=None):
+        """Automatically detect electrode strings. If all electrodes lie on the same
+        Y plane then the function assumes the problem is a borehole problem. 
 
         Parameters
         ----------
         tolerance : float, optional
             Maximum (+/-) bearing (ie directional angle) tolerance each subsiquent
-            electrode may have. The default is 5.
+            electrode may have. The default is 15.
         max_itr : int, optional
             Maximum number of searches that can be performed to find colinear
-            nieghbouring electrodes. The default is None.
+            nieghbouring electrodes. The default is number of electrodes plus 10.
 
         Raises
         ------
@@ -772,41 +923,22 @@ class Project(object): # Project master class instanciated by the GUI
             a list of integers which are the indices of the respective electrodes
             in self.elec
         """
-        # compute bearing 
-        def bearing(dx,dy):
-            if dx == 0 and dy == 0:
-                raise ValueError('both dx and dy equal 0 - check no 2 electrodes occupy same xy coordinates')
-            elif dx == 0 and dy > 0:
-                return 0
-            elif dx == 0 and dy < 0:
-                return 180
-            elif dx > 0 and dy == 0:
-                return 90
-            elif dx < 0 and dy == 0:
-                return 270
-            elif dx > 0 and dy > 0: 
-                return np.rad2deg(np.arctan(dx/dy))
-            elif dx > 0 and dy < 0: 
-                return 180 + np.rad2deg(np.arctan(dx/dy))
-            elif dx < 0 and dy < 0: 
-                return 180 + np.rad2deg(np.arctan(dx/dy))
-            elif dx < 0 and dy > 0: 
-                return 360 + np.rad2deg(np.arctan(dx/dy))
-
         iremote = self.elec['remote'].values
         x = self.elec['x'].values[~iremote]
         y = self.elec['y'].values[~iremote]
+        
+        # deal with borehole case 
+        if all(y[0] == y):
+            print('Detecting strings for a borehole problem!')
+            y = self.elec['z'].values[~iremote]
+            
+        # decide maximum number of iterations 
         if max_itr is None:
             max_itr = len(x)+10
-        # init - nb couple of commented lines are in here for displaying the selected electrode strings 
-        # fig, ax = plt.subplots()
-        # ax.scatter(x,y,c='k')
-        # ax.set_aspect('equal')
         
         # mid point of survey 
         xm = np.mean(x)
         ym = np.mean(y)
-        # ax.scatter(xm,ym,c='b',s=2)
         dist = np.sqrt((x-xm)**2 + (y-ym)**2) # distance to all other points in survey
         
         # find neighbours 
@@ -889,7 +1021,8 @@ class Project(object): # Project master class instanciated by the GUI
 
     def convertLocalGrid(self):
         """
-        Converts UTM grid to local grid for mesh stability
+        Converts UTM grid to local grid for stability in mesh generation and 
+        the finite element solution. 
         
         Parameters
         ----------
@@ -981,6 +1114,8 @@ class Project(object): # Project master class instanciated by the GUI
         
         settings = {'surveysInfo': self.surveysInfo,
                     'topo': self.topo.to_dict(),
+                    'coordLocal':self.coordLocal, 
+                    'coordParam':self.coordParam, 
                     'typ': self.typ,
                     'err': self.err,
                     'iBorehole': self.iBorehole,
@@ -1147,6 +1282,16 @@ class Project(object): # Project master class instanciated by the GUI
         self.custSeq = settings['custSeq']
         self.errTyp = settings['errTyp']
         self.surfaceIdx = settings['surfaceIdx']
+        # check if local coordinate flag in keys (need to do this for backward compatibility)
+        if 'coordLocal' in settings.keys(): 
+            self.coordLocal = settings['coordLocal'] 
+        else: 
+            self.coordLocal = False 
+            
+        if 'coordParam' in settings.keys():
+            self.coordParam = settings['coordParam']
+        else: 
+            self.coordParam = {'x0':None,'y0':None,'a':0}
             
         # read parameters
         with open(os.path.join(savedir, 'params.json'), 'r') as f:
@@ -1222,6 +1367,7 @@ class Project(object): # Project master class instanciated by the GUI
             If true, estimate the amount of RAM required to do the inversion. 
             Default is True. 
         **kwargs: Keyword arguments to be passed to Survey()
+        
         """
         self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, debug=debug, **kwargs))
         self.surveysInfo.append(info)
@@ -1252,7 +1398,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of Surveys'] = 1 
         
         if estMemory: 
-            _ = self._estimateMemory(dump=pointer)
+            _ = self._estimateMemory(dump=donothing)
         
             
     def addData(self,index=0, **kwargs):
@@ -1277,7 +1423,8 @@ class Project(object): # Project master class instanciated by the GUI
         dirname : str
             Directory with files to be parsed.
         ftype : str, optional
-            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','ResInv',
+            'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         info : dict, optional
             Dictionnary of info about the survey.
         spacing : float, optional
@@ -1312,7 +1459,8 @@ class Project(object): # Project master class instanciated by the GUI
         dirname : str or list of str
             Directory with files to be parsed or list of file to be parsed.
         ftype : str, optional
-            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','ResInv',
+            'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         info : dict, optional
             Dictionnary of info about the survey. Put inverse_type = 1 to allow
             for a changing number of measurements between surveys.
@@ -1385,7 +1533,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = len(self.surveys) 
         
-        _ = self._estimateMemory(dump=pointer)
+        _ = self._estimateMemory(dump=donothing)
 
 
     def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
@@ -1407,7 +1555,8 @@ class Project(object): # Project master class instanciated by the GUI
             If `True` then one survey out of two will be flipped.
             #TODO not implemented yet
         ftype : str, optional
-            Type of the survey to choose which parser to use.
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','ResInv',
+            'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         name : str, optional
             Name of the merged 3D survey.
         """
@@ -1470,7 +1619,7 @@ class Project(object): # Project master class instanciated by the GUI
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = 1 
-        _ = self._estimateMemory(dump=pointer)
+        _ = self._estimateMemory(dump=donothing)
         
     
     def createMergedSurveys(self, fname, ftype='Protocol DC', delimiter=',',
@@ -1482,12 +1631,12 @@ class Project(object): # Project master class instanciated by the GUI
         Parameters
         ----------
         fname : str
-            file path to .csv file. 
-        ftype: str, reccomended 
-            file type, see ResIPy docs for types of file type avialable. Will be 
+            File path to .csv file. 
+        ftype: str, optional
+            File type, see ResIPy docs for types of file type avialable. Will be 
             overwritten if specified in the survey details file. 
-        delimiter: str
-            delimiter used in merge 
+        delimiter: str, optional
+            Delimiter used in merge file. Defaults to ','. 
             
         Notes
         -----
@@ -1501,7 +1650,9 @@ class Project(object): # Project master class instanciated by the GUI
             File type, should correspond to the file 'ftype' for each file (they
             might be different for some reason, though best avoided). If not
             passed the file type can be set be the variable at the top of this
-            function. 
+            function. Type of files avialable are: Either 'Syscal','ProtocolDC',
+            'ResInv','BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund',
+            'Lippmann' or 'ARES'.
         
         sid: int, optional 
             Survey index, used for making timelapse surveys from multiple files
@@ -1511,7 +1662,7 @@ class Project(object): # Project master class instanciated by the GUI
         finfo = pd.read_csv(fname,sep=delimiter) # file info dataframe 
         
         if 'fpath' not in finfo.columns: 
-            raise Exception('file paths are not defined in survey')
+            raise Exception('file paths are not defined in survey merge file')
             
         if 'ftype' not in finfo.columns: 
             finfo['ftype'] = ftype 
@@ -1528,18 +1679,45 @@ class Project(object): # Project master class instanciated by the GUI
         if len(sid) > 1: 
             self.iTimeLapse = True 
             
-
         c = 0 
         for i in uidx: 
             self.createSurvey(finfo.fpath[i], ftype=finfo.ftype[i], 
                               debug=debug, estMemory=False)
-            sidx = np.argwhere(finfo.sid.values == i).tolist() # survey index 
+            sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
             _ = sidx.pop(0)
-            
             for j in sidx: 
                 self.addData(index=c, fname=finfo.fpath[j], ftype=finfo.ftype[j])
                 # add data for each survey 
+            if c == 0:
+                self.bigSurvey = Survey(finfo.fpath[i], ftype=finfo.ftype[i])
+                for j in sidx: 
+                    self.bigSurvey.addData(fname=finfo.fpath[j], ftype=finfo.ftype[j])
             c += 1 
+
+        elecids = []
+        for s in self.surveys:
+            elecids += s.df[['a','b','m','n']].values.flatten().tolist()
+            
+        uelecids = sorted(np.unique(elecids)) # is this efficient enough for strings ?
+        
+        if self.elec is None or len(uelecids) != len(self.elec):
+            xplaceholder = np.arange(len(uelecids),dtype=float)
+            yplaceholder = np.zeros_like(xplaceholder)
+            zplaceholder = np.zeros_like(xplaceholder)
+            placeholder = [False]*len(uelecids)
+            elec = {
+                'label':uelecids,
+                'x':xplaceholder, 
+                'y':yplaceholder,
+                'z':zplaceholder,
+                'buried':placeholder,
+                'remote':placeholder,
+                }
+            elec = pd.DataFrame(elec)
+            self.elec = elec 
+            for s in self.surveys:
+                s.elec = elec.copy()
+        
             
         if self.iTimeLapse: # bit of clean up regarding timelapse case 
             self.iTimeLapseReciprocal = np.array([False]*len(self.surveys)) # true if survey has reciprocal
@@ -1549,7 +1727,6 @@ class Project(object): # Project master class instanciated by the GUI
             
             # create bigSurvey (useful if we want to fit a single error model
             # based on the combined data of all the surveys)
-            self.bigSurvey = self.surveys[0]
             df = self.bigSurvey.df.copy()
             for i in range(1,len(self.surveys)):
                 df2 = self.surveys[i].df
@@ -1561,12 +1738,15 @@ class Project(object): # Project master class instanciated by the GUI
                 c = c + df2.shape[0]
             self.bigSurvey.df = df.copy() # override it
             self.bigSurvey.dfOrigin = df.copy()
+            self.bigSurvey.ndata = df.shape[0]
+        else:
+            self.bigSurvey = None 
         
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = len(self.surveys) 
         
-        _ = self._estimateMemory(dump=pointer)
+        _ = self._estimateMemory(dump=donothing)
 
 
     def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
@@ -1620,7 +1800,7 @@ class Project(object): # Project master class instanciated by the GUI
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = len(self.surveys)
-        _ = self._estimateMemory(dump=pointer)
+        _ = self._estimateMemory(dump=donothing)
         
     
     
@@ -1799,7 +1979,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.pseudo3Dfmd = kwargs['fmd']
             
         # check ram requirements 
-        _ = self._estimateMemory(dump=pointer) 
+        _ = self._estimateMemory(dump=donothing) 
    
     
     
@@ -2012,7 +2192,7 @@ class Project(object): # Project master class instanciated by the GUI
             ncores = sysinfo['physicalCpuCount']
             
         # get memory estimates 
-        memInv = self._estimateMemory(dump=pointer)
+        memInv = self._estimateMemory(dump=donothing)
         memTot = sysinfo['totalMemory'] #use the total memory (its more conversative)
         
         # check if static inversion possible 
@@ -3062,6 +3242,27 @@ class Project(object): # Project master class instanciated by the GUI
                 self.topo = pd.DataFrame(surface, columns=['x','z'])
             else:
                 self.topo = pd.DataFrame(surface, columns=['x','y','z'])
+                
+            if self.coordLocal: 
+                # need to convert surface to local coordinates 
+                surface = surface.copy() 
+                if surface.shape[1] == 2: 
+                    utmy = np.zeros(surface.shape[0])
+                else: 
+                    utmy = surface[:,1]
+                utmx = surface[:,0]
+                x0 = self.coordParam['x0']
+                y0 = self.coordParam['y0']
+                a = self.coordParam['a']
+                localx, localy = rotGridData(utmx, utmy, x0, y0, a)
+                surface[:,0] = localx 
+                if surface.shape[1] == 3:
+                    surface[:,1] = localy 
+                    # reassign topo 
+                    self.topo = pd.DataFrame(surface, columns=['x','y','z'])
+                else:
+                    self.topo = pd.DataFrame(surface, columns=['x','z'])
+
         
         # estimate depth of fine mesh
         if fmd is None:
@@ -3417,7 +3618,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of Nodes']=self.mesh.numnp 
         self.pinfo['Mesh Type'] = meshtypename
         
-        _ = self._estimateMemory(dump=pointer)
+        _ = self._estimateMemory(dump=donothing)
         
         
 
@@ -3528,6 +3729,10 @@ class Project(object): # Project master class instanciated by the GUI
                 param['inverse_type'] = 0 # normal regularisation
                 param['zmin'] = np.min(self.mesh.node[:,2]) - 10 # we want to keep the whole mesh for background regularisation
                 param['zmax'] = np.max(self.mesh.node[:,2]) + 10
+            
+            if 'baseline_target_decrease' in param.keys():
+                param['target_decrease'] = param['baseline_target_decrease']
+                
             self.configFile = write2in(param, refdir, typ=typ) # background survey
             
             # now prepare the actual timelapse settings
@@ -3654,8 +3859,8 @@ class Project(object): # Project master class instanciated by the GUI
             # a bit simplistic but assign error to all based on Transfer resistance
             # let's assume it's False all the time for now
             content = ''
-            df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean']]
-            df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0'})
+            df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean','resError']]
+            df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0','resError':'resError0'})
             for i, s in enumerate(self.surveys):
                 if 'resist0' in s.df.columns:
                     s.df = s.df.drop('resist0', axis=1)
@@ -3691,6 +3896,14 @@ class Project(object): # Project master class instanciated by the GUI
                                             ip=False, # no IP timelapse possible for now
                                             isubset=indexes[i][1], threed=threed,
                                             fm0=fm00)
+                
+                # need to do a guassian propogration of errors if the case we have 
+                # errors and difference inversion 
+                if err and self.param['reg_mode'] == 2 and errTyp!='global':
+                    resError0 = df0['resError0'][indexes[i][0]].values 
+                    resError = protocol['resError'].values 
+                    protocol.loc[:,'resError'] = np.sqrt(resError**2 + resError0**2)
+                
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
                     if os.path.exists(refdir) == False:
@@ -5611,40 +5824,43 @@ class Project(object): # Project master class instanciated by the GUI
         dump('Writing protocol.dat... ')
         seq = self.sequence
 
-        # let's check if IP that we have a positive geometric factor
-        if self.typ[0] == 'c': # NOTE this doesn't work for borehole
-            lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-            seqdf = pd.DataFrame(seq).rename(columns = {0:'a', 1:'b', 2:'m', 3:'n'})
-            array = seqdf[['a','b','m','n']].astype(str).replace(lookupDict).values.astype(int)
-            elec = self.elec[['x','y','z']].values.copy()
+        ## let's check if IP that we have a positive geometric factor
+        ## EH? Why do this - Jimmy
+        ## commented out for now as not a generalised solution and did not work 
+        ## for 3D problems. 
+        # if self.typ[0] == 'c': # NOTE this doesn't work for borehole
+        #     lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        #     seqdf = pd.DataFrame(seq).rename(columns = {0:'a', 1:'b', 2:'m', 3:'n'})
+        #     array = seqdf[['a','b','m','n']].astype(str).replace(lookupDict).values.astype(int)
+        #     elec = self.elec[['x','y','z']].values.copy()
             
-            aposx = elec[:,0][array[:,0]]
-            aposy = elec[:,1][array[:,0]]
-            aposz = elec[:,2][array[:,0]]
+        #     aposx = elec[:,0][array[:,0]]
+        #     aposy = elec[:,1][array[:,0]]
+        #     aposz = elec[:,2][array[:,0]]
             
-            bposx = elec[:,0][array[:,1]]
-            bposy = elec[:,1][array[:,1]]
-            bposz = elec[:,2][array[:,1]]
+        #     bposx = elec[:,0][array[:,1]]
+        #     bposy = elec[:,1][array[:,1]]
+        #     bposz = elec[:,2][array[:,1]]
             
-            mposx = elec[:,0][array[:,2]]
-            mposy = elec[:,1][array[:,2]]
-            mposz = elec[:,2][array[:,2]]
+        #     mposx = elec[:,0][array[:,2]]
+        #     mposy = elec[:,1][array[:,2]]
+        #     mposz = elec[:,2][array[:,2]]
             
-            nposx = elec[:,0][array[:,3]]
-            nposy = elec[:,1][array[:,3]]
-            nposz = elec[:,2][array[:,3]]
+        #     nposx = elec[:,0][array[:,3]]
+        #     nposy = elec[:,1][array[:,3]]
+        #     nposz = elec[:,2][array[:,3]]
             
-            AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
-            BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
-            AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
-            BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
+        #     AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
+        #     BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
+        #     AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
+        #     BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
             
-            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        #     K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
             
-            ie = K < 0
-            seq2 = seq.copy()
-            seq[ie,2] = seq2[ie,3] # swap if K is < 0
-            seq[ie,3] = seq2[ie,2]
+        #     ie = K < 0
+        #     seq2 = seq.copy()
+        #     seq[ie,2] = seq2[ie,3] # swap if K is < 0
+        #     seq[ie,3] = seq2[ie,2]
             
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq],
                                 columns=['index','a','b','m','n'])
@@ -5659,7 +5875,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False)
+            protocol.to_csv(f, sep='\t', header=False, index=False,lineterminator='\n')
         dump('done\n')
 
         # fun the inversion
@@ -5720,7 +5936,7 @@ class Project(object): # Project master class instanciated by the GUI
             else: 
                 self.surveys[0].write2protocol(outputname)
                 
-        _ = self._estimateMemory(dump=pointer)
+        _ = self._estimateMemory(dump=donothing)
         
         dump('Forward modelling done.')
         
@@ -5758,15 +5974,6 @@ class Project(object): # Project master class instanciated by the GUI
         
         kwargs['model_err'] = True # force model_err argument to be true 
         
-        # create FLAT homogeneous mesh 
-        # if '2' in self.typ: # normalise to flat surface if 2D            
-        #     idx = (self.elec['remote'].values == False) & (self.elec['buried'].values == False)
-        #     ez = self.elec['z'].values[idx]
-        #     ex = self.elec['x'].values[idx]
-        #     ez_tmp = self.elec['z'].values - np.interp(self.elec['x'].values,ex,ez)
-        #     self.elec['z'] = ez_tmp
-            
-        # self.elec['z'] = 0
         self.createMesh(**kwargs)
         self.modErrMesh = self.mesh.copy()
         self.modErrMeshNE = self.param['node_elec'].copy()
@@ -6294,8 +6501,92 @@ class Project(object): # Project master class instanciated by the GUI
                 self.mesh.dat(outputname)
             else:
                 raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
+                
+                
+    def exportMesh(self, outputname=None, voxel=False, _forceLocal=False):
+        """Export mesh as a different file format, with coordinate conversion
+        if Project.coordLocal set to True. 
 
+        Parameters
+        ----------
+        outputname : str, optional
+            Output path with extension. Available mesh format are:
+                - .vtk (Paraview)
+                - .node (Tetgen)
+                - .dat (R* codes)
+            If not provided the mesh is saved in the working directory
+            as mesh.vtk.
+        voxel: bool, optional 
+            If True, mesh will be converted to voxel format. 
+        _forceLocal: bool, optional
+            Forces outputs in the local grid format is self.coordLocal == True. 
+        """
+        if outputname is None: 
+            outputname = 'mesh.vtk'
+            
+        if isinstance(outputname,str):
+            # check for extension 
+            if len(outputname.split('.'))<2: 
+                outputname = outputname + '.vtk'
+                
+        # force local grid output in the UI
+        if _forceLocal and self.coordLocal:
+            self.mesh.exportMesh(outputname,False,self.coordParam, voxel)
+            return 
+            
+        self.mesh.exportMesh(outputname, None, self.coordLocal,self.coordParam, voxel)
+        
+    def exportElec(self, outputname=None, _forceLocal=False):
+        """Export electrodes as a different file format, with coordinate conversion
+        if Project.coordLocal set to True. 
 
+        Parameters
+        ----------
+        outputname : str, optional
+            Output path with extension. Available mesh format are:
+                - .vtk (Paraview)
+                - .dat (R* codes)
+                - .csv (general)
+            If not provided the electrode coordinates are saved in the working directory
+            as electrodes.vtk.
+        _forceLocal: bool, optional
+            Forces outputs in the local grid format is self.coordLocal == True. 
+        """
+        if self.elec is None: # cant run function with electrodes object being populated 
+            warnings.warn('No electrode dataframe has been set, cannot export electrodes!')
+            return # so return 
+        
+        if outputname is None: #' set default file name for output 
+            outputname = 'electrodes.vtk'
+            
+        if not isinstance(outputname, str):
+            raise Exception('Output name must be a string!')
+        
+        if len(outputname.split('.')) == 1: 
+            outputname += '.vtk'
+
+        eleccopy = self.elec.copy() 
+        
+        # force local grid output in the UI
+        if not _forceLocal and self.coordLocal:
+            localx = eleccopy.x.values
+            localy = eleccopy.y.values 
+            eleccopy['x'], eleccopy['y'] = invRotGridData(
+                localx, localy, 
+                self.coordParam['x0'],
+                self.coordParam['y0'],
+                self.coordParam['a']
+                )
+            
+        if outputname.endswith('.csv'):
+            eleccopy.to_csv(outputname,index=False)
+        elif outputname.endswith('.dat'):
+            eleccopy.to_csv(outputname,index=False,sep='\t')
+        elif outputname.endswith('.vtk'):
+            mt.points2vtk(eleccopy.x, eleccopy.y, eleccopy.z, outputname, 'Electrodes')
+        else:
+            raise Exception('Unrecognised output extension type')
+            
 
     def _toParaview(self, fname,  paraview_loc=None): # pragma: no cover
         """Open file in paraview (might not work if paraview is not in the PATH,
@@ -6693,10 +6984,163 @@ class Project(object): # Project master class instanciated by the GUI
         fh.write('def end_cue(self): pass\n')
         fh.close()
 
+    def exportMeshResults(self, dirname=None, ftype='.vtk', voxel=False, 
+                          _forceLocal=False):
+        """Save mesh files of inversion results to a specified directory. If 
+        results are in a local grid, they will be converted back into thier 
+        respective utm or nationa grid coordinates. 
+
+        Parameters
+        ----------
+        dirname: str
+            Directory in which results will be saved. Default is the working directory.
+        ftype: str
+            Type of file extension. 
+        voxel: bool, optional
+            Force export to be in a voxel format. 
+        _forceLocal: bool, optional
+            Force output to be in a local grid if self.coordLocal is True. Meant 
+            for use with the UI. 
+        """
+            
+        if dirname is None:
+            dirname = self.dirname
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+        amtContent = ''
+        if len(self.meshResults) == 0:
+            self.getResults()
+        count=0
+        ext = '.vtk'
+        if 'vtk' in ftype.lower():
+            ext = '.vtk'
+        elif 'dat' in ftype.lower(): 
+            ext = '.dat'
+        elif 'node' in ftype.lower(): 
+            ext = '.node'
+        elif 'xyz' in ftype.lower(): 
+            ext = '.xyz'
+        elif 'csv' in ftype.lower(): 
+            ext = '.csv'
+        # add file types as appropiate! 
+        
+        # force local grid output in the UI
+        coordLocalFlipped = False 
+        if _forceLocal and self.coordLocal:
+            self.coordLocal = False 
+            coordLocalFlipped = True 
+        
+        
+        # check param for truncation variables 
+        for key in ['num_xz_poly','num_xy_poly']:
+            if key not in self.param.keys():
+                self.param[key] = 0 
+        for key in ['zmin','zmax']:
+            if key not in self.param.keys():
+                self.param[key] = None 
+            
+        # loop through and export meshes as vtk files 
+        for mesh, s in zip(self.meshResults, self.surveys):
+            count+=1
+            meshcopy = mesh.copy()
+            
+            if self.iTimeLapse and voxel:
+                fname = 'time_step{:0>4}'.format(count) + '_voxel' + ext 
+            elif self.iTimeLapse:
+                fname = 'time_step{:0>4}'.format(count) + ext 
+            elif voxel:
+                fname = mesh.mesh_title + '_voxel' + ext 
+            else:
+                fname = mesh.mesh_title + ext 
+            file_path = os.path.join(dirname, fname) 
+            if self.trapeziod is not None and self.pseudo3DMeshResult is None:
+                meshcopy = meshcopy.crop(self.trapeziod)
+            elif '3' in self.typ and self.param['num_xy_poly'] > 2: 
+                meshcopy = meshcopy.crop(self.param['xy_poly_table'])
+                meshcopy.elec = None 
+                if self.param['zmin'] is None or self.param['zmax'] is None:
+                    pass # cant truncate mesh with out z limits 
+                else: 
+                    meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
+                                                           self.param['zmax']])
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
+                meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
+                
+            # convert to utm if needed (not for psuedo3d, that'll be handled differently)
+            if self.coordLocal and self.pseudo3DMeshResult is None: 
+                coordLocal = True 
+            else:
+                coordLocal = False 
+            
+            # add electrode types 
+            meshcopy.elec = s.elec[['x','y','z']].values 
+            elec_type =['surface']*len(s.elec)
+            for i in range(len(s.elec)):
+                if s.elec['buried'][i]:
+                    elec_type[i] = 'buried'
+                elif s.elec['remote'][i]:
+                    elec_type[i] = 'remote'
+            meshcopy.elec_type = elec_type  
+
+            meshcopy.exportMesh(file_path, ftype.replace('.',''),
+                                coordLocal, self.coordParam, 
+                                voxel, self.meshParams) # save to vtk 
+            amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
+            if self.pseudo3DMeshResultList is not None:
+                file_path = os.path.join(dirname, mesh.mesh_title + '_3D' + ext)
+                self.pseudo3DMeshResultList[count-1].exportMesh(file_path, 
+                                                              ftype.replace('.',''),
+                                                              self.coordLocal,
+                                                              self.coordParam,
+                                                              False)
+                
+        if self.pseudo3DMeshResult is not None: 
+            self.pseudo3DMeshResult.mesh_title = 'Pseudo_3D_result'
+            self.pseudo3DMeshResult.elec = self.pseudo3DSurvey.elec[['x','y','z']].values 
+            elec_type =['surface']*len(self.pseudo3DSurvey.elec)
+            for i in range(len(self.pseudo3DSurvey.elec)):
+                if self.pseudo3DSurvey.elec['buried'][i]:
+                    elec_type[i] = 'buried'
+                elif self.pseudo3DSurvey.elec['remote'][i]:
+                    elec_type[i] = 'remote'
+            self.pseudo3DMeshResult.elec_type = elec_type  
+            file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + ext)
+            self.pseudo3DMeshResult.exportMesh(file_path, ftype.replace('.',''), 
+                                             self.coordLocal, self.coordParam,
+                                             voxel)
+            amtContent += "\tannotations.append('%s')\n"%self.pseudo3DMeshResult.mesh_title
+
+        if ext =='.vtk': 
+            # write out paraview animation track 
+            fh = open(os.path.join(dirname,'amt_track.py'),'w')
+            fh.write('from paraview.simple import *\n')
+            fh.write('def start_cue(self):\n')
+            fh.write('\tglobal annotations\n')
+            fh.write('\tglobal maxIndex\n')
+            fh.write("\ttextSource = paraview.simple.FindSource('Text1')\n")
+            fh.write("\tif textSource is None:\n")
+            fh.write("\t\tText()\n")
+            fh.write("\tannotations = []\n")
+            fh.write(amtContent)
+            fh.write('\tmaxIndex=len(annotations)\n')
+            fh.write('def tick(self):\n')
+            fh.write('\tglobal annotations\n')
+            fh.write('\tglobal maxIndex\n')
+            fh.write('\tindex = int( self.GetClockTime() )\n')
+            fh.write('\tif index >= maxIndex :\n')
+            fh.write('\t\tindex = maxIndex - 1\n')
+            fh.write("\ttextSource = paraview.simple.FindSource('Text1')\n")
+            fh.write('\ttextSource.Text = annotations[index]\n')
+            fh.write('def end_cue(self): pass\n')
+            fh.close()
+            
+        # force local grid output in the UI
+        if _forceLocal and coordLocalFlipped:
+            self.coordLocal = True 
 
 
-    def saveData(self, outputdir):
-        """Save all data (_res.dat, .vtk, ...) from the working directory
+    def saveCwd(self, outputdir):
+        """Save all ouputs (_res.dat, .vtk, ...) from the working directory
         generated during inversion to the designated directory.
 
         Parameters
@@ -6708,7 +7152,98 @@ class Project(object): # Project master class instanciated by the GUI
         if os.path.exists(wd):
             shutil.rmtree(wd)
         shutil.copytree(self.dirname, wd)
+        
+    def saveData(self, outputdir):
+        """
+        Saves all data generated by ResIPy in the current working directory 
+        to a specified folder. Serves same function as Project.saveCwd()
+        but retained for backwards compability. 
 
+        Parameters
+        ----------
+        outputdir : str
+            Path to the directory to save the files.
+
+        """
+        self.saveCwd(outputdir)
+        
+    def exportData(self, outputname=None, ftype='protocol', err=False, 
+                   recip=False):
+        """
+        Export preconditioned data used by ResIPy into another format (
+        different to project.saveData).
+
+        Parameters
+        ----------
+        outputname : str, optional
+            Outputname. The default is None. If not given then the function falls
+            back on the survey name. If set then a number will be appended to the 
+            file name in the case of time-lapse (or batch) surveys. 
+        ftype : str, optional
+            Export File type, choose from either protocol, srv, csv, ResInv. 
+            The default is 'protocol'.
+        err : bool, optional
+            Flag to include errors. The default is False.
+        recip : bool, optional
+            Flag to include reciprocals. The default is False.
+        """
+        
+        # check the ftype 
+        ext = '.dat'
+        if ftype == 'protocol':
+            ext == '.dat'
+        elif ftype == 'ResInv':
+            ext = '.dat'
+        elif ftype == 'srv':
+            ext = '.srv'
+        elif ftype == 'csv':
+            ext == '.csv'
+        else:
+            raise Exception('unknown file type')
+            
+        flag3d = False 
+        if '3' in self.typ:
+            flag3d = True 
+            
+        for i,s in enumerate(self.surveys): 
+            if recip:
+                isubset = [True]*len(s.df)
+            else:
+                isubset = None 
+                
+            protocol = s.write2protocol(err=err, isubset=isubset, threed=flag3d)
+            
+            # decide on file outputname 
+            if outputname is None: 
+                fout = s.name 
+                if fout == '':
+                    fout = 'SurveyData'
+                    if len(self.surveys) > 1:
+                        fout = 'SurveyData_{:0>3d}'.format(i)
+            else:
+                fout = outputname 
+                if fout.endswith(ext):
+                    fout = fout.replace(ext,'')
+                if len(self.surveys) > 1: 
+                    fout += '_{:0>3d}'.format(i)
+                    
+            if not fout.endswith(ext):
+                fout += ext 
+                
+            # write to file 
+            if ftype == 'protocol':
+                protocol.to_csv(fout, index=False, sep='\t', lineterminator='\n')
+            elif ftype == 'ResInv':
+                param = {'lineTitle':s.name}
+                write2Res2DInv(param, fout, protocol, 
+                               self.elec[['x','y','z']].values)
+            elif ftype =='srv':
+                writeSrv(fout, protocol, self.elec[['x','y','z']].values)
+            elif ftype =='csv':
+                protocol.to_csv(fout, index=False, sep=',', lineterminator='\n')
+                
+        return 
+                
 
     def showParam(self):
         """Print parameters in `R2.param` dictionary.

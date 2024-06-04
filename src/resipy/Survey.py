@@ -1826,6 +1826,8 @@ class Survey(object):
             Geometric factors for each measurement in Survey.df (dataframe)
 
         """
+        if self.isequence.shape[0] != len(self.df):
+            self.setSeqIds()
         if 'buried' in self.elec.columns and any(self.elec['buried']):
             if self.debug:
                 print('Computing geometric factors for buried electrodes!')
@@ -2515,7 +2517,7 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                to_csv(protocol, f, sep='\t', header=False, index=False)
+                to_csv(protocol, f, sep='\t', header=False, index=False, lineterminator='\n')
         
         return protocol
         
@@ -2567,6 +2569,9 @@ class Survey(object):
         flag3d: bool, optional
             If true, function exits before 
         """
+        if len(self.df) != self.isequence.shape[0]:
+            self.setSeqIds()
+
         array = self.isequence - 1 
         if self.df.shape[0] == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')

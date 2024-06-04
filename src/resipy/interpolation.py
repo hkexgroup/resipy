@@ -769,6 +769,81 @@ def triangulate(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
         znew[idx_nan] = zknown[idx]
     
     return znew        
+
+#%% interpolate using triangulation (can look odd in some situations)
+def triangulate3d(xnew, ynew, znew, xknown, yknown, zknown, iknown, extrapolate=True):
+    """Tri-linear interpolation acheived using a triangulation scheme from Qhull,
+    uses the scipy.interpolate.LinearNDinterpolator function. See here: 
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.LinearNDInterpolator.html#scipy.interpolate.LinearNDInterpolator   
+    
+    Parameters
+    ------------
+    xnew: array like
+        x coordinates for the interpolated values
+    ynew: array like 
+        y coordinates for the interpolated values
+    znew: array like 
+        z coordinates for the interpolated values
+    xknown: array like
+        x coordinates for the known values 
+    yknown: array like
+        y coordinates for the known values 
+    zknown: array like
+        z coordinates for the known values 
+    iknown: array like
+        known values in 3D space. 
+    extropolate:
+        use nearest nieghbour lookup to find nan values 
+
+    Returns
+    ------------
+    znew: numpy array
+        z coordinates at xnew and ynew.  
+    """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(znew) != 'numpy.ndarray':znew = np.array(znew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    if type(iknown) != 'numpy.ndarray':iknown = np.array(iknown)
+    
+    #error checking 
+    if len(xnew) != len(ynew):
+        raise ValueError('Mismatch in interpolated coordinate array lengths')
+    if len(xknown) != len(yknown) or len(xknown) != len(zknown):
+        raise ValueError('Mismatch in known coordinate array lengths')
+        
+    pknown = np.array([xknown,yknown,zknown]).T # known points 
+    pnew = np.array([xnew,ynew,znew]).T # new points
+    
+    interpolator = LinearNDInterpolator(pknown,iknown)
+    inew = interpolator(pnew)
+    
+    idx_nan = np.isnan(inew).flatten() # boolian indexes of where nans are
+    idx_num = np.invert(idx_nan).flatten()
+    
+    #extrapolate nans using nearest nieghbough interpolation(cKDtree)
+    if extrapolate:
+        #combine known and interpolated values 
+        xknown = np.append(xknown,xnew[idx_num])
+        yknown  = np.append(yknown,ynew[idx_num])
+        zknown  = np.append(zknown,znew[idx_num])
+        iknown  = np.append(iknown,inew[idx_num])
+        xextrap = xnew[idx_nan] 
+        yextrap = ynew[idx_nan]
+        zextrap = znew[idx_nan]
+
+        # extrapolate using the gridded and interpolated data
+        pknown = np.array([xknown,yknown,zknown]).T # known points 
+        pextrap = np.array([xextrap,yextrap,zextrap]).T # extrapolated points 
+        tree = cKDTree(pknown)#tree object 
+        dist,idx = tree.query(pextrap)# map known points to new points 
+        
+        inew[idx_nan] = iknown[idx]
+    
+    return inew        
     
 
 #%% pure nearest neighbour interpolation

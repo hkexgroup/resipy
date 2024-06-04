@@ -644,11 +644,13 @@ def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
  
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def sortNeigh(np.ndarray[long, ndim=2] neigh):
+def sortNeigh(np.ndarray[long, ndim=2] neigh, long[:] zone):
     """Sort neighbour matrix for input into R3t. 
     -----------
     neigh: nd array 
         M by N describing element neighbours 
+    zone: nd array 
+        N rows which corresponds to the zone number of elements. 
         
     Returns
     -----------
@@ -656,6 +658,7 @@ def sortNeigh(np.ndarray[long, ndim=2] neigh):
     neigh: nd array
         Prepared neighbour matrix 
     """
+    cdef int i,j 
     cdef int numel = neigh.shape[0]
     cdef int npere = neigh.shape[1]
     cdef long[:,:] neighv = neigh
@@ -666,6 +669,8 @@ def sortNeigh(np.ndarray[long, ndim=2] neigh):
         for j in range(npere):
             if neighv[i,j] == -1: #check if outside element 
                 neighv[i,j] = like_inf # if outside assign big number 
+            elif zone[i] != zone[neighv[i,j]]:# check if neighbour in different zone 
+                neighv[i,j] = like_inf 
                 
         sortInt(neigh[i,:],npere) # sort in that part of the row
         for j in range(npere):
@@ -1261,8 +1266,7 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     numnp: int
         Number of nodes
     typ: vtk cell type
-        DESCRIPTION. The default is 0. Will raise an error if takes an 
-        unexpected value. 
+        The default is 0. Will raise an error if takes an unexpected value. 
     num_threads: int
         (not currently in use)
 
