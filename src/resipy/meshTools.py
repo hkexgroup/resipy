@@ -454,7 +454,7 @@ class Mesh:
             return 3
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
             return 4
-        elif int(self.cell_type[0]) == 11: # elements are voxels
+        elif int(self.cell_type[0]) == 11 or int(self.cell_type[0]) == 12: # elements are voxels
             return 8
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
             return 4
@@ -472,7 +472,7 @@ class Mesh:
             return 1
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
             return 1
-        elif int(self.cell_type[0]) == 11: # elements are voxels
+        elif int(self.cell_type[0]) == 11 or int(self.cell_type[0]) == 12:# elements are voxels
             return 8
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
             return 4
@@ -4014,12 +4014,21 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
             except:
                 # print('Failed')
                 pass
-    
+    # read in header lines 
     title=fid.readline().strip()#read line 2
+    while title == '':
+        title=fid.readline().strip()#read line 2
+    
     format_type=fid.readline().strip()#read line 3
+    while format_type == '':
+        format_type=fid.readline().strip()#read line 3
+        
     if format_type=='BINARY':
         raise ImportError("expected ASCII type file format, not binary")
+        
     dataset_type=fid.readline().strip().split()#read line 4
+    while len(dataset_type) == 0: 
+        dataset_type=fid.readline().strip().split()#read line 4
     if dataset_type[1]!='UNSTRUCTURED_GRID':
         print("Warning: code is built to parse a vtk 'UNSTRUCTURED_GRID' data type not %s"%dataset_type[1])
     
@@ -4038,18 +4047,54 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     node_y=[0] * numnp
     node_z=[0] * numnp
     node_num=[0] * numnp
+    rowwise = True # flag that nodes are listed rowwise 
     for i in range(numnp):
-        try:
-            coord_data=fid.readline().strip().split()
+        node_num[i] = i
+        coord_data_line = fid.readline().strip()
+        coord_data = coord_data_line.split() 
+        if len(coord_data) == 3: 
             node_x[i] = float(coord_data[0])
             node_y[i] = float(coord_data[1])
             node_z[i] = float(coord_data[2])
-        except:# ValueError:
+        elif len(coord_data) == 1:
             coord_data=fid.readline()
-            node_x[i] = float(coord_data[0:12]) # retrive fixed width columns if cannot parse as split strings
-            node_y[i] = float(coord_data[12:24])
-            node_z[i] = float(coord_data[24:36])
-        node_num[i] = i
+            node_x[i] = float(coord_data_line[0:12]) # retrive fixed width columns if cannot parse as split strings
+            node_y[i] = float(coord_data_line[12:24])
+            node_z[i] = float(coord_data_line[24:36])
+        else: 
+            rowwise = False # switch off flag that nodes are row wise 
+            break 
+    
+    if not rowwise: 
+        #read in node data that is in matrix form 
+        node = np.zeros((numnp,3),dtype=float)
+        i = 0 
+        j = 0 
+        k = 0 
+        while i < len(coord_data):
+            node[k,j] = float(coord_data[i])
+            j += 1 
+            i += 1 
+            if j == 3:
+                j = 0 
+                k += 1 
+                
+        while k < numnp: 
+            coord_data_line = fid.readline().strip()
+            coord_data = coord_data_line.split() 
+            i = 0 
+            j = 0 
+            while i < len(coord_data):
+                node[k,j] = float(coord_data[i])
+                j += 1 
+                i += 1 
+                if j == 3:
+                    j = 0 
+                    k += 1 
+                
+        node_x = node[:,0]
+        node_y = node[:,1]
+        node_z = node[:,2]
     
     #now read in element data
     elm_info=fid.readline().strip().split()#read line with cell data

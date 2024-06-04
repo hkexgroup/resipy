@@ -3735,6 +3735,10 @@ class Project(object): # Project master class instanciated by the GUI
                 param['inverse_type'] = 0 # normal regularisation
                 param['zmin'] = np.min(self.mesh.node[:,2]) - 10 # we want to keep the whole mesh for background regularisation
                 param['zmax'] = np.max(self.mesh.node[:,2]) + 10
+            
+            if 'baseline_target_decrease' in param.keys():
+                param['target_decrease'] = param['baseline_target_decrease']
+                
             self.configFile = write2in(param, refdir, typ=typ) # background survey
             
             # now prepare the actual timelapse settings

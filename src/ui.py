@@ -653,6 +653,7 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(True)
                 self.sensWidget.setVisible(True)
                 show3DInvOptions(False)
+                show2DInvOptions(True)
                 
                 # post-processing
                 self.errorGraphs.setTabEnabled(0, True)
@@ -728,6 +729,7 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(False)
                 self.sensWidget.setVisible(False)
                 show3DInvOptions(True)
+                show2DInvOptions(False)
                 
                 # post-processing
                 self.errorGraphs.setTabEnabled(0, False)
@@ -782,6 +784,8 @@ class App(QMainWindow):
                 self.batchCheck.setEnabled(False)
                 self.pseudo3DCheck.setEnabled(False)
                 self.pseudo3DCheck.setChecked(False)
+                self.base_target_decrease.setVisible(True)
+                self.base_target_decreaseLabel.setVisible(True)
             else:
                 self.iTimeLapse = False
                 if self.project is not None:
@@ -792,6 +796,8 @@ class App(QMainWindow):
                 self.importDataBtn.clicked.connect(importDataBtnFunc)
                 self.batchCheck.setEnabled(True)
                 self.pseudo3DCheck.setEnabled(True)
+                self.base_target_decrease.setVisible(False)
+                self.base_target_decreaseLabel.setVisible(False)
 
         self.timeLapseCheck = QCheckBox('Time-lapse Survey')
         self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
@@ -1902,11 +1908,17 @@ class App(QMainWindow):
 
         def importElecBtnFunc():
             self.localCoordCheck.setChecked(False) # force the local grid back to default 
+            self.localCoordLabel.setText('<b><font color="gray">Convert to local grid</font></b>')
             self.project.coordLocal = False 
             self.project.coordParam = {'x0':None, 'y0':None, 'a':None} 
-            self.localCoordCheck.setEnabled(True)
+            if self.pseudo3DCheck.isChecked(): # don't want to do local coordinate conversion for pseudo 3D 
+                self.localCoordCheck.setEnabled(False)
+                self.localCoordLabel.setText('<b><font color="gray">Convert to local grid</font></b>')
+            else: 
+                self.localCoordCheck.setEnabled(True)
+                self.localCoordLabel.setText('<b>Convert to local grid</b>')
             self.project.elec = None # clear project electrodes 
-            self.localCoordLabel.setText('<b>Convert to local grid</b>')
+            
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,
                                                    'Open File', 
                                                    self.datadir,
@@ -1987,8 +1999,8 @@ class App(QMainWindow):
             
         self.localCoordLabel = QLabel('<b><font color="gray">Convert to local grid</font></b>')
         self.localCoordCheck = QCheckBox('\t\t\t\t')
-        self.localCoordCheck.setToolTip('Converts UTM / National Grid coordinates to local grid for solution stability')
-        self.localCoordLabel.setToolTip('Converts UTM / National Grid coordinates to local grid for solution stability')
+        self.localCoordCheck.setToolTip('Converts UTM / National Grid coordinates to local grid for solution stability (not available for Pseudo 3D)')
+        self.localCoordLabel.setToolTip('Converts UTM / National Grid coordinates to local grid for solution stability (not available for Pseudo 3D)')
         self.localCoordCheck.stateChanged.connect(applyCoordinateConv)
         self.localCoordCheck.setEnabled(False)
         
@@ -5188,7 +5200,23 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.target_decrease.setText('0')
         self.target_decrease.editingFinished.connect(target_decreaseFunc)
         invForm.addRow(self.target_decreaseLabel, self.target_decrease)
-
+        
+        def base_target_decreaseFunc():
+            if self.target_decrease.text() == '':
+                a = self.project.param['target_decrease']
+            else: 
+                a = float(self.base_target_decrease.text())
+            self.project.param['baseline_target_decrease'] = a
+            self.writeLog('k.param["baseline_target_decrease"] = {:.2f}'.format(a))
+        self.base_target_decreaseLabel = QLabel('<a href="baseline_target_decrease">Baseline target decrease</a>:')
+        self.base_target_decreaseLabel.linkActivated.connect(showHelp)
+        self.base_target_decrease = QLineEdit()
+        self.base_target_decrease.setValidator(QDoubleValidator())
+        # self.base_target_decrease.setText()
+        self.base_target_decrease.editingFinished.connect(base_target_decreaseFunc)
+        invForm.addRow(self.base_target_decreaseLabel, self.base_target_decrease)
+        self.base_target_decrease.setVisible(False)
+        self.base_target_decreaseLabel.setVisible(False)
 
         def data_typeFunc(index):
             self.project.param['data_type'] = index
@@ -5205,7 +5233,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def reg_modeFunc(index):
             self.project.param['reg_mode'] = index
             self.writeLog('k.param["reg_mode"] = {:d}'.format(index))
-            if int(index) == 1: # enable qedit for alpha_s (as only relevant to timelapse)
+            if int(index) == 1: # enable qedit for alpha_s (as only relevant to baseline constrained timelapse)
                 self.alpha_sLabel.setVisible(True)
                 self.alpha_s.setVisible(True)
             else:
@@ -6095,40 +6123,71 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.pvapplyBtn.setToolTip('Apply 3D options')
         
         def screenshotBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(self, 'Open File', self.datadir,
+            fname, exttype = QFileDialog.getSaveFileName(self, 'Open File', self.datadir,
                                                    'PNG (*.png);;TIFF (*.tif);;JPEG (*.jpg)')
-            if fname != '':
-                if fname[-3:] == 'jpg':
-                    transparent_background=False
+            ext = exttype.split()[0].lower() 
+            
+            if fname == '':
+                return 
+
+            if not fname.lower().endswith(ext):
+                fname += '.'
+                fname += ext 
+                
+            if fname.lower().endswith('.jpg'):
+                transparent=False
+            else: 
+                transparent=True
+                
+            idx_cache = self.displayParams['index']
+            ext = fname.split('.')[-1]
+            nmesh = len(self.project.meshResults)
+            if self.timelapseScreenshotCheck.isChecked() and nmesh > 1 and not self.pseudo3DCheck.isChecked(): 
+                for i in range(nmesh):
+                    self.displayParams['index'] = i 
+                    self.replotSection()
+                    if self.m2DRadio.isChecked(): 
+                        self.mwInv.figure.savefig(fname, dpi=600, transparent=transparent)
+                    else: 
+                        self.vtkWidget.screenshot(fname.replace('.'+ext,'{:0>3d}.{:s}'.format(i,ext)), 
+                                                  transparent_background=transparent)
+                self.displayParams['index'] = idx_cache 
+                self.replotSection()
+            else:
+                if self.m2DRadio.isChecked():
+                    self.mwInv.figure.savefig(fname, dpi=600, transparent=transparent)
                 else: 
-                    transparent_background=True
-                self.vtkWidget.screenshot(fname, transparent_background=transparent_background)
+                    self.vtkWidget.screenshot(fname, transparent_background=transparent)
+                
         self.screenshotBtn = QPushButton('Save screenshot')
         self.screenshotBtn.setAutoDefault(True)
         self.screenshotBtn.clicked.connect(screenshotBtnFunc)
-            
-        # opt3d = [pvthreshMinLabel, self.pvthreshMin,
-        #          pvthreshMaxLabel, self.pvthreshMax,
-        #          pvxslicesLabel, self.pvxslices,
-        #          pvyslicesLabel, self.pvyslices,
-        #          pvzslicesLabel, self.pvzslices,
-        #          self.pvcontourLabel, self.pvcontour,
-        #          self.pvapplyBtn,
-        #          self.pvdelaunay3dCheck, self.pvgridCheck,
-        #          self.screenshotBtn]
+        self.timelapseScreenshotCheck = QCheckBox('Time-lapse\nscreenshot')
+        self.timelapseScreenshotCheck.setToolTip('Save screenshot for each time step if running a batch/time-lapse inversion')
+        
+        # having the option to save screen shots in 2D would be useful too... 
+        self.screenshotBtn2d = QPushButton('Save 2D screenshot')
+        self.screenshotBtn2d.setAutoDefault(True)
+        self.screenshotBtn2d.clicked.connect(screenshotBtnFunc)
+        self.timelapseScreenshotCheck2d = QCheckBox('Time-lapse\nscreenshot')
+        self.timelapseScreenshotCheck2d.setToolTip('Save screenshot for each time step if running a batch/time-lapse inversion')
         
         opt3d = [self.pvthreshLabel, self.pvthreshMin,
                  self.pvthreshMax, self.volCheck, self.pvslicesLabel, 
                  self.pvxslices, self.pvyslices,
                  self.pvzslices, self.pvcontourLabel, 
                  self.pvcontour, self.pvapplyBtn, self.pvsplineCheck,
-                 self.pvdelaunay3dCheck, self.pvgridCheck, self.screenshotBtn]
+                 self.pvdelaunay3dCheck, self.pvgridCheck, 
+                 self.timelapseScreenshotCheck, self.screenshotBtn]
+        
+        opt2d = [self.timelapseScreenshotCheck2d, self.screenshotBtn2d]
         
         def show3DInvOptions(a):
             [o.setVisible(a) for o in opt3d]
+        def show2DInvOptions(a):
+            [o.setVisible(a) for o in opt2d]
         show3DInvOptions(False)
-        
-        
+        show2DInvOptions(True)
         
         # subtab compute attribute
         self.evalLabel = QLabel("You can use a formula to compute new attribute. "
@@ -6206,6 +6265,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.aspectCheck)
         # optsLayout.addWidget(self.saveBtn)
         optsLayout.addWidget(self.exportShortCut)
+        for o in opt2d:
+            optsLayout.addWidget(o)
         
         opt3dLayout = QHBoxLayout()
         for o in opt3d:
