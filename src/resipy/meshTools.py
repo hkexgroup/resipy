@@ -3452,11 +3452,11 @@ class Mesh:
         voxel_info_file = file_name.lower().replace('.xyz','_voxel_info.txt')
         fh = open(voxel_info_file,'w')
         for key in self.nvoxel.keys(): 
-            fh.write('%s : %i\n'%(key,int(self.nvoxel['x'])))
+            fh.write('%s : %i\n'%(key,int(self.nvoxel[key])))
         fh.close() 
         
         
-    def toVoxelMesh(self,elec=None,elec_type=None, **kwargs):
+    def toVoxelMesh(self, elec=None, elec_type=None, **kwargs):
         """
         Returns a special kind of mesh optimised for visualasation inside of 
         GIS software like Geovisionary. 
@@ -3500,13 +3500,24 @@ class Mesh:
                          force_regular=True)
         mesh.cellCentres() 
         self.cellCentres()
+        interp_method = 'triangulate'
+        if all(self.df.Y == self.df.Y[0]):
+            interp_method = 'nearest'
+        elif all(self.df.X == self.df.X[0]):
+            interp_method = 'nearest'
+
         for column in self.df.columns:
             if column in ['X','Y','Z','param','elm_id','cellType','region']: 
                 continue 
-            inew = interp.triangulate3d(mesh.df.X, mesh.df.Y, mesh.df.Z, 
-                                        self.df.X, self.df.Y, self.df.Z, 
-                                        self.df[column])
-            mesh.df[column] = inew 
+            if interp_method == 'triangulate': 
+                inew = interp.triangulate3d(mesh.df.X.values, mesh.df.Y.values, mesh.df.Z.values, 
+                                            self.df.X.values, self.df.Y.values, self.df.Z.values, 
+                                            self.df[column].values)
+            else: 
+                inew = interp.nearest3d(mesh.df.X.values, mesh.df.Y.values, mesh.df.Z.values, 
+                                        self.df.X.values, self.df.Y.values, self.df.Z.values, 
+                                        self.df[column].values)
+            mesh.addAttribute(inew, column)
             
         return mesh
     
@@ -3644,7 +3655,7 @@ class Mesh:
             
     
     def exportTetgenMesh(self,prefix='mesh',zone=None, debug=False, mixed=False):
-        """Export a mesh like the tetgen format for input into E4D. 
+        """ Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. Currently only tested for 
         3D surface array like surveys. Assumes the sides of the mesh are parrallel 
         to the x and y plane and that the surface has gentle to no topography. 
@@ -5931,6 +5942,9 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             interp_method = 'bilinear'
         elif len(x_interp) < 4: 
             interp_method = 'nearest'
+    
+    if all(y_interp==y_interp[0]): # cant interpolate if on one plane 
+        interp_method = 'nearest'
     
     if interp_method is None:
         elec_z_topo = np.zeros_like(elec_x) # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
