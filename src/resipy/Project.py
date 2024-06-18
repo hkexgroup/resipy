@@ -2193,7 +2193,7 @@ class Project(object): # Project master class instanciated by the GUI
             
         # get memory estimates 
         memInv = self._estimateMemory(dump=donothing)
-        memTot = sysinfo['totalMemory'] #use the total memory (its more conversative)
+        memTot = sysinfo['totalMemory'] #use the total memory (its more conservative)
         
         # check if static inversion possible 
         if memInv > memTot: 
@@ -2212,15 +2212,14 @@ class Project(object): # Project master class instanciated by the GUI
             # number of surveys that can possibly be inverted in parallel is 
             # n - 1 becuase of the baseline which is inverted independently 
             maxInversions = min([nsurveys,ncores]) # maximum number of inversions at one time 
-            
-            if ncores == maxInversions:                     
-                # provide the user with some safety net 
-                while (maxInversions*memInv) > memTot: 
-                    adjustTrigger = True 
-                    ncores -= 1 
-                    maxInversions = ncores # maximum number of inversions at one time 
-                    if ncores == 1:
-                        break 
+                            
+            # provide the user with some safety net 
+            while (maxInversions*memInv) > memTot: 
+                adjustTrigger = True 
+                ncores -= 1 
+                maxInversions = ncores # maximum number of inversions at one time 
+                if ncores == 1:
+                    break 
                     
         # flag to the user they're using too many cores 
         if adjustTrigger: 
@@ -7304,9 +7303,9 @@ class Project(object): # Project master class instanciated by the GUI
             mnum_ind_meas = max(nmeas) # maximum number of measurements (more conservative estimate)
                     
         #nsize A estimation - describes number of connected nodes 
-        kxf = self.mesh.connection.flatten() # flattened connection matrix
-        uni_node, counts = np.unique(kxf,return_counts=True)
-        nsizeA = (np.sum(counts) - self.mesh.numel) # an estimate only of NsizeA
+        if self.mesh.NsizeA is None:
+            self.mesh.computeNconnec()
+        nsizeA = self.mesh.NsizeA 
         
         #other mesh parameters 
         numnp = self.mesh.numnp
