@@ -1634,7 +1634,10 @@ class Mesh:
         X = np.array(self.df[attr])
         
         if '(log10)' in attr: # the real values (later in the code) cause confusion
-            color_bar_title = attr.replace('(log10)', '')
+            if 'Resistivity' in attr:
+                color_bar_title = attr.replace('(log10)', '(ohm.m)')
+            else:
+                color_bar_title = attr.replace('(log10)', '')
         else:
             color_bar_title = attr
             
