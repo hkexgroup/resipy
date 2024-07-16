@@ -1131,7 +1131,7 @@ class Project(object): # Project master class instanciated by the GUI
                     'fwdErrModel': self.fwdErrModel,
                     'custSeq': self.custSeq,
                     'errTyp': self.errTyp,
-                    'surfaceIdx': self.surfaceIdx.tolist() if self.surfaceIdx is not None else None
+                    'surfaceIdx': list(self.surfaceIdx) if self.surfaceIdx is not None else None
                    }
         with open(os.path.join(savedir, 'settings.json'), 'w') as f:
             f.write(json.dumps(settings))
