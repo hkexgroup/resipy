@@ -3136,7 +3136,7 @@ class Project(object): # Project master class instanciated by the GUI
                    cl=-1, dump=None, res0=100, show_output=False, fmd=None,
                    remote=None, refine=0, **kwargs):
         """Create a mesh.
-
+        
         Parameters
         ----------
         typ : str, optional
@@ -3180,7 +3180,7 @@ class Project(object): # Project master class instanciated by the GUI
             This helps having a more accurate forward response and a faster inversion
             (as the number of elements does not increase). Only available for
             triangles or tetrahedral mesh.
-        kwargs : -
+        kwargs : -, optional
             Keyword arguments to be passed to mesh generation schemes
             Specific for 'tank mesh':
                 - origin : list of 3 floats

@@ -1017,7 +1017,7 @@ class Survey(object):
         """Filter measurements based on the level reciprocal error. 
         
         Parameters
-        -----------
+        ----------
         percent : float, optional
             Percentage level of reciprocal error in which to filter the measurements.
             Percentage Errors > percentage will be removed. By default the value is 
@@ -1044,7 +1044,7 @@ class Survey(object):
         """Filter measurements based on the stacking error. 
         
         Parameters
-        -----------
+        ----------
         percent : float, optional
             Percentage level of stacking error in which to filter the measurements.
             Percentage Errors > percentage will be removed. By default the value is 2.
@@ -1070,7 +1070,7 @@ class Survey(object):
         """Filter measurements by inversion error. 
         
         Parameters
-        -----------
+        ----------
         vmin : float, optional
             Minimum error.
         vmax : float, optional
@@ -1104,7 +1104,7 @@ class Survey(object):
          """Filter measurements by transfer resistance. 
          
          Parameters
-         -----------
+         ----------
          vmin : float, optional
              Minimum value.
          vmax : float, optional
@@ -2744,7 +2744,7 @@ class Survey(object):
         """Filter measurements by apparent resistivity for surface surveys 
         
         Parameters
-        -----------
+        ----------
         vmin : float, optional
             Minimum value.
         vmax : float, optional
@@ -2776,7 +2776,7 @@ class Survey(object):
         """Filter measurements by transfer resistance. 
         
         Parameters
-        -----------
+        ----------
         vmin : float, optional
             Minimum value.
         vmax : float, optional
@@ -2806,7 +2806,7 @@ class Survey(object):
     #     """Normalise the indexes the sequence matrix to start at 1.
         
     #     Parameters
-    #     -------------
+    #     ----------
     #     debug : bool, optional
     #         Set to True to print output.
     #     """
@@ -2877,7 +2877,7 @@ class Survey(object):
         number is 1. Then removes jumps in the electrode indexing.
         
         Parameters
-        -----------
+        ----------
         debug : bool, optional
             Output will be printed to console if `True`. 
         """
@@ -2930,7 +2930,7 @@ class Survey(object):
         number is 1. Then removes jumps in the electrode indexing.
         
         Parameters
-        -----------
+        ----------
         expected : array like
             Expected sequence. 
         """
@@ -3142,7 +3142,7 @@ class Survey(object):
         """Add a flat percentage error to resistivity data.
         
         Parameters
-        --------------
+        ----------
         pnct: float
             Error in percent
         """
@@ -3157,7 +3157,7 @@ class Survey(object):
         of modelling errors. 
         
         Parameters
-        ------------
+        ----------
         a_wgt: float, optional
             a_wgt documented in the R2 documentation 
         b_wgt: float, optional 
@@ -3175,8 +3175,8 @@ class Survey(object):
         file includes the electrode locations, in addition to the scheduling 
         matrix. 
         
-        Paramters
-        ------------
+        Parameters
+        ----------
         fname: string, optional
             Where the output file will be written to. By default the file will 
             take on the name of the survey and is written to the current working 

@@ -259,11 +259,11 @@ class Mesh:
         element indexes for a material in the mesh (needs further explanation)
         
     Returns
-    ----------
+    -------
     Mesh : class
     
     Attritbutes 
-    ----------
+    -----------
     numnp: int
         Number of nodes 
     numel: int 
@@ -279,8 +279,9 @@ class Mesh:
     df: pandas dataframe 
         Contains attributes assocaited with each element inside the mesh, for 
         example resistivity or parameter number 
-    Note: 
-    ----------
+    
+    Note
+    ----
     Something about the attribute_cache 
     """
 
@@ -411,7 +412,7 @@ class Mesh:
         """Assign node numbers to electrodes. 
         
         Parameters
-        ------------
+        ----------
         e_nodes: array like
             array of ints which index the electrode nodes in a mesh
         iremote: array like, optional
@@ -512,7 +513,7 @@ class Mesh:
         """Add a new/update attribute to mesh. 
         
         Parameters
-        ------------
+        ----------
         values: array like
             must have a length which matches the number of elements. Discrete 
             values which map to the elements. 
@@ -529,7 +530,7 @@ class Mesh:
         """Associate attributes with the mesh nodes  
         
         Parameters
-        ------------
+        ----------
         values: array like
             Must have a length which matches the number of nodes. Discrete 
             values which map to the nodes. 
@@ -567,7 +568,7 @@ class Mesh:
         """Order mesh nodes in clockwise fashion 
         
         Parameters
-        -----------
+        ----------
         return_count:bool, optional
             Function returns the number of reordered elements, default is False. 
         """
@@ -1001,7 +1002,7 @@ class Mesh:
         function will depend on mesh type. 
         
         Parameters
-        -----------
+        ----------
         return_idx: bool
             Return the indices of elements on the top of the mesh (default is false)
         post_neigh_check: bool 
@@ -1231,7 +1232,7 @@ class Mesh:
         when outputting inverted results. 
         
         Parameters
-        ------------
+        ----------
         xlim : tuple, optional
             Axis x limits as `(xmin, xmax)`.
         ylim : tuple, optional
@@ -1240,7 +1241,7 @@ class Mesh:
             Axis z limits as `(ymin, ymax)`. 
             
         Returns
-        ------------
+        -------
         nmesh: Class
             New instance of mesh class which is truncated 
         """
@@ -1287,7 +1288,7 @@ class Mesh:
         """Threshold the mesh to certian attribute values. 
         
         Parameters
-        ------------
+        ----------
         attr: string
             Name of attribute to threshold by 
         vmin: float
@@ -1296,7 +1297,7 @@ class Mesh:
             maximum value of attribute
         
         Returns
-        ------------
+        -------
         mesh: Class
             New instance of mesh class which is thresholded 
         """
@@ -1342,14 +1343,14 @@ class Mesh:
         """Filter mesh down on the basis of element number / index
         
         Parameters
-        ------------
+        ----------
         in_elem: array like
             array of bool, True means to keep the element 
         attr: string
             Name of attribute to threshold by 
         
         Returns
-        ------------
+        -------
         mesh: Class
             New instance of mesh class which is filtered 
         """
@@ -1419,7 +1420,7 @@ class Mesh:
         assign attributes to the current mesh class. 
         
         Parameters
-        -------------
+        ----------
         look_up_mesh: class
             Another mesh class. 
          
@@ -2993,7 +2994,7 @@ class Mesh:
         no nodes are assigned to mesh, a mesh.e_nodes variable is created.  
         
         Parameters
-        ------------
+        ----------
         new_x: array l ike
             new electrode x coordinates 
         new_y: array like
@@ -3003,14 +3004,15 @@ class Mesh:
             new electrode z coordinates 
         debug: bool, optional
             Controls if any changes to electrode nodes will be output to console. 
+        
         Returns
-        ------------
+        -------
         node_in_mesh: np array
             Array of mesh node numbers corresponding to the electrode postions/
             coordinates.
             
         Notes
-        ------------
+        -----
         Mesh.e_nodes parameter is updated (or added) after running function. 
         """
         #formalities 
@@ -3047,10 +3049,11 @@ class Mesh:
 
     #%% write mesh to file 
     def findIdirichlet(self):
-        """Find the best node for the dirchlet node 
+        """Find the best node for the dirichlet node.
+
         Returns
         -------
-        idirchlet: int 
+        idirchlet : int 
             A node far away as possible from each of the electrodes on the boundary of the 
             mesh. (Add one if using inside of mesh(3d).dat)
         """
@@ -3620,7 +3623,7 @@ class Mesh:
         """ Show mesh in paraview 
         
         Parameters
-        -----------
+        ----------
         fname: str,optional
             A vtk file will be written to working directory and then displayed 
             using paraview. 
@@ -5243,28 +5246,26 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
               mesh_refinement=None, ball_refinement=True,
               path='exe', dump=print, whole_space=False, model_err=False,
               handle=None, show_output=True, **kwargs):
-    """
-    Generates a tetrahedral mesh for R3t (with topography) for field surveys.
+    """Generates a tetrahedral mesh for R3t (with topography) for field surveys.
     This function expects the current working directory has path: exe/gmsh.exe.
-    
     Uses post processing after mesh generation to super impose topography on to 
     a flat 3D tetrahedral mesh of a hemisphere. Handles, wholespace, 2d and 
     halfspace problems. 
             
     Parameters
     ---------- 
-    elec_x: array like
+    elec_x : array like
         electrode x coordinates 
-    elec_y: array like 
+    elec_y : array like 
         electrode y coordinates 
-    elec_z: array like 
+    elec_z : array like 
         electrode z coordinates 
-    elec_type: list of strings, optional
+    elec_type : list of strings, optional
         Defines if electrodes are buried or not.   
     keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the working 
         directory.
-    interp_method: string, default ='triangulate' optional
+    interp_method : string, default ='triangulate' optional
         Interpolation method to translate mesh nodes in the z direction. In 
         other words the method in which topography is appended to the mesh. 
         Here the topography is added to the mesh in post processing. 
@@ -5282,31 +5283,31 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         the refinement of mesh elements. If not provided ResIPy attempts to add 
         mesh_refinement for you (though not in the case of a wholespace). 
         See further explanation in tetraMesh notes. 
-    ball_refinement: boolean, optional
+    ball_refinement : boolean, optional
         If True, tells gmsh to add a 'ball' of refined mesh around electrodes. 
         Default is True. 
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
-    whole_space: boolean, optional
+    whole_space : boolean, optional
         flag for if the problem should be treated as a whole space porblem, in 
         which case electrode type is ignored and all electrodes are buried in 
         the middle of a large mesh.
-    model_err: bool
+    model_err : bool
         If True, a flat mesh will be returned for the sake of estimating 
         forward modelling errors. 
     dump : function, optional
         Function to which pass the output during mesh generation. `print()` is
         the default.
-    **kwargs: dict
+    **kwargs : dict
         Keyword arguments to be passed to functions in gmshWrap.py 
          
     Returns
-    ---------- 
+    -------
     mesh3d: class
     
     
     Notes 
-    ---------- 
+    -----
     Possible arguments for interp_method: 
         'bilinear' : 4 known points are used to compute the equation of a plane 
                     in which the interpolated point lies. This method is reccomended 
@@ -5755,8 +5756,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
               mesh_refinement=None, ball_refinement=True,
               path='exe', dump=print, whole_space=False, model_err=False,
               handle=None, show_output=True, **kwargs):
-    """
-    Generates a voxel mesh, not meant to be used for ERT processing with the R*
+    """Generates a voxel mesh, not meant to be used for ERT processing with the R*
     codes but rather can be used for the purposes of mesh visualizuation post 
     processing, and is more readily exportable into formats required by
     other geological software (e.g. Geovisionary). 
@@ -5807,12 +5807,12 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         are of the same size. 
          
     Returns
-    ---------- 
+    -------
     mesh3d: class
     
     
     Notes 
-    ---------- 
+    -----
     Possible arguments for interp_method: 
         'bilinear' : 4 known points are used to compute the equation of a plane 
                     in which the interpolated point lies. This method is reccomended 
@@ -5841,8 +5841,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         'type': list, object array of point types, use the tag 'surface' for 
             surface points, use 'buried' for buried points. 
         'cl': array like of characteristic lengths for each refinement point in 
-            the mesh. 
-            
+            the mesh.
     """
     #formalities 
     if elec_z is None: 

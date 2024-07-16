@@ -3,33 +3,47 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Getting Started
-===============
+ResIPy
+======
 
-ResIPy aims to process geoeletrical data (DC and IP). It provides a python application programming interface (API) and a standalone graphical user interface (GUI). Resipy provides high-level filtering, error modelling, inversion/forward modelling and post-processing tools.
+ResIPy is a Python wrapper around the `R* family of codes <http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm>`_ (for 2D/3D DC/IP inversion).
+ResIPy provides a standalone graphical user interface (GUI) along with a Python API (Application Programming Interface)
+for use in Jupyter notebook. Have a look at the :ref:`gallery_examples` or subscribe to our `YouTube channel (ResIPy) <https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q>`_ to learn more.
 
-.. _guiGif:
-.. figure:: ../src/image/teaser.gif
-    :alt: Animated gif of the GUI in action
-    
-    Animation of the workflow of creating synthetic data from forward modelling and then inverting them in the GUI.
+ResIPy aims to be:
+
+* **Simple and intuitive** to use (you can invert your data in one-click with all default settings)
+* But still allowing the user to have **full control** on data filtering, error modelling, mesh parameters and inversion settings
 
 
-The same processing can be achieved with the python API::
+
+What it can do
+--------------
+
+.. figure:: ../src/image/teaser3D.gif
+   :alt: Animated gif of the GUI in action 3D
+
+.. figure:: ../src/image/teaser2D.gif
+   :alt: Animated gif of the GUI in action 2D
+
+
+The same processing can be achieved with the :ref:`python_api`::
 
     from resipy import Project
     k = Project(typ='R2')
     k.createSurvey('examples/dc-2d/syscal.csv')
+    k.showPseudo() # show pseudo-section
     k.invert() # invert measurements
-    k.showResults() # display inverted pseudo-section
+    k.showResults() # display inverted section
 
-More examples are available in the Gallery of examples.
+More examples are available in the :ref:`gallery_examples`.
 
 
-Installation
-------------
+Download
+--------
 
-The easiest way is to **download one of our standalone executable (.exe or .zip) from gitlab (https://gitlab.com/hkex/resipy)**.
+.. important::
+    The easiest way is to `download one of the standalone executables (.exe or .zip) from GitLab <https://gitlab.com/hkex/resipy>`_.
 
 If you wish to modify the code or just get the latest version, you can also *run from source* like this:
 
@@ -42,9 +56,17 @@ Alternatively you can install the API part of the module (so no GUI) from pypi u
     pip install resipy
     
     
-.. note::
-    Mac and Linux user will need *wine* to run the inversions.
 
+Mac and Linux user will need *wine* to run the inversions. For more details please refer to the `GitLab <https://gitlab.com/hkex/resipy>`_.
+
+
+Project structure
+-----------------
+
+.. figure:: ../src/image/structure.png
+   :alt: Project structure
+
+General overlook of the project structure with the three main parts. Please refer to the GitLab if you want to contribute.
 
 
 Contents
@@ -54,11 +76,10 @@ Contents
 .. toctree::
    :maxdepth: 2
    
-   getting-started
    gui
    gui-in-action
-   api
    gallery/index
+   api
    
 
 
