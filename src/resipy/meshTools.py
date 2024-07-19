@@ -24,6 +24,7 @@ from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
+from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import cKDTree, Voronoi 
@@ -1732,7 +1733,8 @@ class Mesh:
             if vmax is None:
                 vmax = np.nanmax(zc)
             if vmax > vmin:
-                levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
+                levels = MaxNLocator().tick_values(vmin, vmax)
+                # levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
             else:
                 levels = None
             
@@ -1764,8 +1766,9 @@ class Mesh:
                 else:
                     self.cbar.set_ticks([1])
                 self.cbar.set_ticklabels(val)
-            elif 'log' in attr: 
-                levels = np.linspace(vmin, vmax,13)
+            elif 'log' in attr:
+                levels = MaxNLocator().tick_values(vmin, vmax)
+                # levels = np.linspace(vmin, vmax, 13)
                 if vmax < 0.01:
                     ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
                 else:
@@ -1918,7 +1921,8 @@ class Mesh:
                 self.cbar.set_ticks([1])
             self.cbar.set_ticklabels(val) 
         elif 'log' in attr: 
-            levels = np.linspace(vmin, vmax,13)
+            levels = MaxNLocator().tick_values(vmin, vmax)
+            # levels = np.linspace(vmin, vmax,13)
             if vmax < 0.01:
                 ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
             else:

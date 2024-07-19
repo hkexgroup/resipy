@@ -10,6 +10,7 @@ import sys, os, platform, time
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
+from matplotlib.ticker import MaxNLocator
 import pandas as pd
 from scipy.stats import norm, linregress
 from scipy.stats import gaussian_kde
@@ -2144,7 +2145,8 @@ class Survey(object):
         else:
             fig = ax.get_figure()
        
-        levels = np.linspace(vmin, vmax, 13)
+        levels = MaxNLocator().tick_values(vmin, vmax)
+        # levels = np.linspace(vmin, vmax, 13)
         
         if contour:
             plotPsRes = ax.tricontourf(xpos, ypos, resist, levels=levels, extend='both')
@@ -2392,7 +2394,8 @@ class Survey(object):
                 vmin = np.min(ip)
             if vmax is None:
                 vmax = np.max(ip)
-            levels = np.linspace(vmin, vmax, 13)
+            levels = MaxNLocator().tick_values(vmin, vmax)
+            # levels = np.linspace(vmin, vmax, 13)
             plotPsIP = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
         
