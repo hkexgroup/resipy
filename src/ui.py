@@ -152,6 +152,99 @@ pdebug( 'sys.argv[0] is', sys.argv[0] )
 pdebug( 'sys.executable is', sys.executable )
 pdebug( 'os.getcwd is', os.getcwd() )
 
+#%% FlowLayout from https://github.com/baoboa/pyqt5/blob/master/examples/layouts/flowlayout.py
+
+
+from PyQt5.QtCore import QPoint, QRect, QSize
+from PyQt5.QtWidgets import (QLayout, QSizePolicy)
+
+class FlowLayout(QLayout):
+    def __init__(self, parent=None, margin=0, spacing=-1):
+        super(FlowLayout, self).__init__(parent)
+
+        if parent is not None:
+            self.setContentsMargins(margin, margin, margin, margin)
+
+        self.setSpacing(spacing)
+
+        self.itemList = []
+
+    def __del__(self):
+        item = self.takeAt(0)
+        while item:
+            item = self.takeAt(0)
+
+    def addItem(self, item):
+        self.itemList.append(item)
+
+    def count(self):
+        return len(self.itemList)
+
+    def itemAt(self, index):
+        if index >= 0 and index < len(self.itemList):
+            return self.itemList[index]
+
+        return None
+
+    def takeAt(self, index):
+        if index >= 0 and index < len(self.itemList):
+            return self.itemList.pop(index)
+
+        return None
+
+    def expandingDirections(self):
+        return Qt.Orientations(Qt.Orientation(0))
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        height = self.doLayout(QRect(0, 0, width, 0), True)
+        return height
+
+    def setGeometry(self, rect):
+        super(FlowLayout, self).setGeometry(rect)
+        self.doLayout(rect, False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+
+        for item in self.itemList:
+            size = size.expandedTo(item.minimumSize())
+
+        margin, _, _, _ = self.getContentsMargins()
+
+        size += QSize(2 * margin, 2 * margin)
+        return size
+
+    def doLayout(self, rect, testOnly):
+        x = rect.x()
+        y = rect.y()
+        lineHeight = 0
+
+        for item in self.itemList:
+            wid = item.widget()
+            spaceX = self.spacing() + wid.style().layoutSpacing(QSizePolicy.PushButton, QSizePolicy.PushButton, Qt.Horizontal)
+            spaceY = self.spacing() + wid.style().layoutSpacing(QSizePolicy.PushButton, QSizePolicy.PushButton, Qt.Vertical)
+            nextX = x + item.sizeHint().width() + spaceX
+            if nextX - spaceX > rect.right() and lineHeight > 0:
+                x = rect.x()
+                y = y + lineHeight + spaceY
+                nextX = x + item.sizeHint().width() + spaceX
+                lineHeight = 0
+
+            if not testOnly:
+                item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+
+            x = nextX
+            lineHeight = max(lineHeight, item.sizeHint().height())
+
+        return y + lineHeight - rect.y()
+
+
 
 #%% MatplotlibWidget class
 class MatplotlibWidget(QWidget):
@@ -658,10 +751,6 @@ class App(QMainWindow):
                 # post-processing
                 self.errorGraphs.setTabEnabled(0, True)
                 self.errorGraphs.setCurrentIndex(0)
-                
-                # export tab
-                show3DInvOptions(False)
-                show2DInvOptions(True)
             else:
                 self.typ = self.typ.replace('2','3t')
                 if self.project is not None:
@@ -738,10 +827,6 @@ class App(QMainWindow):
                 # post-processing
                 self.errorGraphs.setTabEnabled(0, False)
                 self.errorGraphs.setCurrentIndex(1)
-                
-                # export tab
-                show3DInvOptions(True)
-                show2DInvOptions(False)
             try: # to force update the pseudo sections
                 if self.project is not None:
                     self.plotPseudo()
@@ -1256,11 +1341,11 @@ class App(QMainWindow):
                     pass
                     
                 
-        self.importDataRecipBtn = QPushButton('If you have a reciprocal (or more) data upload it here')
+        self.importDataRecipBtn = QPushButton('Reciprocal/More data')
         self.importDataRecipBtn.setAutoDefault(True)
         self.importDataRecipBtn.clicked.connect(importDataRecipBtnFunc)
         self.importDataRecipBtn.hide()
-        self.importDataRecipBtn.setToolTip('Import file with reciprocal measurements (not mandatory).')
+        self.importDataRecipBtn.setToolTip('Import file with reciprocal measurements or additional data (not mandatory).')
 
         self.lineSpacing = QLineEdit('1')
         self.lineSpacing.setValidator(QDoubleValidator())
@@ -5416,7 +5501,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invtabs.addTab(self.computeTab, 'Compute attribute')
         self.invtabs.setTabEnabled(1, False)
         self.invtabs.setTabEnabled(2, False)
-                
         
         def frozeUI(val=True): # when inversion is running
             n = self.tabs.count()
@@ -6193,6 +6277,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             [o.setVisible(a) for o in opt3d]
         def show2DInvOptions(a):
             [o.setVisible(a) for o in opt2d]
+        show2DInvOptions(False)
+        show3DInvOptions(False)
         
         # subtab compute attribute
         self.evalLabel = QLabel("You can use a formula to compute new attribute. "
@@ -6252,13 +6338,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         logRightLayout.addWidget(self.mwIter, 50)
         logLayout.addLayout(logRightLayout)
         
-        optsLayout = QHBoxLayout()
-        optsLayout.addWidget(self.surveyCombo, 15)
-        optsLayout.addWidget(self.attrCombo, 20)
+        optsLayout = FlowLayout()
+        optsLayout.addWidget(self.surveyCombo)#, 15)
+        optsLayout.addWidget(self.attrCombo)#, 20)
         optsLayout.addWidget(self.vminLabel)
-        optsLayout.addWidget(self.vminEdit, 5)
+        optsLayout.addWidget(self.vminEdit)#, 5)
         optsLayout.addWidget(self.vmaxLabel)
-        optsLayout.addWidget(self.vmaxEdit, 5)
+        optsLayout.addWidget(self.vmaxEdit)#, 5)
         optsLayout.addWidget(self.vMinMaxBtn)
         optsLayout.addWidget(self.doiCheck)
         optsLayout.addWidget(self.doiSensCheck)
@@ -6274,7 +6360,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         for o in opt2d:
             optsLayout.addWidget(o)
         
-        opt3dLayout = QHBoxLayout()
+        opt3dLayout = FlowLayout()
         for o in opt3d:
             opt3dLayout.addWidget(o)
         
@@ -6304,8 +6390,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         #%% tab 6 POSTPROCESSING
         self.tabPostProcessing = QWidget()
-        # self.tabs.addTab(self.tabPostProcessing, 'Post Processing')
-        self.tabs.setTabEnabled(6,False)
+        self.tabs.addTab(self.tabPostProcessing, 'Post Processing')
+        self.tabs.setTabEnabled(6, False)
         
         self.errorGraphs = QTabWidget()
         
@@ -6472,6 +6558,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
+        invErrorLabel.setWordWrap(True)
         QApplication.processEvents()
 
 
