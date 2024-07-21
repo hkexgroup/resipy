@@ -59,7 +59,7 @@ import traceback
 
 
 # debug options
-DEBUG = True # set to false to not display message in the console
+DEBUG = False # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -658,6 +658,10 @@ class App(QMainWindow):
                 # post-processing
                 self.errorGraphs.setTabEnabled(0, True)
                 self.errorGraphs.setCurrentIndex(0)
+                
+                # export tab
+                show3DInvOptions(False)
+                show2DInvOptions(True)
             else:
                 self.typ = self.typ.replace('2','3t')
                 if self.project is not None:
@@ -734,6 +738,10 @@ class App(QMainWindow):
                 # post-processing
                 self.errorGraphs.setTabEnabled(0, False)
                 self.errorGraphs.setCurrentIndex(1)
+                
+                # export tab
+                show3DInvOptions(True)
+                show2DInvOptions(False)
             try: # to force update the pseudo sections
                 if self.project is not None:
                     self.plotPseudo()
@@ -1754,7 +1762,6 @@ class App(QMainWindow):
                 pdebug('elecTable.initTable():\n', tt)
                 self.clear() # this clears out the headers as well
                 self.nrow = tt.shape[0]
-                print(self.nrow)
                 if self.nrow > 10000: # set a hard cap on the number of rows displayed to avoid segmentation fault 
                     self.nrow = 10000
                     self.useNarray = True # use the numpy data array to index the data 
@@ -6186,8 +6193,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             [o.setVisible(a) for o in opt3d]
         def show2DInvOptions(a):
             [o.setVisible(a) for o in opt2d]
-        show3DInvOptions(False)
-        show2DInvOptions(True)
         
         # subtab compute attribute
         self.evalLabel = QLabel("You can use a formula to compute new attribute. "
@@ -6299,7 +6304,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         #%% tab 6 POSTPROCESSING
         self.tabPostProcessing = QWidget()
-        self.tabs.addTab(self.tabPostProcessing, 'Post Processing')
+        # self.tabs.addTab(self.tabPostProcessing, 'Post Processing')
         self.tabs.setTabEnabled(6,False)
         
         self.errorGraphs = QTabWidget()
@@ -6991,28 +6996,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         self.tabAbout.setLayout(infoLayout)
 
-        #%% test tab
-        # tabTest = QTabWidget()
-        # self.tabs.addTab(tabTest, 'TEST')
-        # self.tabs.setCurrentIndex(9)
-        
-        # self.fframe = QFrame()
-        # vlayout = QVBoxLayout()
-        # self.vtk_widget = QtInteractor(self.fframe)
-        # vlayout.addWidget(self.vtk_widget)
-        # self.fframe.setLayout(vlayout)
-        
-        # m = pv.read('/home/jkl/Downloads/f001.vtk')
-        # self.vtk_widget.show_grid()
-        # self.vtk_widget.add_axes()
-        # self.vtk_widget.add_mesh(m, scalars='Resistivity')
-        
-        
-        # tabTestLayout = QVBoxLayout()
-        # tabTestLayout.addWidget(self.fframe)
-        # tabTest.setLayout(tabTestLayout)
-        
-        
         #%% general Ctrl+Q shortcut + general tab layout
 
         self.layout.addWidget(self.tabs)
