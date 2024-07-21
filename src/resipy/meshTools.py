@@ -1734,7 +1734,7 @@ class Mesh:
                 vmax = np.nanmax(zc)
             if vmax > vmin:
                 levels = MaxNLocator().tick_values(vmin, vmax)
-                # levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
+                #levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
             else:
                 levels = None
             
@@ -1757,7 +1757,7 @@ class Mesh:
             cbar_horizontal = 'vertical'
             if hor_cbar: # change orientation if true 
                 cbar_horizontal = 'horizontal'
-            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f',orientation=cbar_horizontal, fraction=0.046, pad=0.04)
+            self.cbar = plt.colorbar(self.cax, ax=ax, orientation=cbar_horizontal, fraction=0.046, pad=0.04)
             if attr == 'region': # default to material
                 val = np.sort(np.unique(X)).astype(int)
                 if len(val) > 1:
