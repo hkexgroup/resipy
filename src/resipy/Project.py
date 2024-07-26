@@ -7013,6 +7013,8 @@ class Project(object): # Project master class instanciated by the GUI
         ext = '.vtk'
         if 'vtk' in ftype.lower():
             ext = '.vtk'
+        elif 'vts' in ftype.lower():
+            ext = '.vts'
         elif 'dat' in ftype.lower(): 
             ext = '.dat'
         elif 'node' in ftype.lower(): 

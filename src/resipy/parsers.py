@@ -1685,6 +1685,105 @@ def ericParser(file_path):
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
     return elec, df
+
+def ABEMterrameterParser(fname):
+    
+    # open file for read then close 
+    fh = open(fname,'r')
+    lines = fh.readlines()
+    fh.close() 
+    
+    # read in headers 
+    xspace = float(lines[1].strip())
+    nmeas = int(lines[6].strip()) 
+    ncoord = int(lines[7].strip())
+    appres = False 
+    if int(lines[5].strip()) == 0:
+        appres = True 
+    dstart = 9 # start of data 
+    ipflag = False 
+    if int(lines[8].strip()) > 0:
+        ipflag = True 
+        dstart = 12
+        
+    a = [0]*nmeas 
+    b = [0]*nmeas 
+    m = [0]*nmeas 
+    n = [0]*nmeas 
+    tr = [0]*nmeas 
+    ip = [0]*nmeas 
+    
+    # need to parse columns to get electrode coordinates 
+    # setup flags for if different coordinate columns are present 
+    xcolumns = [1,1,1,1]
+    ycolumns = [2,1,1,1]
+    zcolumns = [3,1,1,1]
+    xflag = False 
+    yflag = False 
+    zflag = False 
+    rcolumn = 9
+    pcolumn = 0 
+    
+    for i in range(1,4):
+        if ncoord == 1:
+            xflag = True 
+            xcolumns[i] = int(1+(i*ncoord)) 
+            rcolumn = xcolumns[-1] + 1
+        elif ncoord == 2: 
+            xflag = True 
+            zflag = True 
+            xcolumns[i] = int(1+(i*ncoord)) 
+            zcolumns[i] = int(2+(i*ncoord))
+            rcolumn = zcolumns[-1] + 1 
+        elif ncoord == 3:
+            xflag = True 
+            yflag = True 
+            zflag = True 
+            xcolumns[i] = int(1+(i*ncoord)) 
+            ycolumns[i] = int(2+(i*ncoord))
+            zcolumns[i] = int(3+(i*ncoord))
+            rcolumn = zcolumns[-1] + 1 
+            
+    # find minx 
+    allx = []
+    ally = []
+    allz = [] 
+    for i in range(nmeas):
+        line = lines[i+dstart].strip()
+        info = line.split()
+        if xflag: 
+            for j in xcolumns:
+                allx.append(float(info[j]))
+        if yflag: 
+            for j in ycolumns:
+                ally.append(float(info[j]))
+        if zflag: 
+            for j in zcolumns:
+                allz.append(float(info[j]))
+        
+    minx = min(allx)
+    x = [minx +(i*xspace) for i in range(1000)]
+        
+    for i in range(nmeas):
+        line = lines[i+dstart].strip()
+        info = line.split()
+        ax = float(info[xcolumns[0]])
+        bx = float(info[xcolumns[1]])
+        mx = float(info[xcolumns[2]])
+        nx = float(info[xcolumns[3]])
+        
+        a[i] = x.index(ax) + 1 
+        b[i] = x.index(bx) + 1 
+        m[i] = x.index(mx) + 1 
+        n[i] = x.index(nx) + 1 
+        
+        tr[i] = float(info[rcolumn])
+        
+        if ipflag: 
+            ip[i] = float(info[-1])
+    
+    data = {'a':a, 'b':b, 'm':m, 'n':n, 'resist':tr, 'ip':ip}
+    return data 
     
     
 #%% 
@@ -1760,7 +1859,7 @@ def lippmannParser(fname):
 
 # elec, df = lippmannParser(testdir + 'parser/Lippmann_1.tx0')
 
-#%%
+#%% ares instruments 
 def aresParser(fname, spacing=None):
     """Read in *.2dm file from ARES II
     """

@@ -3505,7 +3505,7 @@ class Mesh:
             elec_z = elec.z.values 
         if elec_type is None:
             elec_type = self.elec_type 
-            
+
         mesh = voxelMesh(elec_x, elec_y, elec_z, elec_type, **kwargs, 
                          force_regular=True)
         mesh.cellCentres() 
@@ -3532,50 +3532,92 @@ class Mesh:
         return mesh
     
     
-    def toVoxet(self,file_name='mesh.vo',x0=None,y0=None,a=0):
+    def vts(self,file_name='mesh.vts',x0=None,y0=None,a=0):
         """
-        Not yet working! 
+        Structured grid file, therefore must be a Voxel type mesh. Not that 
+        national grid parameters are only commented in the resulting vts file 
+        for now. 
 
         Parameters
         ----------
-        file_name : TYPE, optional
-            DESCRIPTION. The default is 'mesh.vo'.
-        x0 : TYPE, optional
-            DESCRIPTION. The default is None.
-        y0 : TYPE, optional
-            DESCRIPTION. The default is None.
-        a : TYPE, optional
-            DESCRIPTION. The default is 0.
+        file_name : str, optional
+            Path to output file. The default is 'mesh.vts'.
+        x0 : float, optional
+            Grid origin in X axis. The default is None.
+        y0 : float, optional
+            Grid origin in Y axis. The default is None.
+        a : float, optional
+            Rotation angle or bearing in X direction. The default is 0.
 
         Returns
         -------
-        None.
+        ~.vts: file 
+            vts file written to file_name location. 
 
         """
         if self.cell_type[0] != 11:
-            raise Exception('this kind of export only available for voxel mesh')
+            warnings.warn('.vts export only available for voxel mesh, function call terminated...')
+            return 
         
-        if x0 is None:
-            x0 = np.min(self.node[:,0])
-        if y0 is None:
-            y0 = np.min(self.node[:,1])
-        z0 = np.min(self.node[:,2])
-            
+        # write out voxel information 
+        if self.nvoxel['x'] is None: 
+            warnings.warn('.vts export only available for voxel mesh (with nx, ny, nz information), function call terminated...')
+            return # exit function if nvoxel not populated 
+        
         fh = open(file_name,'w')
-        fh.write('GOCAD Voxet 0.01\n')
-        fh.write('AXIS_O %f %f %f\n'%(x0,y0,z0))
         
-        # vectors desribe the orientation of the mesh axis (can be used to add some rotation)
-        fh.write('AXIS_U 0. 0. %f\n'%np.max(self.node[:,0]))
-        fh.write('AXIS_V 0. %f 0.\n'%np.max(self.node[:,1]))
-        fh.write('AXIS_W %f 0. 0.\n'%np.max(self.node[:,2]))
-        fh.write('AXIS_MIN 0.0 0.0 0.0\n')
-        fh.write('AXIS_MAX %f %f %f\n'%(np.max(self.node[:,0]),np.max(self.node[:,1]),np.max(self.node[:,2])))
-        fh.write('AXIS_N 550 228 150\n')
-        fh.write('AXIS_D 1. 1. 1.\n')
-        fh.write('AXIS_NAME "Z" "Y" "X"\n')
-        fh.write('AXIS_UNIT "m" "m" "m"\n')
-        fh.write('AXIS_TYPE even even even\n')
+        if x0 is not None and y0 is not None: 
+            # make a comment line 
+            fh.write('<!-- rotation info: x0 = %f; y0 = %f; a = %f -->\n'%(x0,y0,a))
+        
+        def writeXMLline(text,bracket=True,tab=0):
+            for i in range(tab):
+                fh.write('\t')
+            if bracket: 
+                fh.write('<')
+            fh.write('{:}'.format(text))
+            if bracket:
+                fh.write('>')
+            fh.write('\n')
+            
+        writeXMLline('VTKFile type="StructuredGrid" version="0.1" byte_order="LittleEndian"')
+    
+        voxel_info = '"0 %i 0 %i 0 %i"'%(self.nvoxel['x'], self.nvoxel['y'], self.nvoxel['z'])
+
+        writeXMLline('StructuredGrid WholeExtent='+voxel_info,tab=1)
+        writeXMLline('Piece Extent='+voxel_info, tab=1)
+        
+        # TODO: write out point data
+        writeXMLline('PointData', tab=2)
+        writeXMLline('/PointData', tab=2)
+        
+        # write cell data 
+        writeXMLline('CellData',tab=2)
+        for column in self.df.columns:
+            if column in ['X','Y','Z','param','elm_id','cellType','region']: 
+                continue 
+            header = 'DataArray type="Float32" Name="%s" format="ascii"'%column 
+            writeXMLline(header,tab=3)
+            X = self.df[column].values 
+            X[np.isnan(X)] = -9999
+            for i in range(len(X)):
+                writeXMLline('%f'%X[i], False, 4)
+            writeXMLline('/DataArray',tab=3)
+        writeXMLline('/CellData',tab=2)
+        
+        # write out point data
+        writeXMLline('Points',tab=2)
+        writeXMLline('DataArray type="Float32" Name="Points" NumberOfComponents="3" format="ascii"',tab=3)
+        for i in range(self.numnp):
+            line = '{:f}\t{:f}\t{:f}'.format(self.node[i,0], self.node[i,1], self.node[i,2])
+            writeXMLline(line, False, 4)
+        writeXMLline('/DataArray',tab=3)
+        writeXMLline('/Points',tab=2)
+        writeXMLline('/Piece',tab=1)
+        writeXMLline('/StructuredGrid',tab=1)
+        writeXMLline('/VTKFile')
+        
+        fh.close()
         
         
     @staticmethod   # find paraview location in windows    
@@ -3825,7 +3867,7 @@ class Mesh:
             raise TypeError('fname needs to be a string!')
         
         #determine file type 
-        atypes = ['dat','node','vtk','csv', 'xyz']
+        atypes = ['dat','node','vtk','vts','csv', 'xyz']
         if ftype is None:#guess
             for a in atypes:
                 if fname.endswith('.' + a):
@@ -3851,6 +3893,8 @@ class Mesh:
             self.exportTetgenMesh(fname.replace('.node',''))
         elif ftype == 'xyz':
             self.xyz(fname) 
+        elif ftype == 'vts':
+            self.vts(fname)
         else:
             raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
             
@@ -3870,6 +3914,12 @@ class Mesh:
         coordParam: dict, optional
             Coordinate conversion parameters, x0, y0 and a. Stored as a dictionary. 
         """
+        if ftype.endswith('vts'):
+            # can't have global coordinates with a vts file 
+            if coordLocal: 
+                warnings.warn('VTS export will be written in a local grid format!')
+            coordLocal = False 
+            
         if coordLocal and coordParam is None: 
             coordParam = {}
             coordParam['a'] = 0 
@@ -3904,8 +3954,6 @@ class Mesh:
         else:
             mesh = self.copy() 
             
-        # if xyz:
-        #     mesh.xyz(fname,coordParam)
         if coordLocal: 
             x0 = coordParam['x0']
             y0 = coordParam['y0']
@@ -5942,6 +5990,9 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     y_interp = np.append(surf_elec_y,surf_y)
     z_interp = np.append(surf_elec_z,surf_z)
     
+    if len(x_interp) == 0:
+        raise Exception('Cannot make a voxel mesh without any surface control points!') 
+    
     if interp_method == 'triangulate':
         # need to check the number of interpolation points is stable for triangulation 
         if len(x_interp) == 4: 
@@ -6030,7 +6081,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     dump('Generated %i unique nodes in Y direction'%len(yy))
         
     ## insert z values 
-    zz = []
+    zz = [0]
     z = min(ez)
     for i in range(1,len(ez)):
         while ez[i] > z and (z + cl) <=0:
@@ -6045,9 +6096,12 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     xx = np.unique(xx)
     yy = np.unique(yy)
     zz = np.unique(zz)
+
+    # meshx, meshy, meshz = np.meshgrid(xx,yy,zz) # old line --> works 
     
-    ## TODO could add nuemonn boundary here ??  
-    meshx, meshy, meshz = np.meshgrid(xx,yy,zz)
+    # changed node creation to be friendly to vts format 
+    meshz, meshy, meshx = np.meshgrid(zz,yy,xx,indexing='ij')
+    # need to check this does not mess up the connection matrix creation... ?
     
     # compress node arrays into columns 
     node = np.c_[meshx.flatten(),meshy.flatten(),meshz.flatten()]
