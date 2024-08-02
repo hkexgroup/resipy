@@ -1686,15 +1686,44 @@ def ericParser(file_path):
     
     return elec, df
 
+
 def ABEMterrameterParser(fname):
+    """
+    Parse ABEM terrameter data 
+
+    Parameters
+    ----------
+    fname : str 
+        Path to resistivity data file 
+
+    Returns
+    -------
+    elec: pd.DataFrame 
+        Electrode data frame 
+    df: pd.DataFrame
+        Resistivity data frame 
+
+    """
+    # function to find distance between electrodes 
+    def fdist(x0, X, y0, Y, z0, Z):
+        sdx = (x0 - X)**2
+        sdy = (y0 - Y)**2
+        sdz = (z0 - Z)**2
+        dist = np.sqrt(sdx + sdy + sdz)
+        return dist 
     
+    # get the index of coordinates 
+    def getIndex(x0, X, y0, Y, z0, Z):
+        dist = fdist(x0, X, y0, Y, z0, Z)
+        return np.argmin(dist)
+        
     # open file for read then close 
     fh = open(fname,'r')
     lines = fh.readlines()
     fh.close() 
     
     # read in headers 
-    xspace = float(lines[1].strip())
+    # xspace = float(lines[1].strip())
     nmeas = int(lines[6].strip()) 
     ncoord = int(lines[7].strip())
     appres = False 
@@ -1702,8 +1731,10 @@ def ABEMterrameterParser(fname):
         appres = True 
     dstart = 9 # start of data 
     ipflag = False 
+    ipunit = ''
     if int(lines[8].strip()) > 0:
         ipflag = True 
+        ipunit = lines[10].strip()
         dstart = 12
         
     a = [0]*nmeas 
@@ -1729,12 +1760,15 @@ def ABEMterrameterParser(fname):
             xflag = True 
             xcolumns[i] = int(1+(i*ncoord)) 
             rcolumn = xcolumns[-1] + 1
+            pcolumn = rcolumn + 1 
         elif ncoord == 2: 
+            zcolumns[0] = 2 
             xflag = True 
             zflag = True 
             xcolumns[i] = int(1+(i*ncoord)) 
             zcolumns[i] = int(2+(i*ncoord))
             rcolumn = zcolumns[-1] + 1 
+            pcolumn = rcolumn + 1 
         elif ncoord == 3:
             xflag = True 
             yflag = True 
@@ -1743,8 +1777,9 @@ def ABEMterrameterParser(fname):
             ycolumns[i] = int(2+(i*ncoord))
             zcolumns[i] = int(3+(i*ncoord))
             rcolumn = zcolumns[-1] + 1 
+            pcolumn = rcolumn + 1 
             
-    # find minx 
+    # find electrode coordinates 
     allx = []
     ally = []
     allz = [] 
@@ -1760,10 +1795,41 @@ def ABEMterrameterParser(fname):
         if zflag: 
             for j in zcolumns:
                 allz.append(float(info[j]))
+    
+    # get electrode coordinates 
+    elecx = np.array([allx[0]])
+    if yflag: 
+        elecy = np.array([ally[0]])
+    else: 
+        elecy = np.array([0])
+    if zflag: 
+        elecz = np.array([allz[0]])
+    else:
+        elecz = np.array([0])
+    
+    for i in range(1,len(allx)):
+        x = allx[i]
+        if yflag:
+            y = ally[i]
+        else:
+            y = 0 
+        if zflag: 
+            z = allz[i]
+        else:
+            z = 0 
+        dist = fdist(x, elecx, y, elecy, z, elecz)
+        if min(dist) != 0.0: 
+            elecx = np.append(elecx,x)
+            elecy = np.append(elecy,y)
+            elecz = np.append(elecz,z)
         
-    minx = min(allx)
-    x = [minx +(i*xspace) for i in range(1000)]
+    # sort by elec x? 
+    sortidx = np.argsort(elecx)
+    elecx = elecx[sortidx]
+    elecy = elecy[sortidx]
+    elecz = elecz[sortidx]
         
+    # loop through measurements and index 
     for i in range(nmeas):
         line = lines[i+dstart].strip()
         info = line.split()
@@ -1772,18 +1838,36 @@ def ABEMterrameterParser(fname):
         mx = float(info[xcolumns[2]])
         nx = float(info[xcolumns[3]])
         
-        a[i] = x.index(ax) + 1 
-        b[i] = x.index(bx) + 1 
-        m[i] = x.index(mx) + 1 
-        n[i] = x.index(nx) + 1 
+        ay = float(info[ycolumns[0]])
+        by = float(info[ycolumns[1]])
+        my = float(info[ycolumns[2]])
+        ny = float(info[ycolumns[3]])
         
-        tr[i] = float(info[rcolumn])
+        az = float(info[zcolumns[0]])
+        bz = float(info[zcolumns[1]])
+        mz = float(info[zcolumns[2]])
+        nz = float(info[zcolumns[3]])
+        
+        a[i] = getIndex(ax, elecx, ay, elecy, az, elecz) + 1 
+        b[i] = getIndex(bx, elecx, by, elecy, bz, elecz) + 1 
+        m[i] = getIndex(mx, elecx, my, elecy, mz, elecz) + 1 
+        n[i] = getIndex(nx, elecx, ny, elecy, nz, elecz) + 1 
+        
+        tr[i] = float(info[rcolumn]) # transfer resistance 
         
         if ipflag: 
-            ip[i] = float(info[-1])
+            ip[i] = float(info[pcolumn])
     
     data = {'a':a, 'b':b, 'm':m, 'n':n, 'resist':tr, 'ip':ip}
-    return data 
+    df = pd.DataFrame(data)
+    elec = pd.DataFrame({'x':elecx, 'y':elecy, 'z':elecz})
+    
+    if appres: 
+        k = geom_factor_3D(df, np.c_[elecx, elecy, elecy], [12])
+        df['Rho'] = tr # whats reported as tr is actaully apparent resistivity 
+        df.loc[:,'resist'] = np.array(tr)/k # divide pa by k to get tr 
+        
+    return elec, df 
     
     
 #%% 

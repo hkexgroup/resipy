@@ -2154,8 +2154,8 @@ class Mesh:
             
             #save to temperory directory 
             folder = tempfile.TemporaryDirectory()
-            fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
-            nmesh.vtk(fname)
+            fname = os.path.join(folder.name, '__to_pv_mesh.vtu')
+            nmesh.vtu(fname)
             self.pvmesh = pv.read(fname) # read in temporary file 
             folder.cleanup()
             
@@ -3289,6 +3289,8 @@ class Mesh:
         fh.write("CELL_DATA %i\n"%self.numel)
         df = self.df
         for i,key in enumerate(df.keys()):
+            if key in ['X','Y','Z','elm_id','cellType']: 
+                continue 
             fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
             fh.write("LOOKUP_TABLE default\n")
             X = np.array(df[key])
@@ -3356,7 +3358,7 @@ class Mesh:
             
         fh.close()
         
-    def toCsv(self,file_name='mesh.csv'):
+    def csv(self,file_name='mesh.csv'):
         """ Write a .csv file of the mesh, the first 3 columns are the element 
         centres at coordinates x,y,z and the rest of the columns are the 
         attributes in the df
@@ -3408,8 +3410,7 @@ class Mesh:
         """
         if isinstance(file_name,str)==False:
             raise NameError("file_name argument must be a string")
-        if self.cell_type[0] != 11:
-            warnings.warn('xyz export intended for voxel meshes only')
+
         if not file_name.lower().endswith('.xyz'):
             file_name += '.xyz'
             
@@ -3534,7 +3535,7 @@ class Mesh:
     
     def vts(self,file_name='mesh.vts',x0=None,y0=None,a=0):
         """
-        Structured grid file, therefore must be a Voxel type mesh. Not that 
+        Structured grid file, therefore must be a Voxel type mesh. Note that 
         national grid parameters are only commented in the resulting vts file 
         for now. 
 
@@ -3587,7 +3588,7 @@ class Mesh:
         writeXMLline('StructuredGrid WholeExtent='+voxel_info,tab=1)
         writeXMLline('Piece Extent='+voxel_info, tab=1)
         
-        # TODO: write out point data
+        # TODO: write out point data?? 
         writeXMLline('PointData', tab=2)
         writeXMLline('/PointData', tab=2)
         
@@ -3619,6 +3620,129 @@ class Mesh:
         
         fh.close()
         
+    def vtu(self,file_name='mesh.vtu'):
+        """
+        Unstructured xml type grid file. 
+        
+        Parameters
+        ----------
+        file_name : str, optional
+            Path to output file. The default is 'mesh.vtu'.
+   
+        Returns
+        -------
+        ~.vts: file 
+            vts file written to file_name location. 
+   
+        """
+        fh = open(file_name,'w')
+        
+        def writeXMLline(text,bracket=True,tab=0):
+            for i in range(tab):
+                fh.write('\t')
+            if bracket: 
+                fh.write('<')
+            fh.write('{:}'.format(text))
+            if bracket:
+                fh.write('>')
+            fh.write('\n')
+            
+        def writeXMLarray(X):
+            # tab = 5
+            j = 0 
+            text = '' 
+            for i in range(len(X)): 
+                if isinstance(X[i],int):
+                    text += '{:d} '.format(X[i])
+                else: 
+                    text += '{:f} '.format(X[i])
+                j += 1 
+                if j == 5: 
+                    writeXMLline(text,False,5)
+                    j = 0 
+                    text = ''  
+            if j < 5: # write out last line 
+                writeXMLline(text,False,5)
+                
+        
+        data_header_template = 'DataArray type="Float64" Name="{:s}" format="ascii" RangeMin="{:f}" RangeMax="{:f}"'
+        point_header_template = 'DataArray type="Float64" Name="Points" NumberOfComponents="3" format="ascii" RangeMin="{:f}" RangeMax="{:f}"'
+        cell_header_template = 'DataArray type="Int64" Name="connectivity" format="ascii" RangeMin="0" RangeMax="{:f}"'
+        ofst_header_template = 'DataArray type="Int64" Name="offsets" format="ascii" RangeMin="{:d}" RangeMax="{:d}"'
+        type_header_template = 'DataArray type="UInt8" Name="types" format="ascii" RangeMin="{:d}" RangeMax="{:d}"'
+       
+        writeXMLline('VTKFile type="UnstructuredGrid" version="1.0" byte_order="LittleEndian" header_type="UInt64"')
+        writeXMLline('UnstructuredGrid',tab=1)
+        writeXMLline('Piece NumberOfPoints="%i" NumberOfCells="%i"'%(self.numnp, self.numel), tab=2)
+        
+        # write out point data
+        writeXMLline('PointData', tab=3)
+        for column in self.ptdf.columns:
+            X = self.ptdf[column].values 
+            header = data_header_template.format(column, np.min(X), np.max(X))
+            writeXMLline(header, tab=4)
+            X[np.isnan(X)] = -9999
+            writeXMLarray(X)
+            writeXMLline('/DataArray',tab=4)
+        writeXMLline('/PointData', tab=3)
+        
+        # write cell data 
+        writeXMLline('CellData',tab=3)
+        for column in self.df.columns:
+            if column in ['X','Y','Z','elm_id','cellType']: 
+                continue 
+            X = self.df[column].values 
+            header = data_header_template.format(column, np.min(X), np.max(X))
+            writeXMLline(header,tab=4)
+            X[np.isnan(X)] = -9999
+            writeXMLarray(X)
+            writeXMLline('/DataArray',tab=4)
+        writeXMLline('/CellData',tab=3)
+        
+        # write out node/point coordinates 
+        writeXMLline('Points',tab=3)
+        header = point_header_template.format(np.min(self.node.flatten()), np.max(self.node.flatten()))
+        writeXMLline(header, tab=4)
+        for i in range(self.numnp):
+            line = '{:f}\t{:f}\t{:f}'.format(self.node[i,0], self.node[i,1], self.node[i,2])
+            writeXMLline(line, False, 5)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline('/Points',tab=3)
+        
+        # write out connection matrix 
+        writeXMLline('Cells',tab=3)
+        header = cell_header_template.format(self.numel-1)
+        writeXMLline(header,tab=4)
+        for i in range(self.numel):
+            text = ''
+            for j in range(self.connection.shape[1]):
+                text += '{:d}\t'.format(self.connection[i,j])
+            writeXMLline(text,False,5)
+        writeXMLline('/DataArray',tab=4)
+        # write out offsets (take the number of nodes per element, and write out its times table)
+        npere = self.type2VertsNo()
+        offsets = [npere]*self.numel 
+        for i in range(1, self.numel):
+            offsets[i] = (i+1)*npere 
+        header = ofst_header_template.format(min(offsets),max(offsets))
+        writeXMLline(header,tab=4)
+        writeXMLarray(offsets)
+        writeXMLline('/DataArray',tab=4)
+        
+        # dont forget the cell types! 
+        cell_type = [int(self.cell_type[0])]*self.numel 
+        header = type_header_template.format(cell_type[0], cell_type[0])
+        writeXMLline(header,tab=4)
+        writeXMLarray(cell_type)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline('/Cells',tab=3)
+        
+        # closing lines 
+        writeXMLline('/Piece',tab=2)
+        writeXMLline('/UnstructuredGrid',tab=1)
+        writeXMLline('/VTKFile')
+        
+        fh.close()
         
     @staticmethod   # find paraview location in windows    
     def findParaview():
@@ -3853,7 +3977,7 @@ class Mesh:
         
     def saveMesh(self, fname, ftype=None):
         """Save mesh into a file. Available formats are .dat, .vtk, .csv, .xyz,
-        and .node. .xyz is a special case where the mesh should be transformed 
+        and .node. .vts is a special case where the mesh should be transformed 
         into a voxel mesh first. 
 
         Parameters
@@ -3867,7 +3991,7 @@ class Mesh:
             raise TypeError('fname needs to be a string!')
         
         #determine file type 
-        atypes = ['dat','node','vtk','vts','csv', 'xyz']
+        atypes = sorted(['dat','node','vtk','vts','vtu','csv', 'xyz'])
         if ftype is None:#guess
             for a in atypes:
                 if fname.endswith('.' + a):
@@ -3887,8 +4011,10 @@ class Mesh:
             self.dat(fname)
         elif ftype == 'vtk':
             self.vtk(fname)
+        elif ftype == 'vtu':
+            self.vtu(fname)
         elif ftype == 'csv':
-            self.toCsv(fname)
+            self.csv(fname)
         elif ftype == 'node':
             self.exportTetgenMesh(fname.replace('.node',''))
         elif ftype == 'xyz':
@@ -3901,7 +4027,7 @@ class Mesh:
     def exportMesh(self, fname, ftype=None, coordLocal=False, coordParam=None, 
                    voxel=False, meshParam=None):
         """
-        Export mesh into with coordinate rotation data 
+        Export mesh into other formats, allowing for coordinate rotation.  
         
         Parameters
         ----------
@@ -3919,6 +4045,7 @@ class Mesh:
             if coordLocal: 
                 warnings.warn('VTS export will be written in a local grid format!')
             coordLocal = False 
+            voxel = True # also vts must be a voxel type format! 
             
         if coordLocal and coordParam is None: 
             coordParam = {}
@@ -3933,13 +4060,6 @@ class Mesh:
             else:
                 coordParam['x0'] = np.min(self.node[:,0])
                 coordParam['y0'] = np.min(self.node[:,1])
-                
-        xyz = False 
-        if ftype is not None and ftype.endswith('xyz'): 
-            # special case where we want to enforce two things 
-            # 1) export is a voxel mesh 
-            # 2) xyz file is written in local coordinates with a conversion file 
-            xyz = True 
         
         kwargs = {} 
         kwargs['cl_factor'] = 1 # force mesh to the extent of the electrodes 
@@ -3949,7 +4069,11 @@ class Mesh:
             if 'fmd' in meshParam.keys():
                 kwargs['fmd'] = meshParam['fmd']
                 
-        if voxel or xyz: 
+        if self.elec is not None:
+            dist = np.unique(findDist(self.elec[:,0], self.elec[:,1], self.elec[:,2]))[1]
+            kwargs['cl'] = dist/2 
+                
+        if voxel: 
             mesh = self.toVoxelMesh(**kwargs)
         else:
             mesh = self.copy() 
@@ -5050,12 +5174,12 @@ def quad(dx,dy):
     else:
         return 3 
     
-def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
+def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True):
     """
     Create control points for surface electrodes in 3D (or 2d borehole electrodes)
     """
     if min_r is None:
-        min_r = r 
+        min_r = r
     nelec = len(elec_x)
     tree = cKDTree(np.c_[elec_x,elec_y])
     _,idx = tree.query(np.c_[elec_x,elec_y],3)
@@ -5067,11 +5191,9 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
     addrx = [0,r,0,-r]
     
     if nelec < 4:
-        for i in range(nelec):
-            for j in range(4):
-                xstack.append(elec_x[i] + addrx[j]) 
-                ystack.append(elec_y[i] + addry[j]) 
-    else: 
+        check_quadrant = False 
+    
+    if check_quadrant: 
         for i in range(nelec):
             dx0 = elec_x[idx[i,1]] - elec_x[i] 
             dx1 = elec_x[idx[i,2]] - elec_x[i]
@@ -5082,11 +5204,17 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None):
             q1 = quad(dx1, dy1) # quadrant 
             qs = [q0,q1]
             
-            # avoid adding points in any known quadrant 
+            # avoid adding points in direction of electrode array / line 
+            # priorities offline control points 
             for j in range(4):
                 if j not in qs: 
                     xstack.append(elec_x[i] + addrx[j]) 
                     ystack.append(elec_y[i] + addry[j]) 
+    else: 
+        for i in range(nelec):
+            for j in range(4):
+                xstack.append(elec_x[i] + addrx[j]) 
+                ystack.append(elec_y[i] + addry[j]) 
                 
     xstack = np.array(xstack)
     ystack = np.array(ystack)
@@ -5638,17 +5766,34 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     elif not whole_space: # make some of our own control points in this case
         elec = np.c_[elec_x, elec_y, elec_z] # all electrodes 
         tree = cKDTree(elec) 
-        idist,_ = tree.query(elec,2) 
+        idist,_ = tree.query(elec,5) 
         
         cpx = np.array([])
         cpy = np.array([])
         cpz = np.array([])
         cpl = np.array([])
         
+        ## control point parameters 
+        cps = np.mean(idist[:,1]) # control point spacing 
+        check_quadrant = True 
+        # reduce cps for tightly spaced electrodes 
+        tight_count = 0 
+        total_count = 0 
+        for i in range(idist.shape[0]):
+            for j in range(1,idist.shape[1]):
+                if abs(cps - idist[i,j]) < (cps*0.2):
+                    tight_count += 1 
+                total_count += 1 
+        
+        if (tight_count/total_count)>0.8:
+            cps = cps/2
+            # print('Tightly packed electrodes detected! Changing control point constraints')
+            check_quadrant = False 
+            
         if len(surf_elec_x)>0: 
             # control points in x y coordinates 
             _cpx, _cpy = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
-                                                np.mean(idist[:,1]), cl*1.5)
+                                                cps, cl, check_quadrant)
             _cpz = np.zeros_like(_cpx)
         
             fmdx = _cpx[::3]

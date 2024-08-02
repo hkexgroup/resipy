@@ -1134,24 +1134,27 @@ class App(QMainWindow):
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
             elif index == 7:
+                self.ftype = 'ABEM-Terrameter'
+                self.fformat = 'DAT (*.DAT *.dat)'
+            elif index == 8:
                 self.ftype = 'Lippmann'
                 self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt *.TXT)'
-            elif index == 8:
+            elif index == 9:
                 self.ftype = 'ARES'
                 self.fformat = 'ARES (*.2dm *.2DM)'
-            elif index == 9:
+            elif index == 10:
                 self.ftype = 'BERT'
                 self.fformat = 'BERT (*.dat *.DAT *.ohm *.OHM)'
-            elif index == 10:
+            elif index == 11:
                 self.ftype = 'E4D'
                 self.fformat = 'srv (*.srv *.SRV)'
-            elif index == 11:
+            elif index == 12:
                 self.ftype = 'DAS-1'
                 self.fformat = 'Data (*.dat *.data *.DAT *.DATA *.txt *.TXT)'
-            elif index == 12:
+            elif index == 13:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
-            elif index == 13:
+            elif index == 14:
                 self.ftype = 'Merged'
                 self.fformat = 'Files (*.csv *.CSV *.txt *.TXT)'
                 self.iMerged = True 
@@ -1167,6 +1170,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('PRIME/RESIMGR')
         self.ftypeCombo.addItem('Sting')
         self.ftypeCombo.addItem('ABEM-Lund')
+        self.ftypeCombo.addItem('ABEM-Terrameter')
         self.ftypeCombo.addItem('Lippmann')
         self.ftypeCombo.addItem('ARES (beta)')
         self.ftypeCombo.addItem('BERT')
@@ -6071,8 +6075,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         # short cut to export tab 
         def change2ExportTab():
-            self.tabs.setCurrentIndex(6)
-            self.errorGraphs.setCurrentIndex(2)
+            self.tabs.setCurrentIndex(7)
         self.exportShortCut = QPushButton('Export')
         self.exportShortCut.clicked.connect(change2ExportTab)
         
@@ -6339,6 +6342,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         logLayout.addLayout(logRightLayout)
         
         optsLayout = FlowLayout()
+        # optsLayout = QHBoxLayout()
         optsLayout.addWidget(self.surveyCombo)#, 15)
         optsLayout.addWidget(self.attrCombo)#, 20)
         optsLayout.addWidget(self.vminLabel)
@@ -6632,9 +6636,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         #%% Post processing - export tab 
         self.tabExportData = QTabWidget()
-        self.errorGraphs.addTab(self.tabExportData,'Export')
+        self.tabs.addTab(self.tabExportData,'Export')
+        # self.errorGraphs.addTab(self.tabExportData,'Export')
         self.exportGrid = QGridLayout() # main grid 
-        
+
         ## old save button function 
         # def saveBtnFunc():
         #     fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
@@ -6734,7 +6739,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self, 
                 'Open File', 
                 self.datadir,
-                'VTK (*.vtk);;NODE (*.node);;DAT (*.dat)')
+                'VTK (*.vtk);;NODE (*.node);;DAT (*.dat) ;; VTU (*.vtu)')
             if mfpathout != '':
                 voxel = False 
                 _forceLocal = False 
@@ -6782,7 +6787,57 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                                _forceLocal=_forceLocal)
                 self.writeLog('k.exportMeshResults("{:s}","{:s}",{:s},{:s})'.format(fdir,ftype,str(voxel),str(_forceLocal)))
                 self.infoDump('Successfully saved meshed results!')
+                
+        def checkMeshResultsBtnQbox():
+            ftype = str(self.exportResultsFtypeMenu.currentText())
+
+            if ftype=='.vts':
+                # vts format means that results must be in voxel format 
+                self.exportVoxelResultsCheck.setChecked(True)
+                self.exportVoxelResultsCheck.setEnabled(False)
+                # likewise must be in local coordinates 
+                self.exportLocalGridResultsCheck.setChecked(True)
+                self.exportLocalGridResultsCheck.setEnabled(False)
+            else: 
+                self.exportVoxelResultsCheck.setEnabled(True)
+                self.exportLocalGridResultsCheck.setEnabled(True)
+                
+        def checkActiveButtons():
+            if self.tabs.currentIndex() != 7: 
+                return 
             
+            buttons = (
+                self.exportPyLogButton,
+                self.exportPpDataButton,
+                self.exportMeshButton, 
+                self.exportWdButton,
+                self.exportElecButton, 
+                self.exportResultsButton, 
+                )
+            
+            # by default set all buttons disabled 
+            for button in buttons:
+                button.setEnabled(False)
+                
+            if self.project is None: 
+                return 
+            
+            if self.project is not None: 
+                buttons[0].setEnabled(True)
+                buttons[3].setEnabled(True)
+                
+            if len(self.project.surveys) > 0:
+                buttons[1].setEnabled(True)
+                
+            if self.project.mesh is not None: 
+                buttons[2].setEnabled(True)
+                
+            if self.project.elec is not None:
+                buttons[4].setEnabled(True)
+                
+            if len(self.project.meshResults) > 0:  
+                buttons[5].setEnabled(True)
+                   
 
         ## left hand side of tab
         gcolumn = 0 
@@ -6905,14 +6960,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportResultsBox.addWidget(self.exportVoxelResultsCheck)
         self.exportResultsFtypeMenu = QComboBox() 
         self.exportResultsFtypeMenu.addItem('.vtk')
+        self.exportResultsFtypeMenu.addItem('.vtu')
+        self.exportResultsFtypeMenu.addItem('.vts')
         self.exportResultsFtypeMenu.addItem('.csv')
         self.exportResultsFtypeMenu.addItem('.xyz')
         self.exportResultsFtypeMenu.addItem('.dat')
-        # self.exportResultsFtypeMenu.addItem('.node') # not sure if we need .node here 
-        # self.exportResultsFtypeMenu.setFixedWidth(150)
+        # self.exportResultsFtypeMenu.addItem('.node') # not sure if we need .node here --> cant store cell arrays this way 
+        self.exportResultsFtypeMenu.currentIndexChanged.connect(checkMeshResultsBtnQbox) 
         self.exportResultsButton.clicked.connect(exportMeshResultsBtnFunc) 
         self.exportResultsBox.addWidget(self.exportResultsFtypeMenu)
-        
+
         # formatting the buttons etc... 
         nrow += 1 
         self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
@@ -6928,9 +6985,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportGrid.setRowStretch(self.exportGrid.rowCount()+1, 1)
         self.tabExportData.setLayout(self.exportGrid)
         
+        self.tabs.currentChanged.connect(checkActiveButtons)
+        
 
         #%% Project information (summary) tab 
         def getSummary():
+            if self.tabs.currentIndex() != 8: 
+                return 
             if self.project is None: 
                 text = 'No data has been imported' 
                 self.projectInfoText.setText(text)
@@ -6946,8 +7007,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.projectInfoLayout.addWidget(self.projectInfoText)
         self.tabProjectInfo.setLayout(self.projectInfoLayout)
         self.tabs.currentChanged.connect(getSummary)
-        
-
         
 
         #%% Help tab
