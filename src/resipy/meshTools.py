@@ -12,10 +12,9 @@ Dependencies:
     python3 standard libaries
 """
 #import standard python packages
-import os, platform, warnings, psutil
+import os, platform, warnings, psutil, struct, base64, time, ntpath 
 from subprocess import PIPE, Popen
 import tempfile
-import time, ntpath
 import xml.etree.ElementTree as ET
 import numpy as np
 import pandas as pd
@@ -4452,31 +4451,49 @@ def vtuImport(file_path,order_nodes=True):
     """
     if os.path.getsize(file_path)==0: # So that people dont ask me why you cant read in an empty file, throw up this error. 
         raise ImportError("Provided mesh file is empty! Check that (c)R2/3t code has run correctly!")
-
-    # function to convert acsii data array to python list 
-    def child2Array(child):
-        if 'format' not in child.attrib.keys():
-            raise Exception('Cannot find format identifier in vtu file')
-        if child.attrib['format'] != 'ascii':
-            raise Exception('Vtu data array not of ASCII type, aborting...')
-        typ = float
-        if 'int' in child.attrib['type'].lower():
-            typ = int
-        t = child.text.strip()
-        t = t.replace('\n','')
-        return [typ(x) for x in t.split()]
-
+        
     # get vtu file information (not robust yet)
     root = ET.parse(file_path)
     for child in root.iter('VTKFile'):
-        # byte_order = child.attrib['byte_order']
+        byte_order = child.attrib['byte_order']
         vtk_type = child.attrib['type']
-        print(child.tag, child.attrib)
     
     if vtk_type != 'UnstructuredGrid':
         raise Exception('vtu file of unrecognised grid type, only unstructed grids allowed')
-        
-    # get ther number of cells and points 
+
+    # function to convert acsii data contained in an xml element array to python list 
+    def child2Array(child):
+        if 'format' not in child.attrib.keys():
+            raise Exception('Cannot find format identifier in vtu file')
+        fmt = child.attrib['format']
+        if fmt not in ['ascii','binary']: 
+            raise Exception('Vtu data array not of ASCII  or Binary type, aborting...')
+            
+        typ = float
+        bcode = '<d' # byte decoding code 
+        if byte_order == 'BigEndian':
+            bcode = '>d'
+        pad = 1 # padding 
+        if 'int' in child.attrib['type'].lower():
+            typ = int
+            bcode = bcode.replace('b','q') # change code to long int 
+            if 'uint8' in child.attrib['type'].lower():
+                bcode = bcode.replace('q','B') # change code to unsigned char 
+                pad = 8 
+            
+        t = child.text.strip() # get raw text 
+        if fmt == 'ascii': 
+            t = t.replace('\n','')
+            a = [typ(x) for x in t.split()]
+        else:
+            b64 = bytes(t, encoding='ascii') # convert to ascii with base64 binary 
+            b = base64.decodebytes(b64)
+            a = [u[0] for u in struct.iter_unpack(bcode,b)]
+            a = a[pad:]
+        return a 
+
+
+    # get the number of cells and points 
     for child in root.iter('Piece'):
         numnp = int(child.attrib['NumberOfPoints'])
         numel = int(child.attrib['NumberOfCells'])
@@ -4485,7 +4502,6 @@ def vtuImport(file_path,order_nodes=True):
     ptdf = pd.DataFrame()
     for child in root.iter('PointData'):
         for subchild in child.findall('DataArray'):
-            # print(subchild.tag, subchild.attrib)
             a = child2Array(subchild)
             ptdf[subchild.attrib['Name']]=a
             
@@ -4493,7 +4509,6 @@ def vtuImport(file_path,order_nodes=True):
     df = pd.DataFrame()
     for child in root.iter('CellData'):
         for subchild in child.findall('DataArray'):
-            # print(subchild.tag, subchild.attrib)
             a = child2Array(subchild)
             df[subchild.attrib['Name']]=a
             
@@ -4502,7 +4517,6 @@ def vtuImport(file_path,order_nodes=True):
         for subchild in child.findall('DataArray'):
             if not subchild.attrib['Name'] == 'Points':
                 continue 
-            # print(subchild.tag, subchild.attrib)
             ncomp = int(subchild.attrib['NumberOfComponents'])
             assert ncomp == 3 
             shape = (numnp,ncomp)
