@@ -16,6 +16,7 @@ import os, platform, warnings, psutil
 from subprocess import PIPE, Popen
 import tempfile
 import time, ntpath
+import xml.etree.ElementTree as ET
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -173,58 +174,6 @@ def findDist(elec_x, elec_y, elec_z): # find maximum and minimum electrode spaci
         z2 = elec_z[i]
         dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
     return dist.flatten() # array of all electrode distances 
-
-#%% write descrete points to a vtk file 
-def points2vtk (x,y,z,file_name="points.vtk",title='points',data=None):
-    """
-    Function makes a .vtk file for some xyz coordinates. optional argument
-    renames the name of the file (needs file path also) (default is "points.vtk"). 
-    title is the name of the vtk file.
-            
-    Parameters
-    ----------
-    x : list, tuple, np array
-        X coordinates of points.
-    y : list, tuple, np array
-        Y coordinates of points.
-    z : list, tuple, np array
-        Z coordinates of points.
-    file_name : string, optional
-        Path to saved file, defualts to 'points.vtk' in current working directory.
-    title : string, optional
-        Title of vtk file.
-            
-    Returns
-    -------
-    ~.vtk : file
-    """
-    #error check
-    if len(x) != len(y) or len(x) != len(z):
-        raise ValueError('mis-match between vector lengths')
-    
-    fh=open(file_name,'w');#open file handle
-    #add header information
-    fh.write('# vtk DataFile Version 3.0\n')
-    fh.write(title+'\n')
-    fh.write('ASCII\n')
-    fh.write('DATASET POLYDATA\n')
-    #add data
-    fh.write('POINTS      %i double\n'%len(x))
-    [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
-    
-    if data is not None and len(data.keys())>0:
-        fh.write("POINT_DATA %i\n"%len(x))
-        for i,key in enumerate(data.keys()):
-            fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
-            fh.write("LOOKUP_TABLE default\n")
-            X = np.array(data[key])
-            X[np.isnan(X)]=-9999
-            [fh.write("%16.8f "%X[j]) for j in range(len(x))]
-            fh.write("\n")
-    
-    fh.close() 
-    
-    
 
 #%% check mac version for wine
 def getMacOSVersion():
@@ -4497,6 +4446,110 @@ def vtk_import_fmt4(file_path,order_nodes=True):
     mesh.mesh_title = title
     return mesh
 
+
+def vtuImport(file_path,order_nodes=True):
+    """Vtk importer for newer format (not fully validated)
+    """
+    if os.path.getsize(file_path)==0: # So that people dont ask me why you cant read in an empty file, throw up this error. 
+        raise ImportError("Provided mesh file is empty! Check that (c)R2/3t code has run correctly!")
+
+    # function to convert acsii data array to python list 
+    def child2Array(child):
+        if 'format' not in child.attrib.keys():
+            raise Exception('Cannot find format identifier in vtu file')
+        if child.attrib['format'] != 'ascii':
+            raise Exception('Vtu data array not of ASCII type, aborting...')
+        typ = float
+        if 'int' in child.attrib['type'].lower():
+            typ = int
+        t = child.text.strip()
+        t = t.replace('\n','')
+        return [typ(x) for x in t.split()]
+
+    # get vtu file information (not robust yet)
+    root = ET.parse(file_path)
+    for child in root.iter('VTKFile'):
+        # byte_order = child.attrib['byte_order']
+        vtk_type = child.attrib['type']
+        print(child.tag, child.attrib)
+    
+    if vtk_type != 'UnstructuredGrid':
+        raise Exception('vtu file of unrecognised grid type, only unstructed grids allowed')
+        
+    # get ther number of cells and points 
+    for child in root.iter('Piece'):
+        numnp = int(child.attrib['NumberOfPoints'])
+        numel = int(child.attrib['NumberOfCells'])
+        
+    # get point data 
+    ptdf = pd.DataFrame()
+    for child in root.iter('PointData'):
+        for subchild in child.findall('DataArray'):
+            # print(subchild.tag, subchild.attrib)
+            a = child2Array(subchild)
+            ptdf[subchild.attrib['Name']]=a
+            
+    # get cell data 
+    df = pd.DataFrame()
+    for child in root.iter('CellData'):
+        for subchild in child.findall('DataArray'):
+            # print(subchild.tag, subchild.attrib)
+            a = child2Array(subchild)
+            df[subchild.attrib['Name']]=a
+            
+    # get node coordinates 
+    for child in root.iter('Points'):
+        for subchild in child.findall('DataArray'):
+            if not subchild.attrib['Name'] == 'Points':
+                continue 
+            # print(subchild.tag, subchild.attrib)
+            ncomp = int(subchild.attrib['NumberOfComponents'])
+            assert ncomp == 3 
+            shape = (numnp,ncomp)
+            node = np.array(child2Array(subchild)).reshape(shape)
+            
+    # get connectivity matrix properties 
+    offset = None 
+    cshape = None 
+    for child in root.iter('Cells'):
+        for subchild in child.findall('DataArray'):
+            if not subchild.attrib['Name'] == 'offsets':
+                continue 
+            offset = int(subchild.attrib['RangeMin'])
+            cshape = (numel,offset)
+            
+    if offset is None: 
+        raise Exception('Cannot find offsets element in vtu file, cannot build connection matrix! Aborting...')
+            
+    cellType = None 
+    for child in root.iter('Cells'):
+        for subchild in child.findall('DataArray'):
+            if not subchild.attrib['Name'] == 'types':
+                continue 
+            cellType = child2Array(subchild)
+            
+    # now find connectivity matrix 
+    for child in root.iter('Cells'):
+        for subchild in child.findall('DataArray'):
+            if not subchild.attrib['Name'] == 'connectivity':
+                continue 
+            connection = np.array(child2Array(subchild)).reshape(cshape)
+                
+    mesh = Mesh(node[:,0],#x coordinates of nodes 
+                node[:,1],#y coordinates of nodes
+                node[:,2],#z coordinates of nodes 
+                connection,#nodes of element vertices
+                cellType,#according to vtk format
+                file_path,
+                order_nodes) 
+    
+    #add attributes / cell parameters 
+    mesh.df = df 
+    mesh.ptdf = ptdf 
+
+    return mesh
+
+
 #%% import mesh from native .dat format
 def dat_import(file_path='mesh.dat', order_nodes=True):
     """ Import R2/cR2/R3t/cR3t .dat kind of mesh. 
@@ -6594,6 +6647,8 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
     path,ext = os.path.splitext(file_path)
     if ext == '.vtk':
         mesh = vtk_import(file_path, order_nodes=order_nodes)
+    elif ext == '.vtu':
+        mesh = vtuImport(file_path, order_nodes=order_nodes)
     elif ext == '.msh':
         mesh_dict = gw.mshParse(file_path, debug=False)
 
@@ -6700,3 +6755,178 @@ def mergeMeshes(meshList):
     mmesh.zone = zone
         
     return mmesh # merged mesh  
+
+#%% write descrete points to a vtk file 
+def points2vtk (x,y,z,fname="points.vtk",title='points',data=None, file_name=None):
+    """
+    Function makes a .vtk file for some xyz coordinates. optional argument
+    renames the name of the file (needs file path also) (default is "points.vtk"). 
+    title is the name of the vtk file.
+            
+    Parameters
+    ----------
+    x : list, tuple, np array
+        X coordinates of points.
+    y : list, tuple, np array
+        Y coordinates of points.
+    z : list, tuple, np array
+        Z coordinates of points.
+    fname : string, optional
+        Path to saved file, defualts to 'points.vtk' in current working directory.
+    title : string, optional
+        Title of vtk file.
+    data: dict, pd.DataFrame, optional 
+        Point data. 
+    file_name: str, optional
+        Same input as fname but kept for backwards compatibility 
+            
+    Returns
+    -------
+    ~.vtk : file
+    """
+    #error check
+    if len(x) != len(y) or len(x) != len(z):
+        raise ValueError('mis-match between vector lengths')
+        
+    if file_name is not None:
+        fname = file_name 
+    
+    fh=open(fname,'w');#open file handle
+    #add header information
+    fh.write('# vtk DataFile Version 3.0\n')
+    fh.write(title+'\n')
+    fh.write('ASCII\n')
+    fh.write('DATASET POLYDATA\n')
+    #add data
+    fh.write('POINTS      %i double\n'%len(x))
+    [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
+    
+    if data is not None and len(data.keys())>0:
+        fh.write("POINT_DATA %i\n"%len(x))
+        for i,key in enumerate(data.keys()):
+            fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
+            fh.write("LOOKUP_TABLE default\n")
+            X = np.array(data[key])
+            X[np.isnan(X)]=-9999
+            [fh.write("%16.8f "%X[j]) for j in range(len(x))]
+            fh.write("\n")
+    
+    fh.close() 
+    
+def points2vtp (x,y,z,fname="points.vtk",title='points',data=None,file_name=None):
+    """
+    Function makes a .vtp file for some xyz coordinates. optional argument
+    renames the name of the file (needs file path also) (default is "points.vtp"). 
+            
+    Parameters
+    ----------
+    x : list, tuple, np array
+        X coordinates of points.
+    y : list, tuple, np array
+        Y coordinates of points.
+    z : list, tuple, np array
+        Z coordinates of points.
+    fname : string, optional
+        Path to saved file, defualts to 'points.vtk' in current working directory.
+    title : string, optional
+        Title of vtk file.
+    data: dict, pd.DataFrame, optional 
+        Point data. 
+    file_name: str, optional
+        Same input as fname but kept for backwards compatibility 
+            
+    Returns
+    -------
+    ~.vtk : file
+    """
+    #error check
+    if len(x) != len(y) or len(x) != len(z):
+        raise ValueError('mis-match between vector lengths')
+    
+    if file_name is not None:
+        fname = file_name 
+    
+    fh = open(fname,'w')
+    
+    def writeXMLline(text,bracket=True,tab=0):
+        for i in range(tab):
+            fh.write('\t')
+        if bracket: 
+            fh.write('<')
+        fh.write('{:}'.format(text))
+        if bracket:
+            fh.write('>')
+        fh.write('\n')
+        
+    def writeXMLarray(X):
+        # tab = 5
+        j = 0 
+        text = '' 
+        for i in range(len(X)): 
+            if isinstance(X[i],int):
+                text += '{:d} '.format(X[i])
+            else: 
+                text += '{:f} '.format(X[i])
+            j += 1 
+            if j == 5: 
+                writeXMLline(text,False,5)
+                j = 0 
+                text = ''  
+        if j < 5: # write out last line 
+            writeXMLline(text,False,5)
+            
+    
+    data_header_template = 'DataArray type="Float64" Name="{:s}" format="ascii" RangeMin="{:f}" RangeMax="{:f}"'
+    empty_header_template = 'DataArray type="Int64" Name="{:s}" format="ascii" RangeMin="1e+299" RangeMax="-1e+299"'
+    point_header_template = 'DataArray type="Float64" Name="Points" NumberOfComponents="3" format="ascii" RangeMin="{:f}" RangeMax="{:f}"'
+   
+    writeXMLline('VTKFile type="PolyData" version="1.0" byte_order="LittleEndian" header_type="UInt64"')
+    writeXMLline('PolyData',tab=1)
+    writeXMLline('Piece NumberOfPoints="%i" NumberOfVerts="0" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0"'%len(x), tab=2)
+    
+    # write out point data
+    writeXMLline('PointData', tab=3)
+    if data is not None: 
+        for column in data.keys():
+            X = data[column] 
+            header = data_header_template.format(column, np.min(X), np.max(X))
+            writeXMLline(header, tab=4)
+            X[np.isnan(X)] = -9999
+            writeXMLarray(X)
+            writeXMLline('/DataArray',tab=4)
+    writeXMLline('/PointData', tab=3)
+    
+    # write cell data 
+    writeXMLline('CellData',tab=3)
+    writeXMLline('/CellData',tab=3)
+    
+    # write out node/point coordinates 
+    writeXMLline('Points',tab=3)
+    points = np.c_[x,y,z]
+    header = point_header_template.format(np.min(points.flatten()), np.max(points.flatten()))
+    writeXMLline(header, tab=4)
+    for i in range(len(x)):
+        line = '{:f}\t{:f}\t{:f}'.format(points[i,0], points[i,1], points[i,2])
+        writeXMLline(line, False, 5)
+    writeXMLline('/DataArray',tab=4)
+    writeXMLline('/Points',tab=3)
+    
+    # write out other data arrays which are empty 
+    empty_datas = ['Verts','Lines','Strips','Polys']
+    for tag in empty_datas: 
+        writeXMLline(tag,tab=3)
+        writeXMLline(empty_header_template.format('connectivity'),tab=4)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline(empty_header_template.format('offsets'),tab=4)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline('/'+tag,tab=3)
+    
+    # closing lines 
+    writeXMLline('/Piece',tab=2)
+    writeXMLline('/PolyData',tab=1)
+    writeXMLline('/VTKFile')
+    
+    fh.close()
+    
+    
+    

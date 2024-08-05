@@ -6544,6 +6544,7 @@ class Project(object): # Project master class instanciated by the GUI
         outputname : str, optional
             Output path with extension. Available mesh format are:
                 - .vtk (Paraview)
+                - .vtp (Paraview)
                 - .dat (R* codes)
                 - .csv (general)
             If not provided the electrode coordinates are saved in the working directory
@@ -6583,8 +6584,8 @@ class Project(object): # Project master class instanciated by the GUI
             eleccopy.to_csv(outputname,index=False,sep='\t')
         elif outputname.endswith('.vtk'):
             mt.points2vtk(eleccopy.x, eleccopy.y, eleccopy.z, outputname, 'Electrodes')
-        # elif outputname.endswith('.vtu'): # todo, add this in meshTools 
-        #     mt.points2vtu(eleccopy.x, eleccopy.y, eleccopy.z, outputname, 'Electrodes')
+        elif outputname.endswith('.vtp'): # todo, add this in meshTools 
+            mt.points2vtp(eleccopy.x, eleccopy.y, eleccopy.z, outputname, 'Electrodes')
         else:
             raise Exception('Unrecognised output extension type')
             
