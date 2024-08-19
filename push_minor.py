@@ -32,7 +32,7 @@ with open('src/setup.py', 'r') as f:
 with open('src/setup.py', 'w') as f:
     f.write(x.replace(version_old, version_new))
 
-with open('src/Version.details', 'w') as f:
+with open('src/Version.details', 'r') as f:
     x = f.read()
 with open('src/Version.details', 'w') as f:
     f.write(x.replace(version_old, version_new).replace(','.join(version_old.split('.')), ','.join(version_new.split('.'))))
