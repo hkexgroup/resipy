@@ -300,7 +300,7 @@ class MatplotlibWidget(QWidget):
         self.canvas.draw()
 
 
-    def plot(self, callback, aspect = None, threed=False):
+    def plot(self, callback, aspect=None, threed=False):
         ''' call a callback plot function and give it the ax to plot to
         '''
         self.figure.clear() # need to clear the figure with the colorbar as well
@@ -1578,6 +1578,19 @@ class App(QMainWindow):
         self.fnamesCombo.activated.connect(fnamesComboFunc)
         self.fnamesCombo.hide()
         
+        # self.pcmapComboLabel = QLabel('Colormap')
+        cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
+                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r']
+        def pcmapComboFunc(index):
+            self.pParams['cmap'] = cmaps[index]
+            self.pParamsIP['cmap'] = cmaps[index]
+        self.pcmapCombo = QComboBox()
+        for cmap in cmaps:
+            self.pcmapCombo.addItem(cmap)
+        self.pcmapCombo.setCurrentIndex(0)
+        self.pcmapCombo.activated.connect(pcmapComboFunc)
+        
+        
         def psContourFunc(state):
             if state  == Qt.Checked:
                 self.pParams['contour'] = True
@@ -1639,8 +1652,8 @@ class App(QMainWindow):
         self.pvmaxIP.setValidator(QDoubleValidator())
         self.pvmaxIP.setVisible(False)
         
-        self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark'])}
-        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark'])}
+        self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark']), 'cmap': 'viridis'}
+        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark']), 'cmap': 'viridis'}
         def prescaleBtnFunc():
             if self.project is not None:
                 self.pParams['vmin'] = float(self.pvmin.text()) if self.pvmin.text() != '' else None
@@ -1737,6 +1750,7 @@ class App(QMainWindow):
         self.hbox5.addWidget(self.pvminIP)
         self.hbox5.addWidget(self.pvmaxIPLabel)
         self.hbox5.addWidget(self.pvmaxIP)
+        self.hbox5.addWidget(self.pcmapCombo)
         self.hbox5.addWidget(self.prescaleBtn)
         self.hbox5.addWidget(self.fnamesComboLabel)
         self.hbox5.addWidget(self.fnamesCombo)
@@ -4852,11 +4866,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.pseudo3Dplotter.clear() # clear all actors
 
                 self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
-                                              strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
-                # self.fwdContour.setDisabled(True)
+                                        strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']),
+                                        cmap=self.pcmapCombo.currentText())
                 self.pseudoFramefwd.setVisible(True)
             else:
-                self.mwFwdPseudo.plot(self.project.surveys[0].showPseudo, aspect='auto')
+                self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
+                self.mwFwdPseudo.replot(aspect='auto', cmap=self.pcmapCombo.currentText())
                 
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)
@@ -4867,10 +4882,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.mwFwdPseudoIP.hide()
                     self.pseudo3DplotterIP.clear() # clear all actors 
                     self.project.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, 
-                                                         strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
+                                                         strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']),
+                                                         cmap=self.pcmapCombo.currentText())
                     self.pseudoFrameIPfwd.setVisible(True)
                 else:
-                    self.mwFwdPseudoIP.plot(self.project.surveys[0].showPseudoIP, aspect='auto')
+                    self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
+                    self.mwFwdPseudoIP.replot(aspect='auto', cmap=self.pcmapCombo.currentText())
                 
         self.forwardBtn = QPushButton('Forward Modelling')
         self.forwardBtn.setAutoDefault(True)
@@ -4918,18 +4935,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if pvfound and self.project.typ[-1] == 't': 
                 self.pseudo3Dplotter.clear() # clear all actors
                 self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, contour=contour,
-                                                   strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
+                                                   strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']),
+                                                   cmap=self.pcmapCombo.currentText())
                 if self.project.typ[0] == 'c':
                     self.pseudo3DplotterIP.clear() # clear all actors 
                     self.project.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, contour=contour,
-                                                         strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
+                                                         strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']),
+                                                         cmap=self.pcmapCombo.currentText())
             else:    
                 self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
-                self.mwFwdPseudo.replot(aspect='auto', contour=contour)
+                self.mwFwdPseudo.replot(aspect='auto', contour=contour, cmap=self.pcmapCombo.currentText())
                 self.writeLog('k.showPseudo(contour={:s})'.format(str(contour)))
                 if self.project.typ[0] == 'c':
                     self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
-                    self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
+                    self.mwFwdPseudoIP.replot(aspect='auto', contour=contour, cmap=self.pcmapCombo.currentText())
                     self.writeLog('k.showPseudoIP(contour={:s})'.format(str(contour)))
         
         self.fwdContour = QCheckBox('Contour')
@@ -7453,7 +7472,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.pseudoPlotter.clear()
             self.project.pseudo3DSurvey.showPseudo(ax=self.pseudoPlotter, threed=True, vmin=self.pParams['vmin'],
                                                    contour=self.psContourCheck.isChecked(),
-                                                   vmax=self.pParams['vmax'], darkMode=eval(resipySettings.param['dark']))
+                                                   vmax=self.pParams['vmax'], darkMode=eval(resipySettings.param['dark']), cmap=self.pcmapCombo.currentText())
         else:
             self.mwPseudo.setCallback(self.project.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
