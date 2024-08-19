@@ -39,6 +39,8 @@ with open('src/Version.details', 'w') as f:
 
 # commit version increase
 os.system('git add src/resipy/Project.py')
+os.system('git add src/setup.py')
+os.system('git add src/Version.details')
 os.system(f'git commit -m "Update to v{version_new}"')
 
 print("=== Create tag and merge request ===")
