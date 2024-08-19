@@ -27,11 +27,15 @@ version_new = '.'.join(version)
 with open('src/resipy/Project.py', 'w') as f:
     f.write(x.replace(version_old, version_new))
    
-with open('src/setup.py', 'rw') as f:
-    f.write(f.read().replace(version_old, version_new))
+with open('src/setup.py', 'r') as f:
+    x = f.read()
+with open('src/setup.py', 'w') as f:
+    f.write(x.replace(version_old, version_new))
 
-with open('src/Version.details', 'rw') as f:
-    f.write(f.read().replace(version_old, version_new).replace(','.join(version_old.split('.')), ','.join(version_new.split('.'))))
+with open('src/Version.details', 'w') as f:
+    x = f.read()
+with open('src/Version.details', 'w') as f:
+    f.write(x.replace(version_old, version_new).replace(','.join(version_old.split('.')), ','.join(version_new.split('.'))))
 
 # commit version increase
 os.system('git add src/resipy/Project.py')
