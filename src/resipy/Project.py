@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.5.5' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.5.10' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -4278,7 +4278,7 @@ class Project(object): # Project master class instanciated by the GUI
 
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
-               rmDirTree=True, modelDOI=False):
+               rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.  
 
@@ -4316,6 +4316,13 @@ class Project(object): # Project master class instanciated by the GUI
             If `True`, the Depth of Investigation will be model by reinverting
             the data on with an initial res0 different of an order of magnitude.
             Note that this option is only available for *single* survey.
+        errResCol : str, optional
+            If no reciprocal data is present but an error column is supplied,
+            this error column can be used in the inversion. Note that the column
+            must contain a value for each quadrupole.
+        errIPCol : str, optioanl
+            If no reciprocal data, a user supplied column can be read as IP
+            error.
         """
         if dump is None:
             def dump(x):
@@ -4335,6 +4342,30 @@ class Project(object): # Project master class instanciated by the GUI
         for f in os.listdir(self.dirname):
             if f[:3] == 'f00':
                 os.remove(os.path.join(self.dirname, f))
+                
+        # deal with potential user supply error (res)
+        if errResCol is not None:
+            for survey in self.surveys:
+                if errResCol in survey.df.columns:
+                    if survey.df[errResCol].notnull().sum() == survey.df.shape[0]:
+                        survey.df['resError'] = survey.df[errResCol]
+                        err = True  # we assume that if the user supplied a column it's to use it as error
+                    else:
+                        dump('ERROR: ' + errResCol + ' does not contain a value for all quadrupoles.')
+                else:
+                    dump('ERROR: ' + errResCol + ' is not found in the dataframe.')
+
+        # deal with potential user supply error (ip)
+        if errIPCol is not None:
+            for survey in self.surveys:
+                if errIPCol in survey.df.columns:
+                    if survey.df[errIPCol].notnull().sum() == survey.df.shape[0]:
+                        survey.df['phaseError'] = survey.df[errIPCol]
+                        err = True  # we assume that if the user supplied a column it's to use it as error
+                    else:
+                        dump('ERROR: ' + errIPCol + ' does not contain a value for all quadrupoles.')
+                else:
+                    dump('ERROR: ' + errIPCol + ' is not found in the dataframe.')
             
         # run Oldenburg and Li DOI estimation
         if modelDOI is True:

@@ -259,6 +259,12 @@ k.fitErrorParabolaIP(index=-1, ax=ax)
 
 timings['methods-error-modelling'] = time.time() - tstart
 
+#%% test use of a user-supplied error for inversion
+k = Project()
+k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
+k.invert(errResCol='dev')  # use standard deviation as error weight
+timings['user-supplied-error'] = time.time() - tstart
+
 
 #%% mesh generation (will be tested in the cases)
 plt.close('all')

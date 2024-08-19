@@ -5420,6 +5420,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.min_error.setVisible(False)
         invForm.addRow(self.min_errorLabel, self.min_error)
 
+        # user supplied error
+        self.errResCol = QComboBox()
+        self.errResCol.addItem('resError')
+        self.errResColLabel = QLabel('<a href="errCol"><code>errResCol</code></a>:')
+        self.errResColLabel.linkActivated.connect(showHelp)
+        invForm.addRow(self.errResColLabel, self.errResCol)
+
+        self.errIPCol = QComboBox()
+        self.errIPCol.addItem('phaseError')
+        self.errIPColLabel = QLabel('<a href="errCol"><code>errIPCol</code></a>:')
+        self.errIPColLabel.linkActivated.connect(showHelp)
+        invForm.addRow(self.errIPColLabel, self.errIPCol)
+
+            
         def a_wgtFunc():
             a = float(self.a_wgt.text())
             self.project.param['a_wgt'] = a
@@ -5655,6 +5669,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if ncores < 1: # then fallback to using one core 
                    ncores = 1
                    
+            # checking for user supplied error
+            errResCol = None if self.errResCol.currentText() == 'resError' else self.errResCol.currentText()
+            errIPCol = None if self.errIPCol.currentText() == 'phaseError' else self.errIPCol.currentText()
+            
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
                 self.pseudo3DInvtext = ''
                 def pseudo3DInvLog(dirname, typ):
@@ -5668,7 +5686,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                           'iplot': False, 
                           'runParallel': self.parallelCheck.isChecked(),
                           'invLog': invLog,
-                          'ncores': ncores
+                          'ncores': ncores,
+                          'errResCol': errResCol,
+                          'errIPCol': errIPCol,
                           }
                 
                 # run inversion in different thread to not block the UI
@@ -5717,7 +5737,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                           'modErr': modErr, 
                           'parallel': parallel,
                           'modelDOI': modelDOI,
-                          'ncores': ncores
+                          'ncores': ncores,
+                          'errResCol': errResCol,
+                          'errIPCol': errIPCol,
                           }
                 
                 # run inversion in different thread to not block the UI
@@ -5733,8 +5755,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
                 # self.project.invert(iplot=False, dump=logTextFunc,
                 #                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
-                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
-                    str(modErr), str(parallel), str(modelDOI)))
+                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s}, errResCol={:s}, errIPCol={:s})'.format(
+                    str(modErr), str(parallel), str(modelDOI), str(errResCol), str(errIPCol)))
                 
                 self.thread.finished.connect(afterInversion)
                 self.thread.finished.connect(afterInversionShow)
@@ -7545,9 +7567,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
     def settingUI(self):
         pdebug('importFile: setting up UI')
-        if 'magErr' in self.project.surveys[0].df.columns:
-            self.a_wgt.setText('0.0')
-            self.b_wgt.setText('0.0')
+        # if 'magErr' in self.project.surveys[0].df.columns:
+        #     self.a_wgt.setText('0.0')
+        #     self.b_wgt.setText('0.0')
+        self.errResCol.clear()
+        self.errResCol.addItem('resError')
+        for col in self.project.surveys[0].df.columns:
+            self.errResCol.addItem(col)
+        self.errIPCol.clear()
+        self.errIPCol.addItem('phaseError')
+        for col in self.project.surveys[0].df.columns:
+            self.errIPCol.addItem(col)
         if np.sum(self.project.surveys[0].df['irecip'].values != 0) < 2:
             # we need more than a single reciprocal to fit error model and so
             listOfNoRecipBtnShow = [self.pseudo3DCheck.isChecked(), self.regular3DCheck.isChecked(), # we can't import group reciprocal files
