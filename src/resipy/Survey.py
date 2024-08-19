@@ -20,7 +20,7 @@ from functools import reduce
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
-                     srvParser, bertParser, dasParser)
+                     srvParser, bertParser, dasParser, ABEMterrameterParser)
 from resipy.DCA import DCA
 from resipy.interpolation import geometricMedian 
 from resipy.saveData import to_csv
@@ -211,8 +211,9 @@ class Survey(object):
         
         # parsing data to form main dataframe and electrode array
         if fname is not None:
-            avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'RESIMGR', 'ProtocolIP',
-                            'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
+            avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'RESIMGR', 
+                            'ProtocolIP','Sting', 'ABEM-Lund', 'ABEM-Terrameter', 'Lippmann', 
+                            'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
             if parser is not None:
                 elec, data = parser(fname)
             else:
@@ -239,6 +240,8 @@ class Survey(object):
                     elec, data = stingParser(fname)
                 elif ftype == 'ABEM-Lund':
                     elec, data = ericParser(fname)
+                elif ftype == 'ABEM-Terrameter':
+                    elec, data = ABEMterrameterParser(fname)
                 elif ftype == 'Lippmann':
                     elec, data = lippmannParser(fname)
                 elif ftype == 'ARES':
@@ -250,7 +253,9 @@ class Survey(object):
                 elif ftype == 'DAS-1':
                     elec, data = dasParser(fname)
                 else:
-                    print("Unrecognised ftype, available types are :",avail_ftypes )
+                    print("Unrecognised ftype, available types are :")
+                    for ftype in avail_ftypes: 
+                        print('\t%s'%ftype)
                     raise Exception('Sorry this file type is not implemented yet')
 
             # assign dataframe and check the types of a,b,m,n (all labels must be string)
@@ -593,6 +598,8 @@ class Survey(object):
                 elec, data = stingParser(fname)
             elif ftype == 'ABEM-Lund':
                 elec, data = ericParser(fname)
+            elif ftype == 'ABEM-Terrameter':
+                elec, data = ABEMterrameterParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
             elif ftype == 'ARES':

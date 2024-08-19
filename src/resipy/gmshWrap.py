@@ -3046,10 +3046,11 @@ def cylinder(electrodes, zlim=None, radius=None,
     # we assume the origin is at 0,0 
     if radius is None:
         radius = np.max(dist) 
+
     diff = np.abs(dist - radius)
-    inside = diff > 1e16 # electrodes on inside of column radius 
+    inside = diff > 1e8 # electrodes on inside of column radius 
     
-    rx = np.linspace(-radius,radius,100000)
+    rx = np.linspace(-radius,radius,1000000)
     ry = np.sqrt(radius**2 - rx**2)
     cx = np.append(rx,rx)
     cy = np.append(ry,-ry)
@@ -3063,6 +3064,7 @@ def cylinder(electrodes, zlim=None, radius=None,
             di = np.argmin(dd)
             elec_x[i] = cx[di]
             elec_y[i] = cy[di]
+            print('Electrode %i not quite right, adjusting...'%i)
     
     # find unique xy positions
     uni_x = []
@@ -3091,8 +3093,23 @@ def cylinder(electrodes, zlim=None, radius=None,
                 curc_x.append(elec_x[i])
                 curc_y.append(elec_y[i])
             
-    # check for at least 3 unique points on column circumfrence 
-    if len(curc_x)<3: 
+    # check for at least 4 unique points on column circumfrence on all quadrants of the column 
+    quad_check = False 
+    if len(curc_x) < 4: 
+        quad_check = True 
+    
+    # now check all quadrants are occupied, if not add extra points in all quads 
+    print(curc_x, curc_y)
+    if min(curc_x) <= 0 and max(curc_x) <= 0: 
+        quad_check = True 
+    if min(curc_x) >= 0 and max(curc_x) >= 0: 
+        quad_check = True 
+    if min(curc_y) <= 0 and max(curc_y) <= 0: 
+        quad_check = True 
+    if min(curc_y) >= 0 and max(curc_y) >= 0: 
+        quad_check = True 
+        
+    if quad_check: 
         #make constructor points for making a basic column 
         cons_x = [0,radius,0,-radius]
         cons_y = [radius,0,-radius,0]
@@ -3106,7 +3123,6 @@ def cylinder(electrodes, zlim=None, radius=None,
                 curc_x.append(cons_x[i])
                 curc_y.append(cons_y[i])
         
-
     bears = [bearing(curc_x[i],curc_y[i]) for i in range(len(curc_x))]
     bear_sort = np.argsort(bears)
     curc_x = np.array(curc_x)[bear_sort]

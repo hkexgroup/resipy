@@ -1681,7 +1681,7 @@ class Project(object): # Project master class instanciated by the GUI
             
         c = 0 
         for i in uidx: 
-            self.createSurvey(finfo.fpath[i], ftype=finfo.ftype[i], 
+            self.createSurvey(finfo.fpath[i].strip(), ftype=finfo.ftype[i], 
                               debug=debug, estMemory=False)
             sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
             _ = sidx.pop(0)
@@ -6575,6 +6575,7 @@ class Project(object): # Project master class instanciated by the GUI
         outputname : str, optional
             Output path with extension. Available mesh format are:
                 - .vtk (Paraview)
+                - .vtp (Paraview)
                 - .dat (R* codes)
                 - .csv (general)
             If not provided the electrode coordinates are saved in the working directory
@@ -6614,6 +6615,8 @@ class Project(object): # Project master class instanciated by the GUI
             eleccopy.to_csv(outputname,index=False,sep='\t')
         elif outputname.endswith('.vtk'):
             mt.points2vtk(eleccopy.x, eleccopy.y, eleccopy.z, outputname, 'Electrodes')
+        elif outputname.endswith('.vtp'): # todo, add this in meshTools 
+            mt.points2vtp(eleccopy.x, eleccopy.y, eleccopy.z, outputname, 'Electrodes')
         else:
             raise Exception('Unrecognised output extension type')
             
@@ -7044,6 +7047,10 @@ class Project(object): # Project master class instanciated by the GUI
         ext = '.vtk'
         if 'vtk' in ftype.lower():
             ext = '.vtk'
+        elif 'vts' in ftype.lower():
+            ext = '.vts'
+        elif 'vtu' in ftype.lower():
+            ext = '.vtu'
         elif 'dat' in ftype.lower(): 
             ext = '.dat'
         elif 'node' in ftype.lower(): 
