@@ -2095,7 +2095,8 @@ class Survey(object):
     
         
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
-                           vmin=None, vmax=None, column='resist', magFlag=False, darkMode=False):
+                           vmin=None, vmax=None, column='resist', magFlag=False,
+                           darkMode=False, cmap='viridis'):
         """Create a pseudo-section for 2D given electrode positions.
         
         Parameters
@@ -2119,7 +2120,8 @@ class Survey(object):
             `False`, resistance values are given with correct polarity.
         darkmode : bool, optional
             Alters coloring of the plot for a darker appearance
-            
+        cmap : str, optional
+            Colormap.
         """
         resist = self.df[column].values.copy()
         xpos, _, ypos = self._computePseudoDepth()
@@ -2156,9 +2158,9 @@ class Survey(object):
         # levels = np.linspace(vmin, vmax, 13)
         
         if contour:
-            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels=levels, extend='both')
+            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels=levels, extend='both', cmap=cmap)
         else:
-            plotPsRes = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
+            plotPsRes = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax, cmap=cmap)#, norm=mpl.colors.LogNorm())
         cbar = fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, 
                             label=label, ticks=levels)
         cbar.set_label(label)
@@ -2221,7 +2223,8 @@ class Survey(object):
     def _showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
                            background_color=(0.8,0.8,0.8), elec_color='k',
-                           strIdx=None, magFlag=False, darkMode=False, pvshow=True):
+                           strIdx=None, magFlag=False, darkMode=False, pvshow=True,
+                           cmap='viridis'):
         """Create a pseudo-section for 3D surface array.
         
         Parameters
@@ -2257,7 +2260,8 @@ class Survey(object):
         pvshow : bool, optional
             If True (default), the `Plotter.show()` is called. Set it to False
             to make 3D subplot with pyvista.
-            
+        cmap : str, optional
+            Colormap.
         """
         if not pyvista_installed:
             print('pyvista not installed, cannot show 3D pseudo section')
@@ -2325,7 +2329,7 @@ class Survey(object):
         if not contour:
             ax.add_mesh(pvpont, point_size=10.,
                         #render_points_as_spheres=True,
-                        #cmap=color_map, #matplotlib colormap 
+                        cmap=cmap, #matplotlib colormap 
                         clim=[vmin,vmax], #color bar limits 
                         #show_scalar_bar=color_bar,#plot the color bar? 
                         #opacity=alpha,
@@ -2334,7 +2338,7 @@ class Survey(object):
         else:
             # using Delaunay 3D
             mesh = pvpont.delaunay_3d()
-            color_map = plt.cm.get_cmap('viridis', 14) # subdividing colorbar so it look more like contouring!
+            color_map = plt.cm.get_cmap(cmap, 14) # subdividing colorbar so it look more like contouring!
             ax.add_mesh(mesh,
                         #render_points_as_spheres=True,
                         cmap=color_map, #matplotlib colormap 
@@ -2356,7 +2360,8 @@ class Survey(object):
             ax.show()
 
     
-    def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None, darkMode=False): #IP pseudo section
+    def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None, 
+                             darkMode=False, cmap='viridis'): #IP pseudo section
         """Create pseudo section of IP data with points (default)
         
         Parameters
@@ -2371,6 +2376,8 @@ class Survey(object):
             Maximum value for colorscale.
         darkmode : bool, optional
             Alters coloring of the plot for a darker appearance
+        cmap : str, optional
+            Colormap.
             
         Returns
         -------
@@ -2392,7 +2399,7 @@ class Survey(object):
             fig = ax.get_figure()
         
         if contour is False:
-            plotPsIP = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)
+            plotPsIP = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax, cmap=cmap)
             cbar = fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label(label)
         
@@ -2403,7 +2410,7 @@ class Survey(object):
                 vmax = np.max(ip)
             levels = MaxNLocator().tick_values(vmin, vmax)
             # levels = np.linspace(vmin, vmax, 13)
-            plotPsIP = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
+            plotPsIP = ax.tricontourf(xpos, ypos, ip, levels=levels, extend='both', cmap=cmap)
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
         
         elecColor = 'k' if darkMode is False else 'w'
