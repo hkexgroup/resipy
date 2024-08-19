@@ -262,7 +262,7 @@ timings['methods-error-modelling'] = time.time() - tstart
 #%% test use of a user-supplied error for inversion
 k = Project()
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
-k.invert(errResCol='dev')  # use standard deviation as error weight
+k.invert(err=True, errResCol='dev')  # use standard deviation as error weight
 timings['user-supplied-error'] = time.time() - tstart
 
 
@@ -648,7 +648,7 @@ k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 # k.showPseudo(threed=True) # only tested in pyvista setup   
-k.createMesh(cl=0.5, cl_factor=5, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
+k.createMesh(cl=1, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
 # k.createMesh(cl=0.1,cl_factor=10,cln_factor=1000)
 
 k.createSequence()
