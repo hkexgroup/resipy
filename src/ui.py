@@ -1152,9 +1152,12 @@ class App(QMainWindow):
                 self.ftype = 'DAS-1'
                 self.fformat = 'Data (*.dat *.data *.DAT *.DATA *.txt *.TXT)'
             elif index == 13:
+                self.ftype = 'Electra'
+                self.fformat = 'Ele (*.ele)'
+            elif index == 14:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
-            elif index == 14:
+            elif index == 15:
                 self.ftype = 'Merged'
                 self.fformat = 'Files (*.csv *.CSV *.txt *.TXT)'
                 self.iMerged = True 
@@ -1176,6 +1179,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('BERT')
         self.ftypeCombo.addItem('E4D')
         self.ftypeCombo.addItem('DAS-1')
+        self.ftypeCombo.addItem('Electra')
         self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.addItem('Merged')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
