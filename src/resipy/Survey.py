@@ -20,7 +20,7 @@ from functools import reduce
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
-                     srvParser, bertParser, dasParser, ABEMterrameterParser)
+                     srvParser, bertParser, dasParser, electraParser, ABEMterrameterParser)
 from resipy.DCA import DCA
 from resipy.interpolation import geometricMedian 
 from resipy.saveData import to_csv
@@ -213,7 +213,7 @@ class Survey(object):
         if fname is not None:
             avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'RESIMGR', 
                             'ProtocolIP','Sting', 'ABEM-Lund', 'ABEM-Terrameter', 'Lippmann', 
-                            'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
+                            'ARES', 'E4D', 'BERT', 'Electra', 'DAS-1']# add parser types here! 
             if parser is not None:
                 elec, data = parser(fname)
             else:
@@ -250,6 +250,8 @@ class Survey(object):
                     elec ,data = srvParser(fname)
                 elif ftype == 'BERT':
                     elec, data = bertParser(fname)
+                elif ftype == 'Electra':
+                    elec, data = electraParser(fname)
                 elif ftype == 'DAS-1':
                     elec, data = dasParser(fname)
                 else:
@@ -608,6 +610,8 @@ class Survey(object):
                 elec ,data = srvParser(fname)
             elif ftype == 'BERT':
                 elec, data = bertParser(fname)
+            elif ftype == 'Electra':
+                elec, data = electraParser(fname)
             elif ftype == 'DAS-1':
                 elec, data = dasParser(fname)
             else:

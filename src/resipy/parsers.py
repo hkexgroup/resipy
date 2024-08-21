@@ -2289,5 +2289,71 @@ def dasParser(fname):
     return dfelec, df
     
     
+def electraParser(fname):
+    """
+    read the DAFAULT output format
+    """
+    with open(fname) as fid:
+        enumerated_lines = enumerate(fid)
+        for i, l in enumerated_lines:
+            l = l.strip()
+            # some changes were made to the headers,
+            # this will avoid annoying errors
+            l = l.replace('\t', '')
+            l = l.replace(' ', '')
+
+            if (l.startswith("#Totalelectrodes")) | (l.startswith('#Totalenabledelectrodes')):
+                i, lv = next(enumerated_lines)
+                lv = lv.strip()
+                num_elec = int(lv)
+                continue
+
+            elif l.startswith("#XYZ"):
+                elec_header_line = i
+                continue
+
+            elif l.startswith("#Meas."):
+                data_header_line = i
+                break
+
+        elec = pd.read_csv(
+            fname,
+            usecols=[0, 1, 2],
+            names=["x", "y", "z"],
+            skiprows=elec_header_line + 1,
+            nrows=num_elec,
+            sep="\t",
+            header=None,
+        )
+        elec = elec.to_numpy()
+
+        data = pd.read_csv(
+            fname,
+            skiprows=data_header_line,
+            sep="\t",
+            header=[0, 1],
+        )
+
+        print(data)
+
+        data.columns = data.columns.droplevel(1)
+        data.drop(data.filter(regex="Unname"), axis=1, inplace=True)
+
+        data_header_map = {
+            "A": "a",
+            "B": "b",
+            "M": "m",
+            "N": "n",
+            "I(AB)": "i",
+            "V(MN)": "vp",
+            "Rhoa": "app",
+            "rhoa": "app"
+        }
+        data = data.rename(columns=data_header_map)
+        data['resist'] = data['vp'] / data['i']
+        data['ip'] = np.nan
+        data = data[['a', 'b', 'm', 'n', 'i', 'vp', 'resist', 'app', 'ip']]
+
+        return elec, data
 
     
