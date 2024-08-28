@@ -50,8 +50,6 @@ The full description of the API can be found in the *[documentation](https://hke
 
 Try it from source
 ------------------
-** Note: currently only Python versions 3.6 to 3.9 are supported.
-
 After downloading or cloning (`git clone https://gitlab.com/hkex/resipy`) the repository,
 you can run the GUI using:
 ```sh
