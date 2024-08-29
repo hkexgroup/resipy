@@ -2477,17 +2477,19 @@ class Project(object): # Project master class instanciated by the GUI
             dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip0']],
                            df[['a', 'b', 'm', 'n', 'tlindex','irecip']],
                            how='inner', on=['a', 'b', 'm', 'n'])
+            # don't keep reciprocals
+            dfm = dfm[dfm[['irecip0', 'irecip']].ge(0).all(axis=1)]
             ie0 = np.zeros(df0.shape[0], dtype=bool)
             ie0[dfm['tlindex0'].values] = True
             ie = np.zeros(df.shape[0], dtype=bool)
             ie[dfm['tlindex'].values] = True
             # dont keep reciprocals too 
-            for i in dfm['tlindex0'].values:
-                if df0.irecip0[i] < 0: 
-                    ie0[i] = False 
-            for i in dfm['tlindex'].values:
-                if df.irecip[i] < 0: 
-                    ie[i] = False  
+#            for i in dfm['tlindex0'].values:
+#                if df0.irecip0[i] < 0: 
+#                    ie0[i] = False 
+#            for i in dfm['tlindex'].values:
+#                if df.irecip[i] < 0: 
+#                    ie[i] = False  
             indexes.append((ie0, ie))
 
         print('done in {:.3}s'.format(time.time()-t0))
@@ -4405,7 +4407,7 @@ class Project(object): # Project master class instanciated by the GUI
                 dump('----------------- Computing d-d0+f(m0) ---------------\n')
                 # as per v3.2 of R3t we need to compute MANUALLY d-d0+f(m0)
                 # this is done automatically in R2 and cR2
-                # unfortunatley R3t does not output the transfer resistances of the final model 
+                # unfortunatly R3t does not output the transfer resistances of the final model 
                 # (only apparent resistivities) , therefore forward modelling the baseline 
                 # resistivities seems like the best option 
                 self.sequence = self.surveys[0].df[['a','b','m','n']].values
