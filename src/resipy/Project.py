@@ -654,7 +654,7 @@ class Project(object): # Project master class instanciated by the GUI
                 else: # check intersection of labels
                     if len(self.surveys) > 0:
                         s = self.surveys[0]
-                        if s.hasLineNumbers():
+                        if s.hasDataString():
                             s1 = np.unique(elec['label'].values)
                             s2 = np.unique(s.df[['a','b','m','n']].values.flatten())
                         else:
@@ -1662,13 +1662,20 @@ class Project(object): # Project master class instanciated by the GUI
         finfo = pd.read_csv(fname,sep=delimiter) # file info dataframe 
         
         if 'fpath' not in finfo.columns: 
-            raise Exception('file paths are not defined in survey merge file')
+            msg = 'File paths are not defined in survey merge file, the file headers should read:\n'
+            for s in ['fpath','ftype','sid','string']:
+                msg += '%s '%s 
+            msg += '\nNote that all but "ftype" columns are optional'
+            raise Exception(msg)
             
         if 'ftype' not in finfo.columns: 
             finfo['ftype'] = ftype 
         
         if 'sid' not in finfo.columns: 
             finfo['sid'] = 0 
+            
+        if 'string' not in finfo.columns:
+            finfo['string'] = 0 
             
         # get survey ids and unique survey indexes 
         # returned indexes are the first instance of each survey index 
@@ -1682,16 +1689,21 @@ class Project(object): # Project master class instanciated by the GUI
         c = 0 
         for i in uidx: 
             self.createSurvey(finfo.fpath[i].strip(), ftype=finfo.ftype[i], 
-                              debug=debug, estMemory=False)
+                              debug=debug, estMemory=False, string=finfo.string[i])
             sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
+            print(sidx)
             _ = sidx.pop(0)
+                
             for j in sidx: 
-                self.addData(index=c, fname=finfo.fpath[j], ftype=finfo.ftype[j])
+                self.addData(index=c, fname=finfo.fpath[j], ftype=finfo.ftype[j],
+                             string=finfo.string[j])
                 # add data for each survey 
             if c == 0:
-                self.bigSurvey = Survey(finfo.fpath[i], ftype=finfo.ftype[i])
+                self.bigSurvey = Survey(finfo.fpath[i], ftype=finfo.ftype[i],
+                                        string=finfo.string[i])
                 for j in sidx: 
-                    self.bigSurvey.addData(fname=finfo.fpath[j], ftype=finfo.ftype[j])
+                    self.bigSurvey.addData(fname=finfo.fpath[j], ftype=finfo.ftype[j],
+                                           string=finfo.string[j])
             c += 1 
 
         elecids = []
@@ -1717,8 +1729,9 @@ class Project(object): # Project master class instanciated by the GUI
             self.elec = elec 
             for s in self.surveys:
                 s.elec = elec.copy()
+                
+        self.mergeElec() 
         
-            
         if self.iTimeLapse: # bit of clean up regarding timelapse case 
             self.iTimeLapseReciprocal = np.array([False]*len(self.surveys)) # true if survey has reciprocal
             for i in range(len(self.surveys)):

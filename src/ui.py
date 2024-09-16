@@ -1133,31 +1133,31 @@ class App(QMainWindow):
             elif index == 6:
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
+            # elif index == 7:
+            #     self.ftype = 'ABEM-Terrameter'
+            #     self.fformat = 'DAT (*.DAT *.dat)'
             elif index == 7:
-                self.ftype = 'ABEM-Terrameter'
-                self.fformat = 'DAT (*.DAT *.dat)'
-            elif index == 8:
                 self.ftype = 'Lippmann'
                 self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt *.TXT)'
-            elif index == 9:
+            elif index == 8:
                 self.ftype = 'ARES'
                 self.fformat = 'ARES (*.2dm *.2DM)'
-            elif index == 10:
+            elif index == 9:
                 self.ftype = 'BERT'
                 self.fformat = 'BERT (*.dat *.DAT *.ohm *.OHM)'
-            elif index == 11:
+            elif index == 10:
                 self.ftype = 'E4D'
                 self.fformat = 'srv (*.srv *.SRV)'
-            elif index == 12:
+            elif index == 11:
                 self.ftype = 'DAS-1'
                 self.fformat = 'Data (*.dat *.data *.DAT *.DATA *.txt *.TXT)'
-            elif index == 13:
+            elif index == 12:
                 self.ftype = 'Electra'
                 self.fformat = 'Ele (*.ele)'
-            elif index == 14:
+            elif index == 13:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
-            elif index == 15:
+            elif index == 14:
                 self.ftype = 'Merged'
                 self.fformat = 'Files (*.csv *.CSV *.txt *.TXT)'
                 self.iMerged = True 
@@ -1173,7 +1173,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('PRIME/RESIMGR')
         self.ftypeCombo.addItem('Sting')
         self.ftypeCombo.addItem('ABEM-Lund')
-        self.ftypeCombo.addItem('ABEM-Terrameter')
+        # self.ftypeCombo.addItem('ABEM-Terrameter')
         self.ftypeCombo.addItem('Lippmann')
         self.ftypeCombo.addItem('ARES (beta)')
         self.ftypeCombo.addItem('BERT')
@@ -1213,7 +1213,8 @@ class App(QMainWindow):
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
                     if self.iMerged:
-                        self.timeLapseCheck.stateChanged.disconnect() # disconnect timelapse checker 
+                        # might need to disconnect some functions ... left commented for now 
+                        # self.timeLapseCheck.stateChanged.disconnect() # disconnect timelapse checker 
                         # self.pseudo3DCheck.stateChanged.disconnect() # might need to disconnect pseudo3d checker too
                         self.project.createMergedSurveys(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.writeLog('k.createMergedSurveys({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
@@ -1228,7 +1229,7 @@ class App(QMainWindow):
                         self.pseudo3DCheck.setEnabled(False)
                         self.pseudo3DCheck.setChecked(False)
                         # reconnect timelapse/pseudo3d functions 
-                        self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
+                        # self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
                         # self.pseudo3DCheck.stateChanged.connect(pseudo3DFunc)
                     elif self.iTimeLapse:
                         if len(fnames) < 2:
@@ -1285,7 +1286,7 @@ class App(QMainWindow):
                 except Exception as e:
                     self.loadingWidget(exitflag=True)
                     print('Error in getdir(): ', e)
-                    self.errorDump('File format is not recognized (one or all files!)')
+                    self.errorDump('Something went wrong importing the data! Check file formats are correct.')
         
         self.loadingDialog = QDialog()
         self.loadingDialogTxtWidget = QLabel()

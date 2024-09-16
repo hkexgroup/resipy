@@ -20,7 +20,7 @@ from functools import reduce
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
-                     srvParser, bertParser, dasParser, electraParser, ABEMterrameterParser)
+                     srvParser, bertParser, dasParser, electraParser)
 from resipy.DCA import DCA
 from resipy.interpolation import geometricMedian 
 from resipy.saveData import to_csv
@@ -140,6 +140,41 @@ def fixSequence(sequence):
             replaceidx = sequence == uid[i]
             newseq[replaceidx] = cid[i] 
     return newseq 
+
+def appendString(elec, df, string):
+    """
+    Append strings to the data frame and electrode labels in the case of 3D 
+    surveys. 
+
+    Parameters
+    ----------
+    elec : pandas.DataFrame
+        Electrode data frame with columns, x,y,z
+    df : pandas.DataFrame
+        Resistance measurement dataframe with columns a,b,m,n
+    """
+    if 'label' not in elec.columns:
+        elec['label'] = (np.arange(len(elec))+1).astype(str)
+        
+    def getLabelNumber(label):
+        if len(label.split()) == 2:
+            number = int(label.split()[-1])
+        else:
+            number = int(label)
+        return number 
+        
+    for i,label in enumerate(elec.label):
+        number = getLabelNumber(label)
+        new_label = '{:d} {:d}'.format(string, number) 
+        elec.loc[i,'label'] = new_label 
+        
+    for e in ['a','b','m','n']:
+        for i in range(len(df)):
+            label = df[e][i]
+            number = getLabelNumber(label)
+            new_label = '{:d} {:d}'.format(string, number) 
+            df.loc[i,e] = new_label 
+            
     
 
 class Survey(object):
@@ -175,10 +210,14 @@ class Survey(object):
         they will all be kept anyway.
     compRecip: bool, optional 
         Compute reciprocal errors, default is True. 
+    string: int, optional
+        Force the addition of string number in electrode labels and abmn 
+        values. Useful when creating a survey that consists of multiple 
+        files. 
     """
     def __init__(self, fname=None, ftype='', df=None, elec=None, name='',
                  spacing=None, parser=None, keepAll=True, debug=True,
-                 compRecip=True):
+                 compRecip=True, string=0):
         
         # set default attributes
         self.iBorehole = False # True is it's a borehole
@@ -212,7 +251,7 @@ class Survey(object):
         # parsing data to form main dataframe and electrode array
         if fname is not None:
             avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'RESIMGR', 
-                            'ProtocolIP','Sting', 'ABEM-Lund', 'ABEM-Terrameter', 'Lippmann', 
+                            'ProtocolIP','Sting', 'ABEM-Lund', 'Lippmann', 
                             'ARES', 'E4D', 'BERT', 'Electra', 'DAS-1']# add parser types here! 
             if parser is not None:
                 elec, data = parser(fname)
@@ -240,8 +279,6 @@ class Survey(object):
                     elec, data = stingParser(fname)
                 elif ftype == 'ABEM-Lund':
                     elec, data = ericParser(fname)
-                elif ftype == 'ABEM-Terrameter':
-                    elec, data = ABEMterrameterParser(fname)
                 elif ftype == 'Lippmann':
                     elec, data = lippmannParser(fname)
                 elif ftype == 'ARES':
@@ -284,6 +321,10 @@ class Survey(object):
                 self.elec['label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
             else:
                 self.elec = elec
+               
+            # assign string numbers to electrode labels 
+            if string > 0: 
+                appendString(self.elec, self.df, string) 
 
             # convert apparent resistivity to resistance and vice versa
             self.computeK()
@@ -377,11 +418,12 @@ class Survey(object):
     
     def hasElecString(self):
         """Determine if a electrode strings are present in the electrode labels 
+        in self.elec
 
         Returns
         -------
         bool
-            True if strings present in electrode label
+            True if strings present in electrode labels 
         """
         df = self.elec
         if 'label' not in df.keys():
@@ -393,7 +435,17 @@ class Survey(object):
                     return False
         return True
     
-    def hasLineNumbers(self):
+    def hasDataString(self):
+        """
+        Check if string numbers are present in the data. 
+
+        Returns
+        -------
+        bool
+            True if strings present in electrode labels 
+
+        """
+        
         if len(self.df) == 0:
             return False 
         if len(self.df['a'].values[0].split()) <= 1:
@@ -418,7 +470,7 @@ class Survey(object):
             self.isequence = None 
             return 
         
-        if self.hasLineNumbers(): 
+        if self.hasDataString(): 
             an = np.zeros((ndata, 4),dtype=int) # array of electrode numbers 
             al = np.zeros((ndata, 4),dtype=int) # array of electrode lines 
             aa = np.zeros((ndata, 4),dtype=int) # array of additonal numbers 
@@ -576,7 +628,7 @@ class Survey(object):
 #            self.dfReset = self.df.copy()
           
         
-    def addData(self, fname, ftype='Syscal', parser=None):
+    def addData(self, fname, ftype='Syscal', parser=None, string=0):
         """Add data to the actual survey (for instance the reciprocal if they
         are not in the same file).
         """
@@ -600,8 +652,6 @@ class Survey(object):
                 elec, data = stingParser(fname)
             elif ftype == 'ABEM-Lund':
                 elec, data = ericParser(fname)
-            elif ftype == 'ABEM-Terrameter':
-                elec, data = ABEMterrameterParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
             elif ftype == 'ARES':
@@ -615,9 +665,21 @@ class Survey(object):
             elif ftype == 'DAS-1':
                 elec, data = dasParser(fname)
             else:
-                raise Exception('Sorry this file type is not implemented yet')
+                raise Exception('Sorry this file type is not implemented yet or not recognised')
         
         data = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
+        
+        if string > 0: 
+            if type(elec) == np.ndarray: # 
+                _elec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
+                _elec['remote'] = False
+                _elec['buried'] = False
+                _elec['label'] = (1 + np.arange(elec.shape[0])).astype(str)
+            else:
+                _elec = elec.copy()
+            appendString(_elec, data, string)
+            self.elec = pd.concat([self.elec,_elec]).reset_index(drop = True) 
+        
         self.df = pd.concat([self.df, data]).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
         self.setSeqIds() # need to recompute sequence 
             

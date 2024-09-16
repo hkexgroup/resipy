@@ -3408,7 +3408,7 @@ class Mesh:
         if self.nvoxel['x'] is None: 
             return # exit function if nvoxel not populated 
         
-        voxel_info_file = file_name.lower().replace('.xyz','_voxel_info.txt')
+        voxel_info_file = file_name.replace('.xyz','_voxel_info.txt')
         fh = open(voxel_info_file,'w')
         for key in self.nvoxel.keys(): 
             fh.write('%s : %i\n'%(key,int(self.nvoxel[key])))
@@ -3988,7 +3988,13 @@ class Mesh:
         coordParam: dict, optional
             Coordinate conversion parameters, x0, y0 and a. Stored as a dictionary. 
         """
-        if ftype.endswith('vts'):
+        # check if vts format! This will force results to be as a voxel and in local grid 
+        vtsflag = False 
+        if ftype is not None and ftype.endswith('vts'): 
+            vtsflag = True 
+        if fname.endswith('vts'):
+            vtsflag = True 
+        if vtsflag: 
             # can't have global coordinates with a vts file 
             if coordLocal: 
                 warnings.warn('VTS export will be written in a local grid format!')

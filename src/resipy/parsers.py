@@ -1443,12 +1443,51 @@ def stingParser(fname):
     df['m'] = np.array(m_f)
     df['resist']=df_raw.iloc[:,4]
 
-    #detecting IP (col 21 would be floats of IP vals)
-    try:
-        float(df_raw.iloc[0,21])
-        df['ip']=df_raw.iloc[:,21]
-    except:
-        df['ip']=[0]*len(df_raw)
+    #detecting IP, columns should read as follows in the case of IP measurements 
+    # 22 IP:
+    # 23 IP time slot in msec.
+    # 24 IP time constant
+    # 25 IP reading in sec for the first time slot
+    # 26 IP reading in sec for the second time slot
+    # 27 IP reading in sec for the third time slot
+    # 28 IP reading in sec for the forth time slot
+    # 29 IP reading in sec for the fifth time slot
+    # 30 IP reading in sec for the sixth time slot
+    # 31 total IP reading in sec
+    
+    if 'IP' in df_raw.iloc[0,21]: 
+        # convert into chargeability via equation 1 in Mwakanyamale et al (2012)
+        Vs_index = [24 + i for i in range(6)]
+        #lookup table for time constants and corresponding time slot lengths 
+        timeslot = {
+            0:100,
+            1:130, 
+            2:260,
+            4:540,
+            8:1040, 
+            }
+        mrad = [0.0]*len(df_raw)
+        for i in range(len(df_raw)):
+            VsVp = np.asarray(df_raw.iloc[i,Vs_index], dtype=float) #secondary/primary voltage 
+            tr = df_raw.iloc[i,4] # transfer resistance 
+            Ia = df_raw.iloc[i,6]*1e-3 # current (amps)
+            Vp = tr * Ia # potential voltage under current (in volts)
+            Vs = Vp*VsVp*1e3 #secondary voltage in milli volts
+            tt = int(df_raw.iloc[i,23]*1e-3) # total time measuring (seconds)
+            if tt in timeslot.keys():
+                dt = timeslot[tt]*1e-3
+            else: 
+                dt = 260e-3# change in time per slot 
+            # integrate Vs to get chargeability 
+            _T = np.abs(np.diff(Vs)) * dt * 0.5 # area of triangles under the curve 
+            _C = np.abs(Vs[1:])*dt # area of colums
+            Area = np.sum(_T*_C)
+            Ma = ((1/(6*dt))*(Area/Vp))
+            mrad[i] = Ma*-1 
+
+        df['ip'] = mrad  
+    else:
+        df['ip'] = [0]*len(df_raw)
     
     #for pole-pole and pole-dipole arrays
     elec[elec > 9999] = 999999
@@ -1687,187 +1726,187 @@ def ericParser(file_path):
     return elec, df
 
 
-def ABEMterrameterParser(fname):
-    """
-    Parse ABEM terrameter data 
+# def ABEMterrameterParser(fname):
+#     """
+#     Parse ABEM terrameter data 
 
-    Parameters
-    ----------
-    fname : str 
-        Path to resistivity data file 
+#     Parameters
+#     ----------
+#     fname : str 
+#         Path to resistivity data file 
 
-    Returns
-    -------
-    elec: pd.DataFrame 
-        Electrode data frame 
-    df: pd.DataFrame
-        Resistivity data frame 
+#     Returns
+#     -------
+#     elec: pd.DataFrame 
+#         Electrode data frame 
+#     df: pd.DataFrame
+#         Resistivity data frame 
 
-    """
-    # function to find distance between electrodes 
-    def fdist(x0, X, y0, Y, z0, Z):
-        sdx = (x0 - X)**2
-        sdy = (y0 - Y)**2
-        sdz = (z0 - Z)**2
-        dist = np.sqrt(sdx + sdy + sdz)
-        return dist 
+#     """
+#     # function to find distance between electrodes 
+#     def fdist(x0, X, y0, Y, z0, Z):
+#         sdx = (x0 - X)**2
+#         sdy = (y0 - Y)**2
+#         sdz = (z0 - Z)**2
+#         dist = np.sqrt(sdx + sdy + sdz)
+#         return dist 
     
-    # get the index of coordinates 
-    def getIndex(x0, X, y0, Y, z0, Z):
-        dist = fdist(x0, X, y0, Y, z0, Z)
-        return np.argmin(dist)
+#     # get the index of coordinates 
+#     def getIndex(x0, X, y0, Y, z0, Z):
+#         dist = fdist(x0, X, y0, Y, z0, Z)
+#         return np.argmin(dist)
         
-    # open file for read then close 
-    fh = open(fname,'r')
-    lines = fh.readlines()
-    fh.close() 
+#     # open file for read then close 
+#     fh = open(fname,'r')
+#     lines = fh.readlines()
+#     fh.close() 
     
-    # read in headers 
-    # xspace = float(lines[1].strip())
-    nmeas = int(lines[6].strip()) 
-    ncoord = int(lines[7].strip())
-    appres = False 
-    if int(lines[5].strip()) == 0:
-        appres = True 
-    dstart = 9 # start of data 
-    ipflag = False 
-    ipunit = ''
-    if int(lines[8].strip()) > 0:
-        ipflag = True 
-        ipunit = lines[10].strip()
-        dstart = 12
+#     # read in headers 
+#     # xspace = float(lines[1].strip())
+#     nmeas = int(lines[6].strip()) 
+#     ncoord = int(lines[7].strip())
+#     appres = False 
+#     if int(lines[5].strip()) == 0:
+#         appres = True 
+#     dstart = 9 # start of data 
+#     ipflag = False 
+#     ipunit = ''
+#     if int(lines[8].strip()) > 0:
+#         ipflag = True 
+#         ipunit = lines[10].strip()
+#         dstart = 12
         
-    a = [0]*nmeas 
-    b = [0]*nmeas 
-    m = [0]*nmeas 
-    n = [0]*nmeas 
-    tr = [0]*nmeas 
-    ip = [0]*nmeas 
+#     a = [0]*nmeas 
+#     b = [0]*nmeas 
+#     m = [0]*nmeas 
+#     n = [0]*nmeas 
+#     tr = [0]*nmeas 
+#     ip = [0]*nmeas 
     
-    # need to parse columns to get electrode coordinates 
-    # setup flags for if different coordinate columns are present 
-    xcolumns = [1,1,1,1]
-    ycolumns = [2,1,1,1]
-    zcolumns = [3,1,1,1]
-    xflag = False 
-    yflag = False 
-    zflag = False 
-    rcolumn = 9
-    pcolumn = 0 
+#     # need to parse columns to get electrode coordinates 
+#     # setup flags for if different coordinate columns are present 
+#     xcolumns = [1,1,1,1]
+#     ycolumns = [2,1,1,1]
+#     zcolumns = [3,1,1,1]
+#     xflag = False 
+#     yflag = False 
+#     zflag = False 
+#     rcolumn = 9
+#     pcolumn = 0 
     
-    for i in range(1,4):
-        if ncoord == 1:
-            xflag = True 
-            xcolumns[i] = int(1+(i*ncoord)) 
-            rcolumn = xcolumns[-1] + 1
-            pcolumn = rcolumn + 1 
-        elif ncoord == 2: 
-            zcolumns[0] = 2 
-            xflag = True 
-            zflag = True 
-            xcolumns[i] = int(1+(i*ncoord)) 
-            zcolumns[i] = int(2+(i*ncoord))
-            rcolumn = zcolumns[-1] + 1 
-            pcolumn = rcolumn + 1 
-        elif ncoord == 3:
-            xflag = True 
-            yflag = True 
-            zflag = True 
-            xcolumns[i] = int(1+(i*ncoord)) 
-            ycolumns[i] = int(2+(i*ncoord))
-            zcolumns[i] = int(3+(i*ncoord))
-            rcolumn = zcolumns[-1] + 1 
-            pcolumn = rcolumn + 1 
+#     for i in range(1,4):
+#         if ncoord == 1:
+#             xflag = True 
+#             xcolumns[i] = int(1+(i*ncoord)) 
+#             rcolumn = xcolumns[-1] + 1
+#             pcolumn = rcolumn + 1 
+#         elif ncoord == 2: 
+#             zcolumns[0] = 2 
+#             xflag = True 
+#             zflag = True 
+#             xcolumns[i] = int(1+(i*ncoord)) 
+#             zcolumns[i] = int(2+(i*ncoord))
+#             rcolumn = zcolumns[-1] + 1 
+#             pcolumn = rcolumn + 1 
+#         elif ncoord == 3:
+#             xflag = True 
+#             yflag = True 
+#             zflag = True 
+#             xcolumns[i] = int(1+(i*ncoord)) 
+#             ycolumns[i] = int(2+(i*ncoord))
+#             zcolumns[i] = int(3+(i*ncoord))
+#             rcolumn = zcolumns[-1] + 1 
+#             pcolumn = rcolumn + 1 
             
-    # find electrode coordinates 
-    allx = []
-    ally = []
-    allz = [] 
-    for i in range(nmeas):
-        line = lines[i+dstart].strip()
-        info = line.split()
-        if xflag: 
-            for j in xcolumns:
-                allx.append(float(info[j]))
-        if yflag: 
-            for j in ycolumns:
-                ally.append(float(info[j]))
-        if zflag: 
-            for j in zcolumns:
-                allz.append(float(info[j]))
+#     # find electrode coordinates 
+#     allx = []
+#     ally = []
+#     allz = [] 
+#     for i in range(nmeas):
+#         line = lines[i+dstart].strip()
+#         info = line.split()
+#         if xflag: 
+#             for j in xcolumns:
+#                 allx.append(float(info[j]))
+#         if yflag: 
+#             for j in ycolumns:
+#                 ally.append(float(info[j]))
+#         if zflag: 
+#             for j in zcolumns:
+#                 allz.append(float(info[j]))
     
-    # get electrode coordinates 
-    elecx = np.array([allx[0]])
-    if yflag: 
-        elecy = np.array([ally[0]])
-    else: 
-        elecy = np.array([0])
-    if zflag: 
-        elecz = np.array([allz[0]])
-    else:
-        elecz = np.array([0])
+#     # get electrode coordinates 
+#     elecx = np.array([allx[0]])
+#     if yflag: 
+#         elecy = np.array([ally[0]])
+#     else: 
+#         elecy = np.array([0])
+#     if zflag: 
+#         elecz = np.array([allz[0]])
+#     else:
+#         elecz = np.array([0])
     
-    for i in range(1,len(allx)):
-        x = allx[i]
-        if yflag:
-            y = ally[i]
-        else:
-            y = 0 
-        if zflag: 
-            z = allz[i]
-        else:
-            z = 0 
-        dist = fdist(x, elecx, y, elecy, z, elecz)
-        if min(dist) != 0.0: 
-            elecx = np.append(elecx,x)
-            elecy = np.append(elecy,y)
-            elecz = np.append(elecz,z)
+#     for i in range(1,len(allx)):
+#         x = allx[i]
+#         if yflag:
+#             y = ally[i]
+#         else:
+#             y = 0 
+#         if zflag: 
+#             z = allz[i]
+#         else:
+#             z = 0 
+#         dist = fdist(x, elecx, y, elecy, z, elecz)
+#         if min(dist) != 0.0: 
+#             elecx = np.append(elecx,x)
+#             elecy = np.append(elecy,y)
+#             elecz = np.append(elecz,z)
         
-    # sort by elec x? 
-    sortidx = np.argsort(elecx)
-    elecx = elecx[sortidx]
-    elecy = elecy[sortidx]
-    elecz = elecz[sortidx]
+#     # sort by elec x? 
+#     sortidx = np.argsort(elecx)
+#     elecx = elecx[sortidx]
+#     elecy = elecy[sortidx]
+#     elecz = elecz[sortidx]
         
-    # loop through measurements and index 
-    for i in range(nmeas):
-        line = lines[i+dstart].strip()
-        info = line.split()
-        ax = float(info[xcolumns[0]])
-        bx = float(info[xcolumns[1]])
-        mx = float(info[xcolumns[2]])
-        nx = float(info[xcolumns[3]])
+#     # loop through measurements and index 
+#     for i in range(nmeas):
+#         line = lines[i+dstart].strip()
+#         info = line.split()
+#         ax = float(info[xcolumns[0]])
+#         bx = float(info[xcolumns[1]])
+#         mx = float(info[xcolumns[2]])
+#         nx = float(info[xcolumns[3]])
         
-        ay = float(info[ycolumns[0]])
-        by = float(info[ycolumns[1]])
-        my = float(info[ycolumns[2]])
-        ny = float(info[ycolumns[3]])
+#         ay = float(info[ycolumns[0]])
+#         by = float(info[ycolumns[1]])
+#         my = float(info[ycolumns[2]])
+#         ny = float(info[ycolumns[3]])
         
-        az = float(info[zcolumns[0]])
-        bz = float(info[zcolumns[1]])
-        mz = float(info[zcolumns[2]])
-        nz = float(info[zcolumns[3]])
+#         az = float(info[zcolumns[0]])
+#         bz = float(info[zcolumns[1]])
+#         mz = float(info[zcolumns[2]])
+#         nz = float(info[zcolumns[3]])
         
-        a[i] = getIndex(ax, elecx, ay, elecy, az, elecz) + 1 
-        b[i] = getIndex(bx, elecx, by, elecy, bz, elecz) + 1 
-        m[i] = getIndex(mx, elecx, my, elecy, mz, elecz) + 1 
-        n[i] = getIndex(nx, elecx, ny, elecy, nz, elecz) + 1 
+#         a[i] = getIndex(ax, elecx, ay, elecy, az, elecz) + 1 
+#         b[i] = getIndex(bx, elecx, by, elecy, bz, elecz) + 1 
+#         m[i] = getIndex(mx, elecx, my, elecy, mz, elecz) + 1 
+#         n[i] = getIndex(nx, elecx, ny, elecy, nz, elecz) + 1 
         
-        tr[i] = float(info[rcolumn]) # transfer resistance 
+#         tr[i] = float(info[rcolumn]) # transfer resistance 
         
-        if ipflag: 
-            ip[i] = float(info[pcolumn])
+#         if ipflag: 
+#             ip[i] = float(info[pcolumn])
     
-    data = {'a':a, 'b':b, 'm':m, 'n':n, 'resist':tr, 'ip':ip}
-    df = pd.DataFrame(data)
-    elec = pd.DataFrame({'x':elecx, 'y':elecy, 'z':elecz})
+#     data = {'a':a, 'b':b, 'm':m, 'n':n, 'resist':tr, 'ip':ip}
+#     df = pd.DataFrame(data)
+#     elec = pd.DataFrame({'x':elecx, 'y':elecy, 'z':elecz})
     
-    if appres: 
-        k = geom_factor_3D(df, np.c_[elecx, elecy, elecy], [12])
-        df['Rho'] = tr # whats reported as tr is actaully apparent resistivity 
-        df.loc[:,'resist'] = np.array(tr)/k # divide pa by k to get tr 
+#     if appres: 
+#         k = geom_factor_3D(df, np.c_[elecx, elecy, elecy], [12])
+#         df['Rho'] = tr # whats reported as tr is actaully apparent resistivity 
+#         df.loc[:,'resist'] = np.array(tr)/k # divide pa by k to get tr 
         
-    return elec, df 
+#     return elec, df 
     
     
 #%% 
