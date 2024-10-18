@@ -6126,7 +6126,6 @@ class Project(object): # Project master class instanciated by the GUI
         # write the resistivity.dat and fparam
         fparam = self.param.copy()
         fparam['job_type'] = 0
-        centroids = mesh.elmCentre
         
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             n = 2
@@ -6181,12 +6180,10 @@ class Project(object): # Project master class instanciated by the GUI
         if halfspace: 
             # assume that apparent resistivities should equal 100 in the case of a halfspace 
             ap = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-1]
-            modErr = np.abs(100-ap)/100
+            modErrRel = np.abs(100-ap)/100
         else: # need to run code again with reference mesh 
             # grab reference transfer resistances made on refined mesh 
             tr0 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-2]
-            k = 100/tr0 # compute geometric factor 
-            ap0 = tr0*k # apparent resistivities 
             
             # keep files for refined mesh 
             shutil.move(os.path.join(fwdDir,mname),
@@ -6208,21 +6205,30 @@ class Project(object): # Project master class instanciated by the GUI
                        resFile,
                        fmt='%.3f')
             
-            dump('Running R* code for reference mesh ...\n')
+            dump('Running R* code for reference (unrefined) mesh ...\n')
             self.runR2(fwdDir,dump)
+            # grab transfer resistances for the reference mesh 
             tr1 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-2]
-            ap1 = tr1*k #(use same k as before)
-            modErr = np.abs(ap0-ap1)/100
+            
+            k = 100/tr0 # compute geometric factor using refined mesh transfer resistances 
+            ap0 = tr0*k # apparent resistivities for refined mesh 
+            ap1 = tr1*k # apparent resistivities for unrefined mesh (use same k as before)
+            modErrRel = np.abs(ap0-ap1)/100 # compute relative modelling error 
             
             
         # append modelling error to survey dataframes 
+        # NOTE: In order to compute absolute modelling error multiply it by survey transfer resistances  
+        # bug fixed on 18/10/2024
         dump('Adding to modelling error to data structures...\n')
         dferr = pd.DataFrame(seq, columns=['a','b','m','n'])
-        dferr['modErr'] = modErr
+        dferr['modErrRel'] = modErrRel 
         for s in self.surveys:
-            if 'modErr' in s.df:
+            if 'modErrRel' in s.df.columns:
+                s.df.drop('modErrRel', axis=1)
+            if 'modErr' in s.df.columns:
                 s.df.drop('modErr', axis=1)
             s.df = pd.merge(s.df, dferr, on=['a','b','m','n'], how='inner')
+            s.df['modErr'] = (s.df['modErrRel']*s.df['resist']).abs() 
         
         if rmTree:# eventually delete the directory to spare space
             dump('Removing temporary error directory...\n')
