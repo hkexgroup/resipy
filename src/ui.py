@@ -6802,7 +6802,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self, 
                 'Open File', 
                 self.datadir,
-                'VTK (*.vtk);;CSV (*.csv);;DAT (*.dat)')
+                'VTK (*.vtk);;VTP (*.vtp);;CSV (*.csv);;DAT (*.dat)')
             
             if fpathout != '': 
                 _forceLocal = False 
@@ -6978,7 +6978,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportGrid.addWidget(self.exportWdButton, nrow, gcolumn)
         
         # export electrode locations 
-        self.exportElecButton = QPushButton('Export Electrodes (xyz, vtk, csv)') 
+        self.exportElecButton = QPushButton('Export Electrodes') 
         self.exportElecLabel = QLabel('Export the electrodes coordinates')
         self.exportElecBox = QHBoxLayout()
         self.exportLocalGridElecCheck = QCheckBox('Force Local Grid')
@@ -6995,7 +6995,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportGrid.addWidget(self.exportElecButton, nrow, gcolumn)
         
         # export results 
-        self.exportResultsButton = QPushButton('Export Results (xyz, vtk, csv)') 
+        self.exportResultsButton = QPushButton('Export Results') 
         self.exportResultsLabel = QLabel('Export the resulting resistivity domain in various formats')
         self.exportResultsBox = QHBoxLayout()
         self.exportLocalGridResultsCheck = QCheckBox('Force Local Grid')

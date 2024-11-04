@@ -1209,8 +1209,14 @@ class Mesh:
             
         # catch 2d truncation in 3D meshes 
         if ylim[0] == ylim[1]:
-            ylim[0] -= 1.0
-            ylim[1] += 1.0
+            ylim[0] -= 3.0
+            ylim[1] += 3.0
+        if xlim[0] == xlim[1]:
+            xlim[0] -= 3.0
+            xlim[1] += 3.0
+        if zlim[0] == zlim[1]:
+            zlim[0] -= 3.0
+            zlim[1] += 3.0
              
         # we keep all the elements which have at least 1 node inside
         # the zone of interest
@@ -3454,6 +3460,10 @@ class Mesh:
             elec_z = elec.z.values 
         if elec_type is None:
             elec_type = self.elec_type 
+        
+        if 'surface_refinement' not in kwargs.keys() and self.ndims==3:
+            if self.surfaceMesh is not None: 
+                kwargs['surface_refinement'] = self.surfaceMesh.node.copy() 
 
         mesh = voxelMesh(elec_x, elec_y, elec_z, elec_type, **kwargs, 
                          force_regular=True)
@@ -6833,7 +6843,7 @@ def points2vtk (x,y,z,fname="points.vtk",title='points',data=None, file_name=Non
     
     fh.close() 
     
-def points2vtp (x,y,z,fname="points.vtk",title='points',data=None,file_name=None):
+def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None):
     """
     Function makes a .vtp file for some xyz coordinates. optional argument
     renames the name of the file (needs file path also) (default is "points.vtp"). 

@@ -336,6 +336,16 @@ def fitXYangle(x,y):
     if a > 360:
         a -= 360 
     return a 
+
+# find min and max of an array 
+def findminmax(a):
+    a = np.array(a)
+    mina = np.min(a) if np.min(a) != 0 else -1
+    maxa = np.max(a) if np.max(a) != 0 else +1
+    if mina == maxa:
+        mina -= 1
+        maxa += 1
+    return [mina, maxa]
     
 
 #%% main Project class (called 'R2' in previous versions)
@@ -1641,7 +1651,7 @@ class Project(object): # Project master class instanciated by the GUI
         Notes
         -----
         Format of survey details file should have up to 3 columns with these names. 
-        fpath, sid (optional), and ftype (optional). 
+        fpath, sid (optional), and ftype (optional), string (optional). 
         
         fpath: str
             Path to survey file, best to use full system path 
@@ -1656,6 +1666,9 @@ class Project(object): # Project master class instanciated by the GUI
         
         sid: int, optional 
             Survey index, used for making timelapse surveys from multiple files
+        string: int, optional 
+            Denotes the string number of the of the sruvey (useful for merging 
+            3D surveys from 2D lines). 
         
         """
 
@@ -2024,15 +2037,6 @@ class Project(object): # Project master class instanciated by the GUI
         kwargs : -
             Keyword arguments to be passed to Mesh.show() class.
         """
-
-        def findminmax(a):
-            a = np.array(a)
-            mina = np.min(a) if np.min(a) != 0 else -1
-            maxa = np.max(a) if np.max(a) != 0 else +1
-            if mina == maxa:
-                mina -= 1
-                maxa += 1
-            return [mina, maxa]
         
         try:
             import pyvista as pv
@@ -3250,6 +3254,7 @@ class Project(object): # Project master class instanciated by the GUI
         elec_type[self.elec['remote'].values] = 'remote'
         elecLabels = self.elec['label'].values.astype(str)
         
+        
         # assign possible topography (surface)
         if surface is not None:
             if surface.shape[1] == 2:
@@ -3257,6 +3262,11 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 self.topo = pd.DataFrame(surface, columns=['x','y','z'])
                 
+            # error checking on surface 
+            for column in self.topo.columns:
+                if any(np.isnan(self.topo[column].values)):
+                    raise Exception('There are nan values in surface topography %s column!'%column)
+            
             if self.coordLocal: 
                 # need to convert surface to local coordinates 
                 surface = surface.copy() 
@@ -3648,11 +3658,18 @@ class Project(object): # Project master class instanciated by the GUI
             elec = elec[~self.elec['remote'].values,:]
             if 'zlim' not in kwargs.keys():
                 kwargs['zlim'] = self.zlim
-                
-            if 'xlim' not in kwargs.keys(): # best to use limits provided by R2 becuase it knows if electrodes are remote 
-                kwargs['xlim'] = findminmax(elec[:,0])
+             
+            # best to use x/y limits provided by project class becuase it knows if electrodes are remote 
+            if 'xlim' not in kwargs.keys():
+                # scale up electrode coordinates by 20% to give some padding around where the electrodes are 
+                kwargs['xlim'] = findminmax(elec[:,0]*1.2) 
+                # can use surface topography too if that has been provided 
+                if len(self.topo) > 4:
+                    kwargs['xlim'] = findminmax(self.topo.x)
             if 'ylim' not in kwargs.keys() and self.typ[-1] == 't':
-                kwargs['ylim'] = findminmax(elec[:,1])
+                kwargs['ylim'] = findminmax(elec[:,1]*1.2)
+                if len(self.topo) > 4:
+                    kwargs['ylim'] = findminmax(self.topo.y)
                 
             if 'color_map' not in kwargs.keys(): # pick a color map based on display type
                 if self.typ[-1] == 't':
@@ -4715,6 +4732,23 @@ class Project(object): # Project master class instanciated by the GUI
             for a in ['tank', 'cylinder', 'prism']:
                 if self.meshParams['typ'] == a:
                     kwargs['clipping'] = False 
+                    
+        elec = self.elec[['x','y']].values
+        elec = elec[~self.elec['remote'].values,:]
+        if 'zlim' not in kwargs.keys():
+            kwargs['zlim'] = self.zlim
+         
+        # best to use x/y limits provided by project class becuase it knows if electrodes are remote 
+        if 'xlim' not in kwargs.keys():
+            # scale up electrode coordinates by 20% to give some padding around where the electrodes are 
+            kwargs['xlim'] = findminmax(elec[:,0]*1.2) 
+            # can use surface topography too if that has been provided 
+            if len(self.topo) > 4:
+                kwargs['xlim'] = findminmax(self.topo.x)
+        if 'ylim' not in kwargs.keys() and self.typ[-1] == 't':
+            kwargs['ylim'] = findminmax(elec[:,1]*1.2)
+            if len(self.topo) > 4:
+                kwargs['ylim'] = findminmax(self.topo.y)
             
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
@@ -7096,8 +7130,14 @@ class Project(object): # Project master class instanciated by the GUI
         for key in ['zmin','zmax']:
             if key not in self.param.keys():
                 self.param[key] = None 
-            
-        # loop through and export meshes as vtk files 
+                
+        # grab surface of mesh in 3d surveys to better inform voxel mesh creation        
+        if '3' in self.typ and voxel:
+            surfaceMesh = self.mesh.extractSurface() 
+        else:
+            surfaceMesh = None 
+    
+        # loop through and export meshes as vtu (or other) files 
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
             meshcopy = mesh.copy()
@@ -7139,7 +7179,8 @@ class Project(object): # Project master class instanciated by the GUI
                 elif s.elec['remote'][i]:
                     elec_type[i] = 'remote'
             meshcopy.elec_type = elec_type  
-
+            
+            meshcopy.surfaceMesh = surfaceMesh
             meshcopy.exportMesh(file_path, ftype.replace('.',''),
                                 coordLocal, self.coordParam, 
                                 voxel, self.meshParams) # save to vtk 
@@ -7168,7 +7209,7 @@ class Project(object): # Project master class instanciated by the GUI
                                              voxel)
             amtContent += "\tannotations.append('%s')\n"%self.pseudo3DMeshResult.mesh_title
 
-        if ext =='.vtk': 
+        if 'v' in ext: 
             # write out paraview animation track 
             fh = open(os.path.join(dirname,'amt_track.py'),'w')
             fh.write('from paraview.simple import *\n')
