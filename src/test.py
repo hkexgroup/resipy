@@ -215,7 +215,7 @@ k.filterRecipIP(index=-2)
 timings['methods-filtering'] = time.time() - tstart
 
 
-#%% error modelling
+#%% reciprocal error modelling
 k = Project(typ='cR2')
 k.createBatchSurvey(testdir + 'ip-2d-timelapse-syscal/')
 
@@ -458,7 +458,7 @@ k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
 k.showPseudoIP()
 print('k')
 k.err=True # there is already error inside the protocol.dat imported
-k.invert()
+k.invert(modErr=True) # test inversion with forward modelling errors 
 print('l')
 k.showResults(attr='Magnitude(ohm.m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)

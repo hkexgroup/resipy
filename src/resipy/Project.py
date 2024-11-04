@@ -4735,8 +4735,6 @@ class Project(object): # Project master class instanciated by the GUI
                     
         elec = self.elec[['x','y']].values
         elec = elec[~self.elec['remote'].values,:]
-        if 'zlim' not in kwargs.keys():
-            kwargs['zlim'] = self.zlim
          
         # best to use x/y limits provided by project class becuase it knows if electrodes are remote 
         if 'xlim' not in kwargs.keys():
@@ -6098,7 +6096,7 @@ class Project(object): # Project master class instanciated by the GUI
             s.addPerError(percent)
             
 
-    def computeModelError(self, rmTree=False, dump=None):
+    def computeModelError(self, rmTree=False, dump=None, refRes=100, refPhs=-10):
         """Compute modelling error associated with the mesh for a half space
         problem. This is computed on a flat mesh with the same meshing parameters
         as the project mesh. In the case of non-conventional surveys a different
@@ -6112,20 +6110,27 @@ class Project(object): # Project master class instanciated by the GUI
         dump : bool 
             Function to direct the output of the modelling error process, by default
             the outputs are printed to the console. 
+        refRes: float, int 
+            Reference resistivity value (normally 100)
+        refPhs: float, int 
+            Reference phase value (normally -10)
             
         """
         if dump is None:
             def dump(x):
                 print(x, end='')
+        
+        if self.mesh is None:
+            raise Exception('Cannot compute modelling error without a mesh, make a mesh first!')
                 
         dump('Doing error modelling...\n')
         
         cases = ['tetra','trian','quad'] # use cases where modelling error is a half space 
         halfspace = True 
-        if self.meshParams['typ'] not in cases and not self.wholespace: 
-            # raise Exception('Modelling error not avialable for this mesh type yet')
-            halfspace = False 
-            
+        if 'typ' in self.meshParams.keys():
+            if self.meshParams['typ'] not in cases and not self.wholespace: 
+                halfspace = False 
+                
         node_elec = None # we need this as the node_elec with topo and without might be different
         if not halfspace:
             dump('Refining the mesh for the case of a generic problem...\n\n')
@@ -6161,20 +6166,37 @@ class Project(object): # Project master class instanciated by the GUI
         fparam = self.param.copy()
         fparam['job_type'] = 0
         
-        if (self.typ == 'R2') | (self.typ == 'cR2'):
-            n = 2
+        if '2' in self.typ:
+            ndim = 2
             mname = 'mesh.dat'
             meshPath = os.path.join(fwdDir, mname)
             mesh.dat(meshPath)
+            appResCol = 6
+            trCol = 5 
         else:
-            n = 3
+            ndim = 3
             mname = 'mesh3d.dat'
             meshPath = os.path.join(fwdDir, mname)
             mesh.datAdv(meshPath, iadvanced=self.iadvanced) # use advanced mesh format if 3D 
+            appResCol = 10
+            trCol = 9
         
+        #check to see if an extra column needs adding in the case of IP surveys 
+        ncol = 1 
+        phaseCol = 0 
+        ipflag = False 
+        if 'c' in self.typ: 
+            ncol = 2
+            appResCol = trCol + 2 
+            phaseCol = trCol + 1 
+            ipflag = True 
+    
         #make starting resistivity file 
-        resFile = np.zeros((mesh.numel, n+1)) # centroid x, y, z, res0
-        resFile[:,-1] = 100
+        
+        resFile = np.zeros((mesh.numel, ndim+ncol),dtype=float) # centroid x, y, z, res0, (phase)
+        resFile[:,ndim] = refRes
+        if ipflag:  
+            resFile[:,ndim+1] = refPhs 
         np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                    fmt='%.3f')
 
@@ -6213,11 +6235,11 @@ class Project(object): # Project master class instanciated by the GUI
         
         if halfspace: 
             # assume that apparent resistivities should equal 100 in the case of a halfspace 
-            ap = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-1]
-            modErrRel = np.abs(100-ap)/100
+            ap = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,appResCol]
+            modErrRel = np.abs(refRes-ap)/100 
         else: # need to run code again with reference mesh 
             # grab reference transfer resistances made on refined mesh 
-            tr0 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-2]
+            tr0 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,trCol]
             
             # keep files for refined mesh 
             shutil.move(os.path.join(fwdDir,mname),
@@ -6228,13 +6250,13 @@ class Project(object): # Project master class instanciated by the GUI
                         os.path.join(fwdDir,'resistivity_refined.dat'))
 
             # write new mesh that is used for the actual inversion
-            if n == 2: 
+            if ndim == 2: 
                 self.mesh.dat(meshPath) # (use class mesh not the refined one)
             else: # use advanced mesh format if 3D   
                 self.mesh.datAdv(meshPath, iadvanced=self.iadvanced)   
             # write a new starting resistivity file
-            resFile = np.zeros((self.mesh.numel, n+1)) # centroid x, y, z, res0
-            resFile[:,-1] = 100
+            resFile = np.zeros((self.mesh.numel, ndim+ncol)) # centroid x, y, z, res0, (phase)
+            resFile[:,ndim] = refRes
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), 
                        resFile,
                        fmt='%.3f')
@@ -6242,13 +6264,12 @@ class Project(object): # Project master class instanciated by the GUI
             dump('Running R* code for reference (unrefined) mesh ...\n')
             self.runR2(fwdDir,dump)
             # grab transfer resistances for the reference mesh 
-            tr1 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,-2]
+            tr1 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,trCol]
             
-            k = 100/tr0 # compute geometric factor using refined mesh transfer resistances 
+            k = refRes/tr0 # compute geometric factor using refined mesh transfer resistances 
             ap0 = tr0*k # apparent resistivities for refined mesh 
             ap1 = tr1*k # apparent resistivities for unrefined mesh (use same k as before)
             modErrRel = np.abs(ap0-ap1)/100 # compute relative modelling error 
-            
             
         # append modelling error to survey dataframes 
         # NOTE: In order to compute absolute modelling error multiply it by survey transfer resistances  
@@ -6256,13 +6277,27 @@ class Project(object): # Project master class instanciated by the GUI
         dump('Adding to modelling error to data structures...\n')
         dferr = pd.DataFrame(seq, columns=['a','b','m','n'])
         dferr['modErrRel'] = modErrRel 
+        
+        if ipflag :
+            simPhase = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,phaseCol]
+            # todo: how to compute phase modelling errors???
+            dferr['modErrPhaseRel'] = np.abs(refPhs-simPhase)/100
+            
+        
         for s in self.surveys:
             if 'modErrRel' in s.df.columns:
                 s.df.drop('modErrRel', axis=1)
             if 'modErr' in s.df.columns:
                 s.df.drop('modErr', axis=1)
+            if 'modErrPhaseRel' in s.df.columns:
+                s.df.drop('modErrRel', axis=1)
+            if 'modErrPhase' in s.df.columns:
+                s.df.drop('modErr', axis=1)
             s.df = pd.merge(s.df, dferr, on=['a','b','m','n'], how='inner')
             s.df['modErr'] = (s.df['modErrRel']*s.df['resist']).abs() 
+            if not ipflag: # continue in the case of resistivity surveys 
+                continue 
+            # otherwise compute phase related errors ... 
         
         if rmTree:# eventually delete the directory to spare space
             dump('Removing temporary error directory...\n')
