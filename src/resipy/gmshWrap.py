@@ -839,7 +839,31 @@ def wholespace2d(electrodes, padding = 20, electrode_type = None, geom_input = N
         else:
             fh.write("//end of boundaries.\n")
             print('%i boundary(ies) added to input file'%(count-1))
-            break              
+            break       
+        
+    if 'refine' in geom_input.keys():
+        fh.write('\n//Refinement points \n')
+        px = np.array(geom_input['refine'][0])
+        pz = np.array(geom_input['refine'][1])
+        if len(geom_input['refine']) == 3: 
+            pl = np.array(geom_input['refine'][2])
+        else:
+            pl = np.ones(px.shape[0])*cl
+        #work out which nodes are inside the fine mesh region 
+        fmrx = [max_x,max_x,min_x,min_x]
+        fmrz = [max_z,min_z,min_z,max_z]
+        path = mpath.Path(np.c_[fmrx,fmrz])
+        inside = path.contains_points(np.c_[px,pz])
+        r_pt_idx = []
+        for k in range(len(px)):
+            if not inside[k]:
+                continue 
+            no_pts += 1 
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,%.2f};//refinement point %i\n"%(no_pts, px[k], 0, pz[k], pl[k], k+1))
+            r_pt_idx.append(no_pts) 
+        fh.write("Point{%s} In Surface{%i};//include nodes in meshing\n"%(str(r_pt_idx).strip('[').strip(']'), 1))
+        print('%i refinement points added to input file'%(len(r_pt_idx)))
+        fh.write('//End refinement points\n')
     
     fh.close()
     print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
@@ -1190,9 +1214,6 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         distances = find_dist(tmp_x[idx], tmp_y[idx], tmp_z[idx])
         dist_sort = np.unique(distances)
         elecspacing = dist_sort[1]
-        # if max(topo_x)-min(topo_x) < elecspacing and len(topo_x) != 1: # they have the same x coordinate 
-        #     topo_x = [min(electrodes[0]) - 2*elecspacing,
-        #               max(electrodes[0]) + 2*elecspacing]
         if dp_len == -1:#there is no change dipole length, maybe due to 1 x coordinate 
             dp_len = dist_sort[-1]
         if fmd == -1:
@@ -1583,7 +1604,6 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         fh.write("Line{%s} In Surface{2};//boundary lines\n"%str(blines).strip('[').strip(']'))
     
     # add buried electrodes? (added after as we need Surface 1 to be defined)      
-    # TODO: add ball fields for buried electrodes 
     if bu_flag:
         nfield = 0 
         fh.write("\n//Buried electrodes \n")  
@@ -1630,6 +1650,10 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
         fh.write('\n//Refinement points \n')
         px = np.array(geom_input['refine'][0])
         pz = np.array(geom_input['refine'][1])
+        if len(geom_input['refine']) == 3: 
+            pl = np.array(geom_input['refine'][2])
+        else:
+            pl = np.ones(px.shape[0])*cl
         #work out which nodes are inside the fine mesh region 
         fmrx = np.append(x_pts,np.flipud(x_base))
         fmrz = np.append(z_pts,np.flipud(z_base))
@@ -1640,7 +1664,7 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
             if not inside[k]:
                 continue 
             no_pts += 1 
-            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*cl_factor};//refinement point %i\n"%(no_pts,px[k],0,pz[k],k+1))
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,%.2f};//refinement point %i\n"%(no_pts, px[k], 0, pz[k], pl[k], k+1))
             r_pt_idx.append(no_pts) 
         fh.write("Point{%s} In Surface{%i};//include nodes in meshing\n"%(str(r_pt_idx).strip('[').strip(']'), no_plane))
         fh.write('//End refinement points\n')

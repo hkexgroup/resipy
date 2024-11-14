@@ -27,7 +27,7 @@ import matplotlib.path as mpath
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from scipy.spatial import cKDTree, Voronoi 
+from scipy.spatial import cKDTree, Voronoi, ConvexHull
 from scipy.interpolate import interp1d
 from copy import deepcopy
 
@@ -1109,6 +1109,9 @@ class Mesh:
         map_idx = np.argsort(sort_idx)# indexes to map the indexes back to thier original positions 
         sortf = con_matf[sort_idx] # sorted connection matrix 
         uni_nodes = np.unique(con_matf) # unique mesh nodes 
+        if len(sortf) == 0:
+            warnings.warn('call made to remove excess nodes but there are no excess nodes to remove')
+            return 
         
         #create new node indexes
         new_nodes = np.array([0]*len(sortf))
@@ -5257,18 +5260,56 @@ def quad(dx,dy):
     else:
         return 3 
     
-def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True):
+def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True, 
+                           cfactor=5, nfactor=100):
     """
-    Create control points for surface electrodes in 3D (or 2d borehole electrodes)
+    Create control points for surface electrodes in 3D (or 2d borehole electrodes), 
+    which attempts to better refine the mesh further away from the electrodes. 
+    
+    Parameters
+    ----------
+    elec_x: array like 
+        Electrode X coordinates 
+    elec_y: array like 
+        Electrode Y coordinates (or Z coordinates in the case of borehole surveys)
+    r: float
+        Raduis of control points. Sets the minimum distance from the electrodes. 
+    min_r: float, optional 
+        Raduis in which multiple control points cannot exist, prevents over tuning
+        of mesh refinement near the electrodes. Set at the desired characteristic
+        length. Defaults to the same as 'r'. 
+    check_quadrant: bool, optional 
+        Checks if refinement points are being added inline with electrodes. For
+        most cases best to leave this as True. 
+    cfactor: float, int, optional
+        Characteristic length multiplication factor for near electrode field. 
+    nfactor: float, int, optional 
+        Nuemon region characteristic length factor. Helps enlarge points inserted 
+        via Voroni calculations further away from the electrodes. Default is 10. 
+    
+    Returns:
+    --------
+    xstack: array like 
+        Array of refinement point X coordinates 
+    ystack: array like 
+        Array of refinement point Y coordinates 
+    ptsize: array like 
+        Array of suggested characteristic lengths for the refinement points 
     """
     if min_r is None:
         min_r = r
+        
+    # electrode geometry parameters 
+    elec_x = np.array(elec_x)
+    elec_y = np.array(elec_y)
     nelec = len(elec_x)
-    tree = cKDTree(np.c_[elec_x,elec_y])
-    _,idx = tree.query(np.c_[elec_x,elec_y],3)
+    points = np.c_[elec_x,elec_y]
+    tree = cKDTree(points)
+    _,idx = tree.query(points,3)
     
     xstack = [] 
     ystack = [] 
+    ptsize = [] 
     
     addry = [r,0,-r,0]
     addrx = [0,r,0,-r]
@@ -5293,14 +5334,51 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True):
                 if j not in qs: 
                     xstack.append(elec_x[i] + addrx[j]) 
                     ystack.append(elec_y[i] + addry[j]) 
+                    ptsize.append(min_r*cfactor)
+                    
+        # do some veroni points further away from electrodes 
+        # but only keep those points which are further away inbetween electrode lines 
+        vor = Voronoi(points)
+        verts = vor.vertices.copy() 
+        # check points are not close too electrodes 
+        closecheck = cKDTree(points).query_ball_point(verts, r) 
+        # check points are not too close to each other 
+        repetcheck = cKDTree(np.vstack([points,verts])).query_ball_point(verts, r*3) 
+        # check points are inside convex hull 
+        chull = ConvexHull(points)
+        chullpath = mpath.Path(points[chull.vertices])
+        
+        #loop through to satisfy above checks 
+        for i in range(verts.shape[0]):
+            keep = True  
+            if len(closecheck[i]) > 1: 
+                c = 0 
+                for c,j in enumerate(closecheck[i]):
+                    if c == 0: 
+                        continue 
+                    keep = False 
+            if len(repetcheck[i]) > 1: 
+                c = 0 
+                for c,j in enumerate(repetcheck[i]):
+                    if c == 0: 
+                        continue 
+                    keep = False  
+            if not chullpath.contains_point(verts[i,:]):
+                keep = False  
+            if keep: 
+                xstack.append(verts[i,0])
+                ystack.append(verts[i,1])
+                ptsize.append(min_r*nfactor)
     else: 
         for i in range(nelec):
             for j in range(4):
                 xstack.append(elec_x[i] + addrx[j]) 
                 ystack.append(elec_y[i] + addry[j]) 
-                
+                ptsize.append(min_r*cfactor)
+    
     xstack = np.array(xstack)
     ystack = np.array(ystack)
+    ptsize = np.array(ptsize)
     # double check no points are repeated 
     tree = cKDTree(np.c_[xstack, ystack])
     ilookup = tree.query_ball_point(np.c_[xstack, ystack],min_r)
@@ -5314,8 +5392,7 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True):
                 if c == 0: 
                     continue 
                 repeats[j] = True 
-        
-    return xstack[~repeats], ystack[~repeats]
+    return xstack[~repeats], ystack[~repeats], ptsize[~repeats] 
 
 #%% build a triangle mesh - using the gmsh wrapper
 def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
@@ -5413,10 +5490,10 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
         dist_sort = np.unique(gw.find_dist(elec_x,np.zeros_like(elec_x),elec_z))
         cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance
         
-    # if 'cl_factor' in kwargs.keys():
-    #     cl_factor = kwargs['cl_factor']
-    # else: 
-    #     cl_factor = 2.0 
+    if 'cl_factor' in kwargs.keys():
+        cl_factor = kwargs['cl_factor']
+    else: 
+        cl_factor = 2.0 
 
     bur_idx=[]#buried electrode index 
     surface_idx = [] 
@@ -5434,15 +5511,15 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
         bux = np.array(elec_x)[np.array(bur_idx)]
         buz = np.array(elec_z)[np.array(bur_idx)]
         # control points in x z coordinates 
-        cpx, cpz = halfspaceControlPoints(bux, buz, 
-                                          cl, cl*1.5)
+        cpx, cpz, cpl = halfspaceControlPoints(bux, buz, 
+                                               cl, cl*1.5, cl_factor)
         if geom_input is None: 
-            geom_input = {'refine':[cpx,cpz]} 
+            geom_input = {'refine':[cpx,cpz,cpl]} 
         elif 'refine' in geom_input.keys():
             geom_input['refine'][0] = list(geom_input['refine'][0]) + cpx.tolist()
             geom_input['refine'][1] = list(geom_input['refine'][1]) + cpz.tolist()
         else:
-            geom_input['refine'] = [cpx,cpz]        
+            geom_input['refine'] = [cpx,cpz,cpl]        
             
     if model_err and not whole_space: 
         # if attempting to model forward modelling errors, normalise topography
@@ -5754,6 +5831,11 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     else:
         cl_factor = 5 
         
+    if 'cln_factor' in kwargs.keys():
+        cln_factor = kwargs['cln_factor']
+    else:
+        cln_factor = 10000
+        
     # check if mesh refinement present 
     if mesh_refinement is not None and not whole_space:        
         surf_rx = []
@@ -5874,26 +5956,29 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             check_quadrant = False 
             
         if len(surf_elec_x)>0: 
-            # control points in x y coordinates 
-            _cpx, _cpy = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
-                                                cps, cl, check_quadrant)
+            # round 0 -> control points in x y coordinates surrounding the electrodes 
+            _cpx, _cpy, _cpl = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
+                                                      cps, cl, check_quadrant, 
+                                                      cl_factor, cln_factor)
             _cpz = np.zeros_like(_cpx)
-        
+            
             fmdx = _cpx[::3]
             fmdy = _cpy[::3]
             fmdz = _cpz[::3] - abs(fmd) # add some points at depth too 
+            fmdl = _cpl[::3] 
         
             # append to control points 
             cpx = np.append(_cpx,fmdx)
             cpy = np.append(_cpy,fmdy)
             cpz = np.append(_cpz,fmdz)
-            cpl = np.full_like(cpx, cl*cl_factor)
+            cpl = np.append(_cpl,fmdl)
         
         if len(bur_elec_x) > 0:
             # add some random control points near the electrodes 
             cbx = [0]*len(bur_elec_x)
             cby = [0]*len(bur_elec_x)
             cbz = [0]*len(bur_elec_x)
+            cbl = [0]*len(bur_elec_x)
             # setup some code to get control points spiraling round the borehole electrodes 
             r = cl*1.0
             choicex = [r, 0, -r, 0]
@@ -5903,6 +5988,7 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
                 cbx[i] = bur_elec_x[i] + choicex[j]
                 cby[i] = bur_elec_y[i] + choicey[j]
                 cbz[i] = bur_elec_z[i] 
+                cbl[i] = cl*cl_factor 
                 j += 1 
                 if j >= 4:
                     j = 0 
@@ -5910,17 +5996,18 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             cpx = np.append(cpx,cbx)
             cpy = np.append(cpy,cby)
             cpz = np.append(cpz,cbz)
-            cpl = np.full_like(cpx, cl*cl_factor)
+            cpl = np.append(cpl,cbl)
                 
         # one last check that no points are duplicates of electrodes 
         idist,_ = tree.query(np.c_[cpx,cpy,cpz]) 
         tokeep = [True]*len(cpx)
         for i in range(len(cpx)):
-            if idist[i] < 1e-16:
+            if idist[i] < (cps*0.8):
                 tokeep[i] = False 
         cpx = cpx[tokeep]
         cpy = cpy[tokeep]
         cpz = cpz[tokeep]
+        cpl = cpl[tokeep]
         
         control = {'x':cpx,
                    'y':cpy,
@@ -6843,7 +6930,8 @@ def points2vtk (x,y,z,fname="points.vtk",title='points',data=None, file_name=Non
     
     fh.close() 
     
-def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None):
+def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None, 
+                connect=True):
     """
     Function makes a .vtp file for some xyz coordinates. optional argument
     renames the name of the file (needs file path also) (default is "points.vtp"). 
@@ -6864,6 +6952,9 @@ def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None
         Point data. 
     file_name: str, optional
         Same input as fname but kept for backwards compatibility 
+    connect: bool, optional 
+        Connect the electrodes in a line. Can be helpful for paraview visualisation 
+        options. 
             
     Returns
     -------
@@ -6905,14 +6996,25 @@ def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None
         if j < 5: # write out last line 
             writeXMLline(text,False,5)
             
+    def writeEmpty(tag): 
+        writeXMLline(tag,tab=3)
+        writeXMLline(empty_header_template.format('connectivity'),tab=4)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline(empty_header_template.format('offsets'),tab=4)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline('/'+tag,tab=3)
     
     data_header_template = 'DataArray type="Float64" Name="{:s}" format="ascii" RangeMin="{:f}" RangeMax="{:f}"'
+    data_header_templatei = 'DataArray type="Int64" Name="{:s}" format="ascii" RangeMin="{:d}" RangeMax="{:d}"'
     empty_header_template = 'DataArray type="Int64" Name="{:s}" format="ascii" RangeMin="1e+299" RangeMax="-1e+299"'
     point_header_template = 'DataArray type="Float64" Name="Points" NumberOfComponents="3" format="ascii" RangeMin="{:f}" RangeMax="{:f}"'
    
     writeXMLline('VTKFile type="PolyData" version="1.0" byte_order="LittleEndian" header_type="UInt64"')
     writeXMLline('PolyData',tab=1)
-    writeXMLline('Piece NumberOfPoints="%i" NumberOfVerts="0" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="0"'%len(x), tab=2)
+    nlines = 0 
+    if connect:
+        nlines = 1 
+    writeXMLline('Piece NumberOfPoints="%i" NumberOfVerts="0" NumberOfLines="%i" NumberOfStrips="0" NumberOfPolys="0"'%(len(x),nlines), tab=2)
     
     # write out point data
     writeXMLline('PointData', tab=3)
@@ -6941,15 +7043,28 @@ def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None
     writeXMLline('/DataArray',tab=4)
     writeXMLline('/Points',tab=3)
     
+    # write out vertices (not applicable here)
+    writeEmpty('Verts')
+    
+    # connect up the electrodes if requested. 
+    if connect: 
+        writeXMLline('Lines', tab=3)
+        X = [i for i in range(len(x))]
+        header = data_header_templatei.format("connectivity", np.min(X), np.max(X))
+        writeXMLline(header, tab=4)
+        writeXMLarray(X)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline(data_header_templatei.format("offsets", len(x), len(x)),tab=4)
+        writeXMLline('%i'%len(x),False,5)
+        writeXMLline('/DataArray',tab=4)
+        writeXMLline('/Lines',tab=3)
+    else: 
+        writeEmpty('Lines')
+    
     # write out other data arrays which are empty 
-    empty_datas = ['Verts','Lines','Strips','Polys']
-    for tag in empty_datas: 
-        writeXMLline(tag,tab=3)
-        writeXMLline(empty_header_template.format('connectivity'),tab=4)
-        writeXMLline('/DataArray',tab=4)
-        writeXMLline(empty_header_template.format('offsets'),tab=4)
-        writeXMLline('/DataArray',tab=4)
-        writeXMLline('/'+tag,tab=3)
+    writeEmpty('Strips')
+    writeEmpty('Polys')
+
     
     # closing lines 
     writeXMLline('/Piece',tab=2)

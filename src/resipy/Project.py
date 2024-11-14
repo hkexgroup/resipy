@@ -337,11 +337,13 @@ def fitXYangle(x,y):
         a -= 360 
     return a 
 
-# find min and max of an array 
-def findminmax(a):
+# find min and max of an array with some padding
+def findminmax(a, pad=20):
     a = np.array(a)
-    mina = np.min(a) if np.min(a) != 0 else -1
-    maxa = np.max(a) if np.max(a) != 0 else +1
+    delta = abs(np.max(a) - np.min(a))
+    mina = np.min(a) - (delta*(pad/100))
+    maxa = np.max(a) + (delta*(pad/100))
+    
     if mina == maxa:
         mina -= 1
         maxa += 1
@@ -492,6 +494,8 @@ class Project(object): # Project master class instanciated by the GUI
             label = ['1 1'] * len(elec)
             for i in range(len(elec)):
                 label[i] = '%i %i'%(line[i],elecid[i])
+            if 'label' in elec.columns:
+                elec.drop(columns=['label'], inplace=True)
             elec.insert(0,'label',label)
         if 'y' not in elec.columns:
             elec.insert(len(elec.columns),'y',0)
@@ -664,7 +668,7 @@ class Project(object): # Project master class instanciated by the GUI
                 else: # check intersection of labels
                     if len(self.surveys) > 0:
                         s = self.surveys[0]
-                        if s.hasDataString():
+                        if s.hasElecString():
                             s1 = np.unique(elec['label'].values)
                             s2 = np.unique(s.df[['a','b','m','n']].values.flatten())
                         else:
@@ -1850,8 +1854,12 @@ class Project(object): # Project master class instanciated by the GUI
             except Exception:
                 header = 'infer'
         df = pd.read_csv(fname, header=header)
+        
         if header is None:
-            elec = df.values
+            x = df.values[:,0]
+            y = df.values[:,0]
+            z = df.values[:,0]
+            elec = pd.DataFrame({'x':x, 'y':y, 'z':z})
         else:
             elec = df
         self.setPseudo3DElec(elec)
@@ -1864,9 +1872,17 @@ class Project(object): # Project master class instanciated by the GUI
     
         Parameters
         ----------
-        elecList : list of dataframes, optional
-            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
+        elec : pd.DataFrame 
+            Electrode data frame 
         """
+        if 'line' in elec.columns and 'number' in elec.columns: 
+            label = ['%i %i'%(elec.line[i], elec.number[i]) for i in range(len(elec))]
+            elec['label'] = label 
+        if 'remote' not in elec.columns: 
+            elec['remote'] = False 
+        if 'buried' not in elec.columns: 
+            elec['buried'] = False 
+        
         self.pseudo3DSurvey.elec = elec
         
         # take self.surveys information to inform all projects in self.projs
@@ -1926,6 +1942,10 @@ class Project(object): # Project master class instanciated by the GUI
         elecList = []
         for elecdfRaw in elecdfs:
             elecdf = elecdfRaw.copy().reset_index(drop=True) # void pandas setting with copy warning annoying error
+            if 'line' in elecdf:
+                elecdf.drop(columns=['line'], inplace=True)
+            if 'number' in elecdf:
+                elecdf.drop(columns=['number'], inplace=True)
             if changeLabel:
                 elecdf['label'] = elecdf['elecNum'].values # it's 2D so let's get rid of line numbers in labels
             elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
@@ -2126,13 +2146,18 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 limits = np.c_[meshMoved.node[:,0], meshMoved.node[:,1]]
 
-            xlim = findminmax(limits[:,0])
-            ylim = findminmax(limits[:,1])
+            xlim = findminmax(limits[:,0],1)
+            ylim = findminmax(limits[:,1],1)
             zlim = proj.zlim if cropMesh or cropMaxDepth else None
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
+            
+            # best to let pseudo 3d algorithm choose extents? 
+            kwargs['xlim'] = xlim 
+            kwargs['ylim'] = ylim 
+            kwargs['zlim'] = zlim 
 
-            meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
-                      ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
+            meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar,
+                           darkMode=self.darkMode, **kwargs)
             if returnMesh:
                 meshOutList.append(meshMoved)
         
@@ -3649,8 +3674,6 @@ class Project(object): # Project master class instanciated by the GUI
     def showMesh(self, ax=None, **kwargs):
         """Display the mesh and handles best default values. 
         """
-        def findminmax(a):
-            return (min(a),max(a))
         if self.mesh is None:
             raise Exception('Mesh undefined')
         else:
@@ -3662,14 +3685,14 @@ class Project(object): # Project master class instanciated by the GUI
             # best to use x/y limits provided by project class becuase it knows if electrodes are remote 
             if 'xlim' not in kwargs.keys():
                 # scale up electrode coordinates by 20% to give some padding around where the electrodes are 
-                kwargs['xlim'] = findminmax(elec[:,0]*1.2) 
+                kwargs['xlim'] = findminmax(elec[:,0]) 
                 # can use surface topography too if that has been provided 
                 if len(self.topo) > 4:
-                    kwargs['xlim'] = findminmax(self.topo.x)
+                    kwargs['xlim'] = findminmax(self.topo.x,1)
             if 'ylim' not in kwargs.keys() and self.typ[-1] == 't':
-                kwargs['ylim'] = findminmax(elec[:,1]*1.2)
+                kwargs['ylim'] = findminmax(elec[:,1])
                 if len(self.topo) > 4:
-                    kwargs['ylim'] = findminmax(self.topo.y)
+                    kwargs['ylim'] = findminmax(self.topo.y,1)
                 
             if 'color_map' not in kwargs.keys(): # pick a color map based on display type
                 if self.typ[-1] == 't':
@@ -4739,14 +4762,14 @@ class Project(object): # Project master class instanciated by the GUI
         # best to use x/y limits provided by project class becuase it knows if electrodes are remote 
         if 'xlim' not in kwargs.keys():
             # scale up electrode coordinates by 20% to give some padding around where the electrodes are 
-            kwargs['xlim'] = findminmax(elec[:,0]*1.2) 
+            kwargs['xlim'] = findminmax(elec[:,0]) 
             # can use surface topography too if that has been provided 
             if len(self.topo) > 4:
-                kwargs['xlim'] = findminmax(self.topo.x)
+                kwargs['xlim'] = findminmax(self.topo.x,1)
         if 'ylim' not in kwargs.keys() and self.typ[-1] == 't':
-            kwargs['ylim'] = findminmax(elec[:,1]*1.2)
+            kwargs['ylim'] = findminmax(elec[:,1])
             if len(self.topo) > 4:
-                kwargs['ylim'] = findminmax(self.topo.y)
+                kwargs['ylim'] = findminmax(self.topo.y,1)
             
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
@@ -7208,6 +7231,7 @@ class Project(object): # Project master class instanciated by the GUI
             # add electrode types 
             meshcopy.elec = s.elec[['x','y','z']].values 
             elec_type =['surface']*len(s.elec)
+            s.elec.reset_index(inplace=True)
             for i in range(len(s.elec)):
                 if s.elec['buried'][i]:
                     elec_type[i] = 'buried'

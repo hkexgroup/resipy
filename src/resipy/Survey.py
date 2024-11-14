@@ -445,7 +445,6 @@ class Survey(object):
             True if strings present in electrode labels 
 
         """
-        
         if len(self.df) == 0:
             return False 
         if len(self.df['a'].values[0].split()) <= 1:
