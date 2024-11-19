@@ -2300,7 +2300,8 @@ class Survey(object):
             If `True`, contour will be plotted. Otherwise, only dots. Warning
             this is unstable. 
         log : bool, optional
-            If `True`, the log of the resistivity will be taken.
+            If `True`, the log of the resistivity (or desired column values) 
+            will be taken.
         geom : bool, optional
             If `True`, the geometric factor will be computed and applied
             to the transfer resisttance to obtain apparent resistiivty. If 
@@ -2353,26 +2354,45 @@ class Survey(object):
                 raise Exception('Error plotting with pyvista, expected a pyvista plotter object but got %s instead'%typ_str)
             ax.set_background(background_color)
             
-        # elec = self.elec[['x','y','z']].values
+        # if intending to show apparent resistivity the safest option is to 
+        # recompute these values 
+        if column == 'app':
+            column = 'resist'
+            geom = True 
+            
         resist = self.df[column].values
                 
         if magFlag: # for cR3t and its magnitude calculation
             ie = self.checkTxSign(inplace=False) 
             resist[ie] *= -1 
             
-        if geom: # compute and applied geometric factor
+        if geom and column=='resist': # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K'].values
             resist[np.isinf(resist)] = np.nan # sometimes inf are generated
             # let's set them to nan to prevent colorscale to be meaningless
+            column = 'app' # column is now apparent resistivity 
             
-        if log:
+        # try and insert some more helpful colorbar labels over the internally used column names 
+        if log and column == 'resist':
+            resist = np.sign(resist)*np.log10(np.abs(resist))
+            label = 'log10(Transfer resistance) [Ohm]'
+        elif log and column == 'app':
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = 'log10(Apparent Resistivity) [Ohm.m]'
+        if column == 'resist':
+            label = 'Transfer resistance [Ohm]'
+        elif column == 'app':
+            label = 'Apparent Resistivity [Ohm.m]'
         elif column == 'ip':
             label = 'Phase [mrad]'
+        elif log and column == 'cR':
+            resist = np.log10(resist)
+            label = 'log10(Contact Resistance) [Ohm]'
+        elif column == 'cR':
+            label = 'Contact Resistance [Ohm]'
         else:
-            label = 'Apparent Resistivity [Ohm.m]'
+            label = column 
             
         if vmin is None:
             vmin = np.percentile(resist[~np.isnan(resist)],10) # use 10% percentile 
@@ -2649,7 +2669,7 @@ class Survey(object):
         darkMode : bool, optional
             If true, electrodes wil be plotted in white, else black
         flag3d: bool, optional
-            If true, function exits before 
+            If true, function exits before plotting. 
         """
         if len(self.df) != self.isequence.shape[0]:
             self.setSeqIds()
