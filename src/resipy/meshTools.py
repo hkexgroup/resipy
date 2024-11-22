@@ -174,6 +174,17 @@ def findDist(elec_x, elec_y, elec_z): # find maximum and minimum electrode spaci
         dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
     return dist.flatten() # array of all electrode distances 
 
+def findminmax(a, pad=20):
+    a = np.array(a)
+    delta = abs(np.max(a) - np.min(a))
+    mina = np.min(a) - (delta*(pad/100))
+    maxa = np.max(a) + (delta*(pad/100))
+    
+    if mina == maxa:
+        mina -= 1
+        maxa += 1
+    return [mina, maxa]
+
 #%% check mac version for wine
 def getMacOSVersion():
     OpSys=platform.system()    
@@ -265,6 +276,7 @@ class Mesh:
         self.eNodes  = None # node number that electrodes occupy 
         self.elec = None
         self.elec_type = None 
+        self.fmd = None 
         self.iremote = None # specify which electrode is remote
         self.idirichlet = None # specify idirichlet node 
         self.cax = None # store mesh.show() output for faster mesh.draw()
@@ -2579,19 +2591,27 @@ class Mesh:
         #return surface for 3D selection in forward modelling 
         if self.ndims != 3:
             raise Exception('Only use case for this is function is with 3D meshes')
-        if 'gmsh_phys_entity' in self.df.keys():
-            a = self.df['gmsh_phys_entity'].values            
-            nmesh = self.filterIdx(a==1)
-            return nmesh.extractSurface(post_neigh_check=False)
+            
+        if self.iremote is not None: 
+            iremote = self.iremote
         else:
-            try: # cut down to just the electrode area 
-                x = self.elec[:,0]
-                y = self.elec[:,1]
-                tmesh = self.truncateMesh([min(x),max(x)],
-                                          [min(y),max(y)])
-            except:
-                tmesh = self.copy()
-            return tmesh.extractSurface()
+            nelec = self.elec.shape[0]
+            iremote = np.array([False]*nelec,dtype=bool)
+        # work out extents of mesh surface 
+        xlim = [min(self.node[:,0])-1, max(self.node[:,0])+1]
+        if self.elec is not None: 
+            xlim = findminmax(self.elec[:,0][~iremote])
+
+        ylim = [min(self.node[:,1])-1, max(self.node[:,1])+1]
+        if self.elec is not None: 
+            ylim = findminmax(self.elec[:,1][~iremote])
+            
+        zlim = None 
+        if self.fmd is not None and self.elec is not None:
+            zlim = [max(self.elec[:,2])-self.fmd, max(self.elec[:,2])]
+        tmesh = self.truncateMesh(xlim,ylim,zlim)
+
+        return tmesh.extractSurface()
         
     def pick3Dbox(self,ax=None,xlim=None,ylim=None,zlim=None,electrodes=True, darkMode=False):
         """Pick out regions on the mesh using the box widget (intended for 3D
@@ -2632,32 +2652,24 @@ class Mesh:
             ax = pv.Plotter()
         
         # determine the extent of the survey for bounding box
-        if zlim == None:
-            zlim = [min(self.node[:,2])-1, max(self.node[:,2])+1]
-        
-        #work out lateral extents        
-        try:
-            if self.elec is not None:
-                if self.iremote is not None: 
-                    iremote = self.iremote
-                else:
-                    nelec = self.elec.shape[0]
-                    iremote = np.array([False]*nelec,dtype=bool)
-                elecx = self.elec[:,0][~iremote]
-                elecy = self.elec[:,1][~iremote]
-                dx = max(elecx) - min(elecx)
-                dy = max(elecy) - min(elecy)
-                d = np.sqrt(dx**2 + dy**2)
-                if xlim == None:
-                    xlim = [min(elecx)-d, max(elecx)+d]
-                if ylim == None:
-                    ylim = [min(elecy)-d, max(elecy)+d]
-        except (AttributeError,TypeError): #if no electrodes present use the node limits 
-            pass
-        if xlim == None:
+        if self.iremote is not None: 
+            iremote = self.iremote
+        else:
+            nelec = self.elec.shape[0]
+            iremote = np.array([False]*nelec,dtype=bool)
+        if xlim is None:
             xlim = [min(self.node[:,0])-1, max(self.node[:,0])+1]
-        if ylim == None:
+            if self.elec is not None: 
+                xlim = findminmax(self.elec[:,0][~iremote])
+        if ylim is None:
             ylim = [min(self.node[:,1])-1, max(self.node[:,1])+1]
+            if self.elec is not None: 
+                ylim = findminmax(self.elec[:,1][~iremote])
+        if zlim is None: 
+            if self.fmd is not None and self.elec is not None:
+                zlim = [max(self.elec[:,2])-self.fmd, max(self.elec[:,2])]
+            
+
                 
         # if 'elm_id' not in self.df.keys():
         self.df['elm_id'] = np.arange(1,self.numel+1,1)
@@ -2670,8 +2682,8 @@ class Mesh:
         
         # pyvista mesh
         folder = tempfile.TemporaryDirectory()
-        fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
-        self.vtk(fname)
+        fname = os.path.join(folder.name, '__to_pv_mesh.vtu')
+        self.vtu(fname)
         pvmesh = pv.read(fname)
         folder.cleanup()
         
@@ -2698,7 +2710,7 @@ class Mesh:
     def addRegion3D(self, clipped):
         if self.ndims != 3:
             raise Exception('Only use case for this function is with 3D meshes')
-        idx = np.unique(np.asarray(clipped.cell_arrays['elm_id'],dtype=self.dint))-1
+        idx = np.unique(np.asarray(clipped.cell_data['elm_id'],dtype=self.dint))-1
         self.df.loc[idx, 'region'] = np.max(self.df['region']) + 1 
         
         in_elem = np.array([False]*self.numel,dtype=bool)
@@ -3650,7 +3662,7 @@ class Mesh:
         # write cell data 
         writeXMLline('CellData',tab=3)
         for column in self.df.columns:
-            if column in ['X','Y','Z','elm_id','cellType']: 
+            if column in ['X','Y','Z','cellType']: 
                 continue 
             X = self.df[column].values 
             header = data_header_template.format(column, np.min(X), np.max(X))
@@ -6062,6 +6074,7 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     
     mesh.addAttribute(regions, 'region')
     mesh.addAttribute(np.array(mesh_info['parameters']), 'gmsh_phys_entity')
+    mesh.fmd = fmd 
     
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
     node_x = np.array(mesh.node[:,0])

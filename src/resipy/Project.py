@@ -6313,9 +6313,9 @@ class Project(object): # Project master class instanciated by the GUI
             if 'modErr' in s.df.columns:
                 s.df.drop('modErr', axis=1)
             if 'modErrPhaseRel' in s.df.columns:
-                s.df.drop('modErrRel', axis=1)
+                s.df.drop('modErrPhaseRel', axis=1)
             if 'modErrPhase' in s.df.columns:
-                s.df.drop('modErr', axis=1)
+                s.df.drop('modErrPhase', axis=1)
             s.df = pd.merge(s.df, dferr, on=['a','b','m','n'], how='inner')
             s.df['modErr'] = (s.df['modErrRel']*s.df['resist']).abs() 
             if not ipflag: # continue in the case of resistivity surveys 
