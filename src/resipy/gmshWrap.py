@@ -342,7 +342,7 @@ def mshParseLegacy(file_path, debug=True):
     return mesh_dict # return a python dictionary 
 
 
-def mshParse47(fname,debug=True):
+def mshParse47(fname, debug=True):
     if debug: # print outputs? 
         def stream(s,**kwargs):
             print(s,**kwargs)
@@ -352,7 +352,7 @@ def mshParse47(fname,debug=True):
         
     if not isinstance(fname,str):
         raise Exception("expected a string argument for fname")
-    fid=open(fname,'r')# Open text file
+    fid = open(fname,'r')# Open text file
     #Idea: Read Mesh format lines $MeshFormat until $Nodes
     dump=fid.readlines()
     fid.close()
@@ -370,14 +370,18 @@ def mshParse47(fname,debug=True):
     
     stream('Reading %s'%fname)
     
-    #find where the nodes start 
+    #find where the nodes start
+    node_start = -1
+    node_end = -1
     for i, line in enumerate(dump):
         if line.find("$Nodes") != -1:#node flag 
             node_start = i
         elif line.find("$EndNodes") != -1:
             node_end = i
             break # stop the loop, should find the nodes start before the end 
-            
+    if node_start == -1 or node_end == -1:
+        raise ValueError("Could not find $Nodes or $EndNodes in generated .msh file")
+
     stream('reading node coordinates...')
     #read in node stats 
     line = dump[node_start+1].split()
