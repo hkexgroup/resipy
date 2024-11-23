@@ -51,7 +51,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://gitlab.com/hkex/resipy",
     packages=setuptools.find_packages(),
-    install_requires=['numpy','matplotlib','pandas','scipy','requests','psutil','chardet'],
+    install_requires=['numpy<2.0.0','matplotlib','pandas','scipy','requests','psutil','chardet'],
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
