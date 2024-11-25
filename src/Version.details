@@ -1,7 +1,7 @@
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(3,6,0,0),
-    prodvers=(3,6,0,0),
+    filevers=(3,6,1,0),
+    prodvers=(3,6,1,0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -16,12 +16,12 @@ VSVersionInfo(
         u'040904B0',
         [StringStruct(u'CompanyName', u'HKEx Group'),
         StringStruct(u'FileDescription', u'ResIPy'),
-        StringStruct(u'FileVersion', u'3.6.0'),
+        StringStruct(u'FileVersion', u'3.6.1'),
         StringStruct(u'InternalName', u'ResIPy'),
         StringStruct(u'LegalCopyright', u'HKEx Group'),
         StringStruct(u'OriginalFilename', u'ResIPy.exe'),
         StringStruct(u'ProductName', u'ResIPy'),
-        StringStruct(u'ProductVersion', u'3.6.0')])
+        StringStruct(u'ProductVersion', u'3.6.1')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
