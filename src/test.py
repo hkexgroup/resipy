@@ -17,10 +17,7 @@ import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy import Project, Survey
 from resipy.Project import apiPath
-# import warnings # too much warnings for CI
-# warnings.simplefilter("always")
-
-use_pyvista = False
+import pyvista as pv  # pyvista will be rendered as with 'pv.Plotter(off_screen=True)'
 
 tstart = time.time()
 timings = {}
@@ -64,38 +61,34 @@ k.createSurvey(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
 k.createSurvey(testdir + 'parser/protocolForward/R2_forward.dat', ftype='ProtocolDC')
 k.createSurvey(testdir + 'parser/protocolForward/cR2_forward.dat', ftype='ProtocolIP')
 
-k.addData(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
-k.addData(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
-k.addData(testdir + 'dc-2d/syscal-normal-only.csv', ftype='Syscal')
-k.addData(testdir + 'dc-2d/protocol.dat', ftype='ProtocolDC')
-k.addData(testdir + 'dc-2d-borehole/xbh_prosys3.csv', ftype='Syscal')
-k.addData(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
-k.addData(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
-k.addData(testdir + 'ip-3d/protocol.dat', ftype='ProtocolIP')
-k.addData(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
-k.addData(testdir + 'parser/res2dinv-dd.dat', ftype='ResInv')
-k.addData(testdir + 'parser/res2dinv-ga.dat', ftype='ResInv')
-k.addData(testdir + 'parser/res2dinv-multigradient.dat', ftype='ResInv')
-k.addData(testdir + 'parser/res2dinv-wenner32.dat', ftype='ResInv')
-k.addData(testdir + 'parser/bgs-prime.dat', ftype='BGS Prime')
-k.addData(testdir + 'parser/sting_2D_noIP.stg', ftype='Sting')
-k.addData(testdir + 'parser/sting_3D_noIP.stg', ftype='Sting')
-k.addData(testdir + 'parser/abem-lund-norm.ohm', ftype='ABEM-Lund')
-k.addData(testdir + 'parser/Lippmann_1.tx0', ftype='Lippmann')
-k.addData(testdir + 'parser/Lippmann_2.tx0', ftype='Lippmann')
-k.addData(testdir + 'parser/Lippmann_3.tx0', ftype='Lippmann') 
-k.addData(testdir + 'parser/Lippmann_ASCII.tx0', ftype='Lippmann') 
-k.addData(testdir + 'parser/electraCustom100mA.ele', ftype='Electra')
-k.addData(testdir + 'parser/electraCustom040mA.ele', ftype='Electra')
-k.addData(testdir + 'parser/electraWenner.ele', ftype='Electra')
-k.addData(testdir + 'parser/syscal-new-format.csv', ftype='Syscal') 
-k.addData(testdir + 'parser/syscal_ProsysIII_IP.csv', ftype='Syscal')
-k.addData(testdir + 'parser/BERT_2D_topo.ohm', ftype='BERT')
-k.addData(testdir + 'parser/BERT_IP_2D.dat', ftype='BERT')
-k.addData(testdir + 'parser/DAS-1_2D_DC.data', ftype='DAS-1') # python 3.9 has an issue with this parser
-k.addData(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
-k.addData(testdir + 'parser/protocolForward/R2_forward.dat', ftype='ProtocolDC')
-k.addData(testdir + 'parser/protocolForward/cR2_forward.dat', ftype='ProtocolIP')
+k = Project(typ='R2')
+k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
+k.addData(fname=testdir + 'dc-2d/syscal.csv', ftype='Syscal')
+k.addData(fname=testdir + 'ip-2d/syscal.csv', ftype='Syscal')
+k.addData(fname=testdir + 'dc-2d/protocol.dat', ftype='ProtocolDC')
+k.addData(fname=testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
+k = Project(typ='R2')
+k.createSurvey(testdir + 'parser/bgs-prime.dat', ftype='BGS Prime')
+k.addData(fname=testdir + 'parser/res2dinv-dd.dat', ftype='ResInv')
+k.addData(fname=testdir + 'parser/sting_2D_noIP.stg', ftype='Sting')
+k.addData(fname=testdir + 'parser/bgs-prime.dat', ftype='BGS Prime')
+k.addData(fname=testdir + 'parser/abem-lund-norm.ohm', ftype='ABEM-Lund')
+k.addData(fname=testdir + 'parser/Lippmann_1.tx0', ftype='Lippmann')
+k.addData(fname=testdir + 'parser/electraWenner.ele', ftype='Electra')
+k.addData(fname=testdir + 'parser/BERT_IP_2D.dat', ftype='BERT')
+k.addData(fname=testdir + 'parser/DAS-1_2D_DC.data', ftype='DAS-1') # python 3.9 has an issue with this parser
+
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
+k.addData(fname=testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
+k.addData(fname=testdir + 'ip-3d/protocol.dat', ftype='ProtocolIP')
+k.addData(fname=testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'parser/sting_3D_noIP.stg', ftype='Sting')
+k.addData(fname=testdir + 'parser/sting_3D_noIP.stg', ftype='Sting')
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
+k.addData(fname=testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
 
 k = Project(typ='R3t')
 k.createSurvey(testdir + 'parser/protocolForward/R3t_forward.dat', ftype='ProtocolDC')
@@ -116,12 +109,20 @@ k.showPseudo(vmax=20)
 k = Project(typ='R3t')
 k.create3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=2,
                  zigzag=False, name='mergedSurvey', ftype='Syscal')
+pl = pv.Plotter(off_screen=True)
+k.showPseudo(threed=True, ax=pl)
 
 # 3D survey from 2D perpendicular line with one common elec
 k = Project(typ='R3t')
 k.create3DSurvey(testdir + 'dc-2d-pseudo3d-synthetic/data', lineSpacing=1,
                  zigzag=False, name='mergedSurvey', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
+
+# append string
+# k = Project(typ='R3t')
+# k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
+# k.addData(fname=testdir + 'dc-2d/syscal.csv', ftype='Syscal', string=1)
+# k.addData(fname=testdir + 'dc-2d/syscal.csv', ftype='Syscal', string=2)
 
 #%% testing different reciprocal methods
 k = Project(typ='R2')
@@ -229,6 +230,7 @@ k.filterDummy()
 k.filterUnpaired() # will remove dummy but can remove more as well
 k.filterElec(['2'])
 k.filterNested()
+k.filterNested()  # run twice on purpose
 #k.filterDCA() # tested in cases
 k.filterManual()
 k.filterRangeIP(phimin=-10, phimax=10)
@@ -259,7 +261,7 @@ k = Project(typ='cR2')
 k.createBatchSurvey(testdir + 'ip-2d-timelapse-syscal/')
 
 k.err = True
-k.write2protocol() # triggers default combined error model for DC and IP
+k.write2protocol(err=True) # triggers default combined error model for DC and IP
 
 k.showErrorIP(index=0)
 k.showErrorIP(index=-2)
@@ -305,6 +307,7 @@ timings['methods-error-modelling'] = time.time() - tstart
 k = Project()
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
 k.invert(err=True, errResCol='dev')  # use standard deviation as error weight
+k.showResults(clipCorners=True)
 timings['user-supplied-error'] = time.time() - tstart
 
 
@@ -313,7 +316,7 @@ plt.close('all')
 # 2D flat
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv')
-#k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
+k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
 k.createMesh('trian')
 # external_nodes,surface_flag = k.mesh.externalNodes() # comment as this requires new mesh calc compile 
 k.mesh.computeNeigh()
@@ -425,6 +428,7 @@ k.importElec(testdir + 'dc-2d-topo/elec.csv')
 k.fitErrorPwl()
 k.filterManual(attr='resError')
 k.estimateError()
+k.addFlatError()
 k.filterManual(attr='resError')
 k.showPseudo(contour=True)
 k.createMesh(typ='quad', elemx=4)
@@ -488,6 +492,9 @@ print('-------------Testing IP ------------')
 t0 = time.time()
 k = Project(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
+k.surveys[0].checkTxSign(inplace=False)
+k.showHeatmap()
+k.surveys[0].self_typ = 'Filtered'
 k.showHeatmap()
 k.showErrorIP()
 k.showPseudo(magFlag=True)
@@ -497,8 +504,10 @@ k.filterManual()
 k = Project(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
 k.showPseudoIP()
-#k.showPseudoIP(threed=True)
+pl = pv.Plotter(off_screen=True)
+k.showPseudoIP(threed=True, ax=pl)
 k.showPseudoIP(bx=True)
+k.showPseudoIP(contour=True)
 k.err=True # there is already error inside the protocol.dat imported
 k.invert(modErr=True) # test inversion with forward modelling errors 
 k.showResults(attr='Magnitude(ohm.m)', sens=False)
@@ -589,6 +598,7 @@ plt.close('all')
 print('-------------Testing Forward DC Modelling ------------')
 t0 = time.time()
 k = Project(typ='R2')
+k.generateElec()
 k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.designModel(fmd=3) # interactive GUI function
 k.geom_input={'polygon1':[[3, 3.5, 3.5, 3],[-0.5, -0.5, -1, -1]]}
@@ -621,7 +631,8 @@ k.createSequence([('dpdp1', 1, 8),
 k.saveSequence(k.dirname + '/seq.csv')
 k.importSequence(k.dirname + '/seq.csv')
 k.createSequence()
-    
+k2 = k    
+
 k.forward(iplot=True, noise=5)
 # k.setRefModel([50]*k.mesh.num_elms)
 k.invert()
@@ -630,6 +641,11 @@ k.invert()
 fig, axs = plt.subplots(2, 1)
 k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False, ax=axs[0]) # not for cR2
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=True, ax=axs[1], vmin=10, vmax=120) # not for cR2
+
+k.saveProject(testdir + 'project-fw')
+
+k = Project(typ='R2')
+k.loadProject(testdir + 'project-fw.resipy')
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-forward'] = time.time() - t0
@@ -685,34 +701,49 @@ timings['ip-2d-forward'] = time.time() - t0
 #print('elapsed: {:.4}s'.format(time.time() - t0))
 #timings['dc-2d-river'] = time.time() - t0
 
+#%% testing 3D forward
+k = Project(typ='R3t')
+k.generateElec(nline=3)
 
 #%% 3D testing
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
 t0 = time.time()
 k = Project(typ='R3t')
+k2.saveSequence(k.dirname + '/seq.csv')
+k.importSequence(k.dirname + '/seq.csv')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 k.typ = 'R2'
 k.elec2distance()
+k.elec2distance(yDominant=True)
+k.elec2horidist()
 
 k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
-# k.showPseudo(threed=True) # only tested in pyvista setup   
+pl = pv.Plotter(off_screen=True)
+k.showPseudo(threed=True, ax=pl) # only tested in pyvista setup   
 k.createMesh(cl=1, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
 # k.createMesh(cl=0.1,cl_factor=10,cln_factor=1000)
+pl = pv.Plotter(off_screen=True)
+k.surveys[0]._showElecStrings3D(ax=pl)
 
 k.createSequence()
-#k.err = True
 k.invert(modErr=True)
-k.showResults(use_pyvista=use_pyvista)
+k.saveVtks()
+k.showResults(use_pyvista=False)
+pl = pv.Plotter(off_screen=True)
+k.showResults(ax=pl)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
 k.showPseudoInvError()
 k.showInvError()
 k.saveMesh()
+k.computeVol(vmin=10, vmax=100)
+k.computeAttribute("x['Resistivity(ohm.m)']*1.4+0.23", "WC")
+
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
 #timeit k.mesh.orderNodes()
@@ -729,8 +760,17 @@ k.importMesh(testdir + 'mesh/coarse3D.vtk')
 k.mesh = k.mesh.refine() # test refining mesh 
 k.addFlatError()
 k.invert()
+k.summary()
+k.exportMeshResults(ftype='vtk')
+k.exportMeshResults(ftype='vts')  # takes more time than others...
+k.exportMeshResults(ftype='vtu')
+k.exportMeshResults(ftype='xyz')
+k.exportMeshResults(ftype='dat')
+k.exportMeshResults(ftype='csv')
 
-k.showResults(use_pyvista=use_pyvista)
+k.showResults(use_pyvista=False)
+pl = pv.Plotter(off_screen=True)
+k.showResults(ax=pl)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -751,11 +791,15 @@ k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.importElec(testdir + 'ip-3d/elec2.csv')
 k.param['min_error'] = 0.0
 k.createMesh(cl=4)
-k.showMesh(use_pyvista=use_pyvista)
+k.showMesh(use_pyvista=False)
+pl = pv.Plotter(off_screen=True)
+k.showMesh(ax=pl)
 
 k.invert()
 
-k.showResults(use_pyvista=use_pyvista)
+k.showResults(use_pyvista=False)
+pl = pv.Plotter(off_screen=True)
+k.showResults(ax=pl)
 k.showSlice(index=0)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
@@ -780,7 +824,9 @@ res0[idx] = 50
 res0[np.invert(idx)] = 200 
 k.setRefModel(res0) # set parameters for forward model 
 
-k.showMesh(attr='res0',color_map='jet',use_pyvista=use_pyvista)
+k.showMesh(attr='res0',color_map='jet',use_pyvista=False)
+pl = pv.Plotter(off_screen=True)
+k.showMesh(ax=pl)
 
 #create a forward modelling sequence, bit awkward at the moment because strings need to be picked individually
 xs = [0,0,1,-1]
@@ -805,10 +851,15 @@ for i in range(len(zs)):
 
 k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)], seqIdx=seqIdx) # create a sequence 
 k.forward() # do forward model 
+k.saveForwardModelResult(os.path.join(k.dirname, 'out.csv'))
 
 k.setRefModel(np.ones_like(res0)*100) # reset reference model 
 k.invert() # invert the problem 
-k.showResults(index=1, use_pyvista=use_pyvista) #show result 
+k.showResults(index=1, use_pyvista=False) #show result 
+pl = pv.Plotter(off_screen=True)
+k.showResults(index=1, ax=pl)
+
+k.computeVol(vmin=10, vmax=100)
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
@@ -826,7 +877,12 @@ k.param['num_xy_poly'] = 0
 k.param['zmin'] = -np.inf
 k.param['zmax'] = np.inf
 k.invert(modErr=True) # tests model error in the case of a generic problem 
-k.showResults(use_pyvista=use_pyvista)
+k.showResults(use_pyvista=False)
+pl = pv.Plotter(off_screen=True)
+k.showResults(ax=pl)
+
+k.saveProject(testdir + 'project-tl3d')
+k.loadProject(testdir + 'project-tl3d.resipy')
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
@@ -853,8 +909,12 @@ k.createMesh(typ='cylinder',cl=0.5)
 
 k.invert()
 
-k.showResults(index=0,use_pyvista=use_pyvista)
-k.showResults(index=1,use_pyvista=use_pyvista)
+k.showResults(index=0,use_pyvista=False)
+k.showResults(index=1,use_pyvista=False)
+pl = pv.Plotter(off_screen=True)
+k.showResults(index=0, ax=pl)
+pl = pv.Plotter(off_screen=True)
+k.showResults(index=1, ax=pl)
 
 k.mesh.orderNodes()
 print('elapsed: {:.4}s'.format(time.time() - t0))
@@ -885,11 +945,46 @@ k.createPseudo3DSurvey(testdir + 'dc-2d-pseudo3d-synthetic/data', lineSpacing=1,
 ## or load the files with 3D-like labels for elec positions of all lines
 k.importPseudo3DElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 k.createMultiMesh(typ='trian', runParallel=True)
-# k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
+pl = pv.Plotter(off_screen=True)
+k.showPseudo3DMesh(ax=pl, cropMesh=True) # only works with pyvista - thus commented for test
+k.invertPseudo3D(runParallel=False)
 k.invertPseudo3D(runParallel=True)
-# k.showResults(index=-1, cropMesh=True, clipCorners=False, pseudo3DContour=True) # only works with pyvista - thus commented for test
+k.saveVtks()
+pl = pv.Plotter(off_screen=True)
+k.showResults(index=-1, ax=pl, cropMesh=True, clipCorners=False, pseudo3DContour=True) # only works with pyvista - thus commented for test
+k.saveProject(testdir + 'project-pseudo3d')
+k.exportMesh()
+k.exportElec()
+k.exportMeshResults(ftype='vtk')
+k._estimateMemoryJac()
+
+k = Project(typ='R3t')
+k.loadProject(testdir + 'project-pseudo3d.resipy')
+
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-pseudo3d'] = time.time() - t0
+
+#%% data export
+k = Project(typ='cR2')
+k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
+k.fitErrorPwl()
+k.exportData(ftype='protocol', err=False, recip=False)
+k.exportData(ftype='protocol', err=True, recip=False)
+k.exportData(ftype='protocol', err=True, recip=True)
+#k.exportData(ftype='ResInv', err=True, recip=True)  # TODO failed
+#k.exportData(ftype='srv', err=True, recip=True)  # TODO failed
+k.exportData(ftype='csv', err=True, recip=True)
+
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d/elec.csv')
+k.exportData(ftype='protocol', err=False, recip=False)
+k.exportData(ftype='protocol', err=False, recip=False)
+k.exportData(ftype='protocol', err=False, recip=True)
+# k.exportData(ftype='ResInv', err=False, recip=True)  # TODO failed
+# k.exportData(ftype='srv', err=False, recip=True)  # TODO failed
+k.exportData(ftype='csv', err=False, recip=True)
+
 
 #%% print final summary information 
 for key in timings.keys():

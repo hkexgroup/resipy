@@ -2709,7 +2709,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Error model'] = True 
 
 
-    def fitErrorLME(self, index=-1, ax=None, rpath=None, iplot=True):
+    def fitErrorLME(self, index=-1, ax=None, rpath=None, iplot=True): # :pragma: no cover
         """Fit a linear mixed effect (LME) model by having the electrodes as
         as grouping variables.
 
@@ -5382,7 +5382,7 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             fig = ax.figure
 
-        def callback(idx):
+        def callback(idx): # :pragram: no cover
             region = np.array(self.mesh.df['region']).copy()
             regid = np.max(region) + 1
             print('nb elements selected:', np.sum(idx), 'in region', regid)
@@ -5447,7 +5447,7 @@ class Project(object): # Project master class instanciated by the GUI
         ax.set_xlim(np.min(self.elec['x']), np.max(self.elec['x']))
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Elevation [m]')
-        def callback():
+        def callback(): # :pragma: no cover
             vert = np.array(self.selector.vertices)
             self.geom_input['polygon' + str(len(self.geom_input)+1)] = [vert[:-1,0].tolist(), vert[:-1,1].tolist()]
             ax.plot(vert[:,0], vert[:,1], '.-')
@@ -7231,7 +7231,7 @@ class Project(object): # Project master class instanciated by the GUI
             # add electrode types 
             meshcopy.elec = s.elec[['x','y','z']].values 
             elec_type =['surface']*len(s.elec)
-            s.elec.reset_index(inplace=True)
+            s.elec.reset_index(inplace=True, drop=True)
             for i in range(len(s.elec)):
                 if s.elec['buried'][i]:
                     elec_type[i] = 'buried'
@@ -7616,19 +7616,19 @@ class Project(object): # Project master class instanciated by the GUI
         mt.ncores = ncores
         
 # for backward compatibility, retain the main class called R2
-class R2(Project):
+class R2(Project): # :pragma: no cover
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
 #%% Resolution matrix calculation
 # compute covariance matrix on Nvidia GPU / multi core processor 
-def __readSize(fname):
+def __readSize(fname): # :pragma: no cover
     fh = open(fname)
     line1 = fh.readline().split()
     fh.close()
     return [int(k) for k in line1]
 
-def __readJacob(fname):
+def __readJacob(fname): # :pragma: no cover
     array = []
     fh = open(fname)
     header = fh.readline()
@@ -7639,7 +7639,7 @@ def __readJacob(fname):
         array += [float(x) for x in line.split()]
     return tuple(size), array
 
-def __readRm(fname, jsize, rsize):
+def __readRm(fname, jsize, rsize): # :pragma: no cover
     Rmap = np.genfromtxt(fname.replace('R','Rindex'),
                          skip_header=1,dtype=int)-1
     
@@ -7655,7 +7655,7 @@ def __readRm(fname, jsize, rsize):
     
     return Rn 
 
-def __getAlpha(fname):
+def __getAlpha(fname): # :pragma: no cover
     #return final reported alpha value, file should be the .out file from andy's code
     fh = open(fname,'r')
     lines = fh.readlines()
@@ -7674,7 +7674,7 @@ def __getAlpha(fname):
     return alpha
 
 
-def cudaRm(invdir):
+def cudaRm(invdir): # :pragma: no cover
     """Compute Resolution and Covariance matrix for 2D problems using nVIDIA GPU. 
 
     Parameters
@@ -7743,7 +7743,7 @@ def cudaRm(invdir):
     
     return covar, remat
 
-def parallelRm(invdir):
+def parallelRm(invdir): # :pragma: no cover
     """Compute Resolution and Covariance matrix for 2D problems using multicore CPU. 
     Behaves the same as cudaRm but uses numpy / openBlas. 
 

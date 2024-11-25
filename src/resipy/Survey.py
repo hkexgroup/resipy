@@ -118,29 +118,29 @@ def polyfit(x,y,deg=1):
         
     return coef 
 
-def fixSequence(sequence, nelec):
-    """
-    Make sequence consecutive. 
+# def fixSequence(sequence, nelec):
+#     """
+#     Make sequence consecutive. 
 
-    Parameters
-    ----------
-    sequence : nd array 
-        N by 4 array which is the measurement sequence. 
+#     Parameters
+#     ----------
+#     sequence : nd array 
+#         N by 4 array which is the measurement sequence. 
 
-    Returns
-    -------
-    None.
+#     Returns
+#     -------
+#     None.
 
-    """
-    uid = np.unique(sequence.flatten())
-    cid = np.arange(nelec)+1
-    # print('Number of elec in electrode df: %i, Number of elec in sequence: %i'%(len(uid),nelec))
-    newseq = sequence.copy()
-    for i in range(len(uid)):
-        if uid[i] != cid[i]:
-            replaceidx = sequence == uid[i]
-            newseq[replaceidx] = cid[i] 
-    return newseq 
+#     """
+#     uid = np.unique(sequence.flatten())
+#     cid = np.arange(nelec)+1
+#     # print('Number of elec in electrode df: %i, Number of elec in sequence: %i'%(len(uid),nelec))
+#     newseq = sequence.copy()
+#     for i in range(len(uid)):
+#         if uid[i] != cid[i]:
+#             replaceidx = sequence == uid[i]
+#             newseq[replaceidx] = cid[i] 
+#     return newseq 
 
 def appendString(elec, df, string):
     """
@@ -452,61 +452,61 @@ class Survey(object):
             return False 
         return True 
     
-    def setSeqIds_(self):
-        """
-        Convert electrode labels to indexable integers, sets the class wide 
-        parameter 'sequence' (old code)
-        """
-        def labeltoint(s):
-            # returns electrode line and number (in that order)
-            t = s.split()
-            l = int(t[0])
-            n = int(t[1])
-            return l,n 
+    # def setSeqIds_(self):
+    #     """
+    #     Convert electrode labels to indexable integers, sets the class wide 
+    #     parameter 'sequence' (old code)
+    #     """
+    #     def labeltoint(s):
+    #         # returns electrode line and number (in that order)
+    #         t = s.split()
+    #         l = int(t[0])
+    #         n = int(t[1])
+    #         return l,n 
 
-        ndata = self.df.shape[0]
-        nelec = self.elec.shape[0]
-        if ndata == 0:
-            self.sequence = None 
-            self.isequence = None 
-            return 
+    #     ndata = self.df.shape[0]
+    #     nelec = self.elec.shape[0]
+    #     if ndata == 0:
+    #         self.sequence = None 
+    #         self.isequence = None 
+    #         return 
         
-        if self.hasDataString(): 
-            an = np.zeros((ndata, 4),dtype=int) # array of electrode numbers 
-            al = np.zeros((ndata, 4),dtype=int) # array of electrode lines 
-            aa = np.zeros((ndata, 4),dtype=int) # array of additonal numbers 
-            cache = {}
-            for a,char in enumerate(['a','b','m','n']):
-                for i in range(ndata):
-                    l,n = labeltoint(self.df[char].values[i])
-                    if l not in cache.keys():
-                        cache[l] = 0 
-                    if n > cache[l]:
-                        cache[l] = n 
-                    an[i,a] = n         
-                    al[i,a] = l 
-            c = 0 
-            keys = np.unique(list(cache.keys()))
-            for i in range(1,len(keys)):
-                line = keys[i]
-                c += cache[keys[i-1]]
-                idx = al == line 
-                aa[idx] = c 
+    #     if self.hasDataString(): 
+    #         an = np.zeros((ndata, 4),dtype=int) # array of electrode numbers 
+    #         al = np.zeros((ndata, 4),dtype=int) # array of electrode lines 
+    #         aa = np.zeros((ndata, 4),dtype=int) # array of additonal numbers 
+    #         cache = {}
+    #         for a,char in enumerate(['a','b','m','n']):
+    #             for i in range(ndata):
+    #                 l,n = labeltoint(self.df[char].values[i])
+    #                 if l not in cache.keys():
+    #                     cache[l] = 0 
+    #                 if n > cache[l]:
+    #                     cache[l] = n 
+    #                 an[i,a] = n         
+    #                 al[i,a] = l 
+    #         c = 0 
+    #         keys = np.unique(list(cache.keys()))
+    #         for i in range(1,len(keys)):
+    #             line = keys[i]
+    #             c += cache[keys[i-1]]
+    #             idx = al == line 
+    #             aa[idx] = c 
                 
-            self.sequence = an + aa 
+    #         self.sequence = an + aa 
 
-        else:
-            self.sequence = np.zeros((ndata,4),dtype=int)
-            for a,char in enumerate(['a','b','m','n']):
-                for i in range(ndata):
-                    self.sequence[i,a] = int(self.df[char].values[i])
+    #     else:
+    #         self.sequence = np.zeros((ndata,4),dtype=int)
+    #         for a,char in enumerate(['a','b','m','n']):
+    #             for i in range(ndata):
+    #                 self.sequence[i,a] = int(self.df[char].values[i])
 
-        # print(nelec, len(np.unique(self.sequence.flatten())))
-        print(self.elec)
+    #     # print(nelec, len(np.unique(self.sequence.flatten())))
+    #     print(self.elec)
         
-        # now need a sequence which is ordered normally with no gaps 
-        # its used for indexing the electrode dataframe  
-        self.isequence = fixSequence(self.sequence, nelec) 
+    #     # now need a sequence which is ordered normally with no gaps 
+    #     # its used for indexing the electrode dataframe  
+    #     self.isequence = fixSequence(self.sequence, nelec) 
         
     def setSeqIds(self): 
         """Convert electrode labels to indexable integers, sets the class wide 
@@ -2270,7 +2270,7 @@ class Survey(object):
         if ax is None:
             return fig
     
-    def _showElecStrings3D(self,ax=None,
+    def _showElecStrings3D(self,ax=None, 
                            strIdx=None, 
                            background_color=(0.8,0.8,0.8),
                            elec_color='k'):
@@ -2739,7 +2739,7 @@ class Survey(object):
         if log:
             val = np.sign(val)*np.log10(np.abs(val))
         
-        def onpick(event):
+        def onpick(event): # :pragma: no cover
             if lines[event.artist] == 'data':
                 xid, yid = xpos[event.ind[0]], ypos[event.ind[0]]
                 isame = (xpos == xid) & (ypos == yid)
@@ -3123,7 +3123,7 @@ class Survey(object):
         else:
             print("Electrode indexing appears to be okay")    
     
-    def elec2distance(self): # pragma: no cover
+    def elec2distance(self):
         """Convert 3d xy data in pure x lateral distance.
         Use for 2D data only!
         """
@@ -3197,7 +3197,7 @@ class Survey(object):
                 val = self.df[col][i]
                 self.df.loc[i,col] = val.split()[-1]
                 
-    def _seq2mat(self):
+    def _seq2mat(self): # :pragma: no cover
                 
         """
         Read in ResIPy scheduling matrix and convert to 4 columns of integers 
@@ -3265,7 +3265,7 @@ class Survey(object):
                 
         return schedule 
     
-    def addPerError(self,pnct=2.5): # pragma: no cover
+    def addPerError(self,pnct=2.5):
         """Add a flat percentage error to resistivity data.
         
         Parameters
@@ -3278,7 +3278,7 @@ class Survey(object):
         self.df['resError'] = error + np.array(self.df['resError'])
         
         
-    def estimateError(self, a_wgt=0.01, b_wgt=0.02): # pragma: no cover
+    def estimateError(self, a_wgt=0.01, b_wgt=0.02):
         """Estimate reciprocal error data for data with no reciprocals, following
         the same routine present in R2. This allows for the additional inclusion
         of modelling errors. 
@@ -3297,7 +3297,7 @@ class Survey(object):
         return std_res 
 
 
-    def exportSrv(self, fname=None): # pragma: no cover
+    def exportSrv(self, fname=None):
         """Export .srv format for which is compatible with E4D. The e4d survey
         file includes the electrode locations, in addition to the scheduling 
         matrix. 
