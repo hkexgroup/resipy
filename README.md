@@ -108,6 +108,25 @@ If all is done with no errors, you are ready to run ResIPy!
 **NOTE**: If you get "ResIPy is damaged" error, run this command in terminal `xattr -cr /Applications/ResIPy.app` (instead of "/Applications/ResIPy.app" put the address to the place you have the app).
 
 
+File formats currently supported
+----------------
+
+Y : yes, N : no, - : not applicable, ? : unknwon
+
+|Parser|2D|3D|IP|comments|
+|------|--|--|--|--------|
+|`syscalParser`|Y|Y|Y|separate electrode layout required|
+|`protocolParser`|Y|Y|Y|`ftype=ProtocolDC` and `ftype=ProtocolIP` required|
+|`primeTabParser`|Y|Y|N||
+|`stingParser`|Y|Y|Y||
+|`resInvParser`|Y|Y|Y|support most 2D formats and general 3D array|
+|`ericParser`|Y|Y|N||
+|`lippmannParser`|Y|?|Y||
+|`aresParser`|Y|Y|Y||
+|`bertParser`|Y|Y|Y||
+|`srvParser`|Y|Y|N||
+|`dasParser`|Y|Y|Y||
+
 Feature request and bug report
 ----
 If there is a feature you would like to see in the API or the GUI or if there is a bug you want to report,
