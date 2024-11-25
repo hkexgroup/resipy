@@ -248,6 +248,7 @@ k.filterRecipIP(index=-2)
 
 k = Project(typ='R2')
 k.createSurvey(testdir + 'parser/bgs-prime2.tab', ftype='BGS Prime')
+k.showPseudo(column='cR')
 k.filterContRes(vmin=0, vmax=10000)
 
 timings['methods-filtering'] = time.time() - tstart
@@ -489,6 +490,8 @@ k = Project(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
 k.showHeatmap()
 k.showErrorIP()
+k.showPseudo(magFlag=True)
+k.showPseudo(log=True)
 k.filterDCA()
 k.filterManual()
 k = Project(typ='cR2')

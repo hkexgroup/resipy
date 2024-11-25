@@ -2231,7 +2231,7 @@ class Survey(object):
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
             
         if column =='cR': # need to add more labels here probably 
-            label = r'$\rho_cr$ [$\Omega$]'
+            label = r'$\R_{cr}$ [$\Omega$]'
             title = 'Contact Resistance/nPseudo Section'
             
         if vmin is None:        
