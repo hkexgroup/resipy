@@ -2754,7 +2754,6 @@ class App(QMainWindow):
                         self.infoDump("%s%i selected measurements removed!" % (rhoRangeText, numSelectRemoved))
 
 
-
                 if self.ipCheck.checkState() == Qt.Checked:
                     for s in self.project.surveys:
                         s.dfPhaseReset = s.df

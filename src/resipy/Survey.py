@@ -118,7 +118,7 @@ def polyfit(x,y,deg=1):
         
     return coef 
 
-def fixSequence(sequence):
+def fixSequence(sequence, nelec):
     """
     Make sequence consecutive. 
 
@@ -133,7 +133,8 @@ def fixSequence(sequence):
 
     """
     uid = np.unique(sequence.flatten())
-    cid = np.arange(len(uid))+1
+    cid = np.arange(nelec)+1
+    # print('Number of elec in electrode df: %i, Number of elec in sequence: %i'%(len(uid),nelec))
     newseq = sequence.copy()
     for i in range(len(uid)):
         if uid[i] != cid[i]:
@@ -299,9 +300,6 @@ class Survey(object):
 
             # assign dataframe and check the types of a,b,m,n (all labels must be string)
             self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
-            
-            # set sequence according to if electrode labels present or not 
-            self.setSeqIds() 
 
             # add error measured to the error columns (so they can be used if no error model are fitted)
             if 'magErr' in self.df.columns:
@@ -321,6 +319,9 @@ class Survey(object):
                 self.elec['label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
             else:
                 self.elec = elec
+                
+            # set sequence according to if electrode labels present or not 
+            self.setSeqIds() 
                
             # assign string numbers to electrode labels 
             if string > 0: 
@@ -451,10 +452,10 @@ class Survey(object):
             return False 
         return True 
     
-    def setSeqIds(self):
+    def setSeqIds_(self):
         """
         Convert electrode labels to indexable integers, sets the class wide 
-        parameter 'sequence'
+        parameter 'sequence' (old code)
         """
         def labeltoint(s):
             # returns electrode line and number (in that order)
@@ -464,6 +465,7 @@ class Survey(object):
             return l,n 
 
         ndata = self.df.shape[0]
+        nelec = self.elec.shape[0]
         if ndata == 0:
             self.sequence = None 
             self.isequence = None 
@@ -491,17 +493,40 @@ class Survey(object):
                 idx = al == line 
                 aa[idx] = c 
                 
-            self.sequence = an + aa
-            
+            self.sequence = an + aa 
+
         else:
             self.sequence = np.zeros((ndata,4),dtype=int)
             for a,char in enumerate(['a','b','m','n']):
                 for i in range(ndata):
                     self.sequence[i,a] = int(self.df[char].values[i])
-           
+
+        # print(nelec, len(np.unique(self.sequence.flatten())))
+        print(self.elec)
+        
         # now need a sequence which is ordered normally with no gaps 
         # its used for indexing the electrode dataframe  
-        self.isequence = fixSequence(self.sequence) 
+        self.isequence = fixSequence(self.sequence, nelec) 
+        
+    def setSeqIds(self): 
+        """Convert electrode labels to indexable integers, sets the class wide 
+        parameter 'isequence'
+        """
+        ndata = self.df.shape[0]
+
+        if ndata == 0:
+            self.isequence = None 
+            return 
+
+        lookup = {}
+        for i,label in enumerate(self.elec.label): 
+            lookup[label] = i + 1 
+            
+        self.isequence = np.zeros((ndata,4),dtype=int)
+        for i in range(ndata):
+            for j,char in enumerate(['a','b','m','n']):
+                self.isequence[i,j] = lookup[self.df[char].values[i]]
+        
 
     
     def convertLocalGrid(self):
@@ -721,9 +746,7 @@ class Survey(object):
                 self.df.reset_index(drop=True, inplace=True)
             else:
                 self.df.reset_index(inplace=True)
-            self.setSeqIds() # not super efficient, but works 
-            # self.sequence = self.sequence.copy()[i2keep,:]
-            # self.isequence = self.isequence.copy()[i2keep,:]
+            
             self.dfPhaseReset = self.df.copy()
             if 'irecip' in self.df.columns:
                 ie = np.in1d(self.df['irecip'].values, recip2reset)
@@ -732,6 +755,8 @@ class Survey(object):
                 self.df.loc[ie, 'recipMean'] = self.df.loc[ie, 'resist'].values
             if self.debug is True:
                 print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
+                
+            self.setSeqIds() # not super efficient, but works 
             return np.sum(~i2keep)
 
     
@@ -2674,7 +2699,7 @@ class Survey(object):
         if len(self.df) != self.isequence.shape[0]:
             self.setSeqIds()
 
-        array = self.isequence - 1 
+        array = self.isequence -1
         if self.df.shape[0] == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
         
