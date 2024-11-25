@@ -63,6 +63,40 @@ k.createSurvey(testdir + 'parser/DAS-1_2D_DC.data', ftype='DAS-1') # python 3.9 
 k.createSurvey(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
 k.createSurvey(testdir + 'parser/protocolForward/R2_forward.dat', ftype='ProtocolDC')
 k.createSurvey(testdir + 'parser/protocolForward/cR2_forward.dat', ftype='ProtocolIP')
+
+k.addData(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
+k.addData(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
+k.addData(testdir + 'dc-2d/syscal-normal-only.csv', ftype='Syscal')
+k.addData(testdir + 'dc-2d/protocol.dat', ftype='ProtocolDC')
+k.addData(testdir + 'dc-2d-borehole/xbh_prosys3.csv', ftype='Syscal')
+k.addData(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
+k.addData(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
+k.addData(testdir + 'ip-3d/protocol.dat', ftype='ProtocolIP')
+k.addData(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
+k.addData(testdir + 'parser/res2dinv-dd.dat', ftype='ResInv')
+k.addData(testdir + 'parser/res2dinv-ga.dat', ftype='ResInv')
+k.addData(testdir + 'parser/res2dinv-multigradient.dat', ftype='ResInv')
+k.addData(testdir + 'parser/res2dinv-wenner32.dat', ftype='ResInv')
+k.addData(testdir + 'parser/bgs-prime.dat', ftype='BGS Prime')
+k.addData(testdir + 'parser/sting_2D_noIP.stg', ftype='Sting')
+k.addData(testdir + 'parser/sting_3D_noIP.stg', ftype='Sting')
+k.addData(testdir + 'parser/abem-lund-norm.ohm', ftype='ABEM-Lund')
+k.addData(testdir + 'parser/Lippmann_1.tx0', ftype='Lippmann')
+k.addData(testdir + 'parser/Lippmann_2.tx0', ftype='Lippmann')
+k.addData(testdir + 'parser/Lippmann_3.tx0', ftype='Lippmann') 
+k.addData(testdir + 'parser/Lippmann_ASCII.tx0', ftype='Lippmann') 
+k.addData(testdir + 'parser/electraCustom100mA.ele', ftype='Electra')
+k.addData(testdir + 'parser/electraCustom040mA.ele', ftype='Electra')
+k.addData(testdir + 'parser/electraWenner.ele', ftype='Electra')
+k.addData(testdir + 'parser/syscal-new-format.csv', ftype='Syscal') 
+k.addData(testdir + 'parser/syscal_ProsysIII_IP.csv', ftype='Syscal')
+k.addData(testdir + 'parser/BERT_2D_topo.ohm', ftype='BERT')
+k.addData(testdir + 'parser/BERT_IP_2D.dat', ftype='BERT')
+k.addData(testdir + 'parser/DAS-1_2D_DC.data', ftype='DAS-1') # python 3.9 has an issue with this parser
+k.addData(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
+k.addData(testdir + 'parser/protocolForward/R2_forward.dat', ftype='ProtocolDC')
+k.addData(testdir + 'parser/protocolForward/cR2_forward.dat', ftype='ProtocolIP')
+
 k = Project(typ='R3t')
 k.createSurvey(testdir + 'parser/protocolForward/R3t_forward.dat', ftype='ProtocolDC')
 k.createSurvey(testdir + 'parser/protocolForward/cR3t_forward.dat', ftype='ProtocolIP')
@@ -211,6 +245,10 @@ k = Project(typ='R2')
 k.createBatchSurvey(testdir + 'ip-2d-timelapse-syscal/')
 k.filterRecipIP(index=-1)
 k.filterRecipIP(index=-2)
+
+k = Project(typ='R2')
+k.createSurvey(testdir + 'parser/bgs-prime2.tab', ftype='BGS Prime')
+k.filterContRes(vmin=0, vmax=10000)
 
 timings['methods-filtering'] = time.time() - tstart
 
@@ -456,15 +494,23 @@ k.filterManual()
 k = Project(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
 k.showPseudoIP()
-print('k')
+#k.showPseudoIP(threed=True)
+k.showPseudoIP(bx=True)
 k.err=True # there is already error inside the protocol.dat imported
 k.invert(modErr=True) # test inversion with forward modelling errors 
-print('l')
 k.showResults(attr='Magnitude(ohm.m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
 k.showPseudoInvError()
 k.showPseudoInvErrorIP()
 # k.showInvError()
+
+
+# same with one elec buried
+k = Project(typ='R2')
+k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
+k.elec.loc[10, 'buried'] = True
+k.showPseudo()
+
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['ip-2d-topo'] = time.time() - t0
 # 

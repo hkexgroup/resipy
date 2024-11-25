@@ -3098,14 +3098,14 @@ class Project(object): # Project master class instanciated by the GUI
     
     
     def filterContRes(self, index=-1, vmin=None, vmax=None):
-        """Filter measurements by contact resistance if avialable. 
+        """Filter measurements by contact resistance if available. 
         
         Parameters
         ----------
         vmin : float, optional
-            Minimum value.
+            Minimum value in unit of cR column.
         vmax : float, optional
-            Maximum value.
+            Maximum value in unit of cR column.
         index : int, optional
             Index of the survey on which to apply the processing. If the
             processing is to be applied to all surveys then specifiy

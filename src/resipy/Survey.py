@@ -1199,14 +1199,14 @@ class Survey(object):
             
     
     def filterContRes(self,vmin=None, vmax=None, debug=True):
-         """Filter measurements by transfer resistance. 
+         """Filter measurements by contact resistances. 
          
          Parameters
          ----------
          vmin : float, optional
-             Minimum value.
+             Minimum value in unit of the cR column.
          vmax : float, optional
-             Maximum value.
+             Maximum value in unit of the cR column.
          debug : bool, optional
              Print output to screen. Default is True.
          """
