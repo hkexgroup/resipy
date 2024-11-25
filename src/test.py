@@ -161,7 +161,7 @@ timings['methods-importing'] = time.time() - tstart
 #%%
 k = Project(typ='R2')
 k.createSurvey(testdir + 'ip-2d/IP_MICP_all.csv', ftype='Syscal')
-abmn = k.surveys[0].sequence
+abmn = k.surveys[0].df[['a','b','m','n']].astype(int).values
 
 t0 = time.time()
 # establishing information on the which swapping of electrode within dipole
