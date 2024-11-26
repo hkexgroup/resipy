@@ -781,6 +781,22 @@ tmesh = k.meshResults[0].threshold(attr='Resistivity(ohm.m)',vmin=20,vmax=100)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-import-mesh'] = time.time() - t0
 
+#%% 3D testing importing electrodes coordinates in a utm like grid 
+plt.close('all')
+print('-------------Testing 3D inversion with UTM coordinates ------------')
+t0 = time.time()
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d/elec_utm.csv')
+k.setCoordConv(True, 300000, 400000, 45) 
+k.createMesh(cl=0.5)
+k.invert()
+k.showResults(use_pyvista=False)
+
+#mesh calculations 
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['dc-3d-utm-coord'] = time.time() - t0
+
 
 #%% 3D ip testing
 plt.close('all')

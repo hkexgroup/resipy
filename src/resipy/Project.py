@@ -1043,6 +1043,8 @@ class Project(object): # Project master class instanciated by the GUI
         reset : bool, optional
             reset the grid to original
         """
+        warnings.warn('This function is now redundant, use setCoordConv() which is more robust',
+                      DeprecationWarning)
         for s in self.surveys:
             s.convertLocalGrid() 
 
