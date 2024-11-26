@@ -119,10 +119,10 @@ k.create3DSurvey(testdir + 'dc-2d-pseudo3d-synthetic/data', lineSpacing=1,
 k.importElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 
 # append string
-# k = Project(typ='R3t')
-# k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
-# k.addData(fname=testdir + 'dc-2d/syscal.csv', ftype='Syscal', string=1)
-# k.addData(fname=testdir + 'dc-2d/syscal.csv', ftype='Syscal', string=2)
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal', string=1)
+k.addData(fname=testdir + 'dc-2d/syscal.csv', ftype='Syscal', string=2)
+k.addData(fname=testdir + 'dc-2d/syscal.csv', ftype='Syscal', string=3)
 
 #%% testing different reciprocal methods
 k = Project(typ='R2')

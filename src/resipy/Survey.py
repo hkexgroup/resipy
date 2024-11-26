@@ -168,10 +168,12 @@ def appendString(elec, df, string):
         number = getLabelNumber(label)
         new_label = '{:d} {:d}'.format(string, number) 
         elec.loc[i,'label'] = new_label 
-        
-    for e in ['a','b','m','n']:
-        for i in range(len(df)):
-            label = df[e][i]
+    
+    
+    ndata = len(df)
+    for i in range(ndata):
+        for e in ['a','b','m','n']:
+            label = df[e].values[i]
             number = getLabelNumber(label)
             new_label = '{:d} {:d}'.format(string, number) 
             df.loc[i,e] = new_label 
@@ -300,6 +302,7 @@ class Survey(object):
 
             # assign dataframe and check the types of a,b,m,n (all labels must be string)
             self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
+            self.df.reset_index(inplace=True) 
 
             # add error measured to the error columns (so they can be used if no error model are fitted)
             if 'magErr' in self.df.columns:
@@ -319,13 +322,13 @@ class Survey(object):
                 self.elec['label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
             else:
                 self.elec = elec
-                
-            # set sequence according to if electrode labels present or not 
-            self.setSeqIds() 
                
             # assign string numbers to electrode labels 
             if string > 0: 
                 appendString(self.elec, self.df, string) 
+                
+            # set sequence according to if electrode labels present or not 
+            self.setSeqIds() 
 
             # convert apparent resistivity to resistance and vice versa
             self.computeK()
@@ -701,9 +704,10 @@ class Survey(object):
                 _elec['label'] = (1 + np.arange(elec.shape[0])).astype(str)
             else:
                 _elec = elec.copy()
+            data.reset_index(drop=True, inplace=True)
             appendString(_elec, data, string)
             self.elec = pd.concat([self.elec,_elec]).reset_index(drop = True) 
-        
+            
         self.df = pd.concat([self.df, data]).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
         self.setSeqIds() # need to recompute sequence 
             
