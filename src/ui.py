@@ -7390,7 +7390,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.mwManualFiltering.replot(index=index, attr=attr)
             if pvfound and 't' in self.project.typ:
                 self.pseudoPlotter4Filter.clear()
-                self.project.showPseudo(ax=self.pseudoPlotter4Filter, index=index, threed=True, column=attr, geom=False)
+                self.project.showPseudo(ax=self.pseudoPlotter4Filter, index=index, threed=True, column=attr, geom=False, darkMode=eval(resipySettings.param['dark']))
             self.writeLog('# k.filterManual(index={:d}, attr="{:s}" # interactive plot)'.format(index, attr))
         except ValueError as e:
             self.errorDump(e)
