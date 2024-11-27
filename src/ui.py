@@ -2865,7 +2865,7 @@ class App(QMainWindow):
         self.filterAttrCombo.activated.connect(filterAttrComboFunc)
 
         ## addition for 3.6.0 --> filter electrodes with a text box
-        self.filterElecTextLabel = QLabel('\tFilter Electrodes:')
+        self.filterElecTextLabel = QLabel('Filter Electrodes:')
         self.filterElecTextBox = QLineEdit()
         self.filterElecTextBox.setPlaceholderText('1,2,3,etc...')
         self.filterElecTextBox.setFixedWidth(100)
@@ -2898,10 +2898,12 @@ class App(QMainWindow):
         self.recipErrorUnpairedBtn.clicked.connect(recipErrorUnpairedFunc)
 
         self.recipErrorPltBtn = QPushButton('Apply filters')
+        self.recipErrorPltBtn.setFixedWidth(100)
         self.recipErrorPltBtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
         self.recipErrorPltBtn.clicked.connect(recipFilter)
 
         self.recipErrorResetBtn = QPushButton('Reset')
+        self.recipErrorResetBtn.setFixedWidth(100)
         self.recipErrorResetBtn.setStyleSheet("color: red")
         self.recipErrorResetBtn.setToolTip('This will restore all deleted measurements at this stage')
         self.recipErrorResetBtn.clicked.connect(resetRecipFilter)
@@ -2922,6 +2924,7 @@ class App(QMainWindow):
                 self.writeLog('k.saveFilteredData("{:s}", {:s})'.format(fname, savetyp))
 
         self.recipErrorSaveBtn = QPushButton('Save data')
+        self.recipErrorSaveBtn.setFixedWidth(100)
         self.recipErrorSaveBtn.setStyleSheet("color: green")
         self.recipErrorSaveBtn.setToolTip('This will save the data in available formats (e.g., Res2DInv.dat)')
         self.recipErrorSaveBtn.clicked.connect(saveFilteredData)
@@ -2949,22 +2952,41 @@ class App(QMainWindow):
         self.recipErrorLabelLayout.addWidget(self.recipErrorfnamesComboLabel)
         self.recipErrorLabelLayout.addWidget(self.recipErrorfnamesCombo)
         self.recipErrorTopLayout.addLayout(self.recipErrorLabelLayout)
+        
+        self.recipErrorInputlayout = QHBoxLayout()
+        self.recipErrorTopLayout.addLayout(self.recipErrorInputlayout)
+        
+        self.recipErrorInputLeftlayout = QHBoxLayout()
+        self.recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
+        self.recipErrorInputLeftlayoutL = QHBoxLayout()
+        self.recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
+        self.recipErrorInputLeftlayoutL.addWidget(self.rhoRangeInputLabel)
+        self.recipErrorInputLeftlayoutL.addWidget(self.recipErrorInputLabel)
+        self.recipErrorInputLeftlayout.addLayout(self.recipErrorInputLeftlayoutL)
+        
+        self.recipErrorInputLineLayout = QHBoxLayout()
+        self.recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
+        self.recipErrorInputLineLayout.addWidget(self.rhoRangeMinInput)
+        self.recipErrorInputLineLayout.addWidget(self.rhoRangeMaxInput)
+        self.recipErrorInputLineLayout.addWidget(self.recipErrorInputLine)
+        self.recipErrorInputLineLayout.addWidget(self.filterAttrCombo)
+        self.recipErrorInputLeftlayout.addLayout(self.recipErrorInputLineLayout)
 
-        self.recipErrorInputLayout = QHBoxLayout()
-        self.recipErrorTopLayout.addLayout(self.recipErrorInputLayout)
+        self.recipErrorInputlayout.addLayout(self.recipErrorInputLeftlayout)
+        
+        self.recipErrorFilterElecLayout = QHBoxLayout()
+        self.recipErrorFilterElecLayout.setAlignment(Qt.AlignLeft)
+        self.recipErrorFilterElecLayout.addWidget(self.filterElecTextLabel)
+        self.recipErrorFilterElecLayout.addWidget(self.filterElecTextBox)
+        self.recipErrorInputlayout.addLayout(self.recipErrorFilterElecLayout)
 
-        self.recipErrorInputLayout.addWidget(self.rhoRangeInputLabel)
-        self.recipErrorInputLayout.addWidget(self.recipErrorInputLabel)
-        self.recipErrorInputLayout.addWidget(self.rhoRangeMinInput)
-        self.recipErrorInputLayout.addWidget(self.rhoRangeMaxInput)
-        self.recipErrorInputLayout.addWidget(self.recipErrorInputLine)
-        self.recipErrorInputLayout.addWidget(self.filterAttrCombo)
-        self.recipErrorInputLayout.addWidget(self.filterElecTextLabel)
-        self.recipErrorInputLayout.addWidget(self.filterElecTextBox)
-        self.recipErrorInputLayout.addWidget(self.recipErrorUnpairedBtn)
-        self.recipErrorInputLayout.addWidget(self.recipErrorPltBtn)
-        self.recipErrorInputLayout.addWidget(self.recipErrorResetBtn)
-        self.recipErrorInputLayout.addWidget(self.recipErrorSaveBtn)
+        self.recipErrorBtnLayout = QHBoxLayout()
+        self.recipErrorBtnLayout.setAlignment(Qt.AlignRight)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorUnpairedBtn)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorPltBtn)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorResetBtn)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorSaveBtn)
+        self.recipErrorInputlayout.addLayout(self.recipErrorBtnLayout, 1)
      
         #tab widgets for the graphs
         self.recipErrorBottomTabs = QTabWidget()
