@@ -443,8 +443,8 @@ k.showMesh()
 #k.fitErrorLME(iplot=True)
 k.fitErrorPwl()
 k.saveErrorData(os.path.join(k.dirname, 'dferrors.csv'))
-k.saveFilteredData(os.path.join(k.dirname, 'dfdata1'), savetyp='Res2DInv (*.dat)')
-k.saveFilteredData(os.path.join(k.dirname, 'dfdata2'), savetyp='Comma Separated Values (*.csv)')
+# k.saveFilteredData(os.path.join(k.dirname, 'dfdata1'), savetyp='Res2DInv (*.dat)')
+# k.saveFilteredData(os.path.join(k.dirname, 'dfdata2'), savetyp='Comma Separated Values (*.csv)')
 k.err = True
 
 k.invert(modErr=True, modelDOI=True)
@@ -984,22 +984,23 @@ timings['dc-2d-pseudo3d'] = time.time() - t0
 k = Project(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
 k.fitErrorPwl()
-k.exportData(ftype='protocol', err=False, recip=False)
-k.exportData(ftype='protocol', err=True, recip=False)
-k.exportData(ftype='protocol', err=True, recip=True)
-#k.exportData(ftype='ResInv', err=True, recip=True)  # TODO failed
-#k.exportData(ftype='srv', err=True, recip=True)  # TODO failed
-k.exportData(ftype='csv', err=True, recip=True)
+k.fitErrorPwlIP()
+k.exportData(os.path.join(k.dirname, 'exportData1.dat'), savetyp='Protocol (*.dat)', err=False, recip=False)
+k.exportData(os.path.join(k.dirname, 'exportData1.dat'), savetyp='Protocol (*.dat)', err=False, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData1.dat'), savetyp='Protocol (*.dat)', err=True, recip=False)
+k.exportData(os.path.join(k.dirname, 'exportData1.dat'), savetyp='Protocol (*.dat)', err=True, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData2.dat'), savetyp='Res2DInv (*.dat)', err=True, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData3.srv'), savetyp='srv', err=True, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData3.csv'), savetyp='csv', err=True, recip=True)
 
 k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
-k.exportData(ftype='protocol', err=False, recip=False)
-k.exportData(ftype='protocol', err=False, recip=False)
-k.exportData(ftype='protocol', err=False, recip=True)
-# k.exportData(ftype='ResInv', err=False, recip=True)  # TODO failed
-# k.exportData(ftype='srv', err=False, recip=True)  # TODO failed
-k.exportData(ftype='csv', err=False, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData1.dat'), savetyp='Protocol (*.dat)', err=False, recip=False)
+k.exportData(os.path.join(k.dirname, 'exportData1.dat'), savetyp='Protocol (*.dat)', err=False, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData2.dat'), savetyp='Res2DInv (*.dat)', err=False, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData3.srv'), savetyp='srv', err=False, recip=True)
+k.exportData(os.path.join(k.dirname, 'exportData3.csv'), savetyp='csv', err=False, recip=True)
 
 
 #%% print final summary information 

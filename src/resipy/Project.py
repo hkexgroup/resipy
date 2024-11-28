@@ -7377,7 +7377,8 @@ class Project(object): # Project master class instanciated by the GUI
         fname : str
             Path where to save the file.
         savetyp : str, optional
-            Saving format. To be determined in GUI. Default: Res2DInv (.dat)
+            Saving format. To be determined in GUI. Default: Res2DInv (.dat).
+            Also possible: Protocol (*.dat).
         err : bool, optional
             Flag to include errors. The default is False.
         recip : bool, optional
@@ -7409,6 +7410,8 @@ class Project(object): # Project master class instanciated by the GUI
                     df[a] = data[:,i] 
                 df[['a','b','m','n']] = df[['a','b','m','n']] + 1
                 if savetyp == 'Res2DInv (*.dat)':
+                    if 'lineTitle' not in self.param:
+                        self.param['lineTitle'] = 'MyBeautifulLine'
                     spacing = elec[1,0] - elec[0,0]
                     param = {'num_meas': df.shape[0],
                              'lineTitle': self.param['lineTitle'],
