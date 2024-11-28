@@ -7401,25 +7401,23 @@ class Project(object): # Project master class instanciated by the GUI
                 df = s.df.query('irecip >=0').copy() # not saving reciprocal data
             
             if savetyp == 'Protocol (*.dat)':
-                protocol = s.write2protocol(outputname=fname, err=err, isubset=isubset, threed=flag3d, ip=ipFlag)
+                s.write2protocol(outputname=fname, err=err, isubset=isubset, threed=flag3d, ip=ipFlag)
             else:
-                protocol = s.write2protocol(err=err, isubset=isubset, threed=flag3d, ip=ipFlag)
-            
-            lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-            data = df[['a','b','m','n']].replace(lookupDict).values
-            for i, a in enumerate(['a','b','m','n']):
-                df[a] = data[:,i] 
-            df[['a','b','m','n']] = df[['a','b','m','n']] + 1
-            if savetyp == 'Res2DInv (*.dat)':
-                spacing = elec[1,0] - elec[0,0]
-                param = {'num_meas': protocol.shape[0],
-                         'lineTitle': self.param['lineTitle'],
-                         'spacing': spacing}
-                write2Res2DInv(param, fname, df, elec, self.typ)
-            elif savetyp == 'Comma Separated Values (*.csv)':
-                write2csv(fname, df, elec, self.typ)
-            elif savetyp == 'E4D survey file (*.srv)':
-                writeSrv(fname, df, elec)
+                lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+                data = df[['a','b','m','n']].replace(lookupDict).values
+                for i, a in enumerate(['a','b','m','n']):
+                    df[a] = data[:,i] 
+                df[['a','b','m','n']] = df[['a','b','m','n']] + 1
+                if savetyp == 'Res2DInv (*.dat)':
+                    spacing = elec[1,0] - elec[0,0]
+                    param = {'num_meas': df.shape[0],
+                             'lineTitle': self.param['lineTitle'],
+                             'spacing': spacing}
+                    write2Res2DInv(param, fname, df, elec, self.typ)
+                elif savetyp == 'Comma Separated Values (*.csv)':
+                    write2csv(fname, df, elec, self.typ)
+                elif savetyp == 'E4D survey file (*.srv)':
+                    writeSrv(fname, df, elec)
 
             fname = fname[:-4] + str(i) + fname[-4:] # to iterate file numbers in case of timelapse survey
     
