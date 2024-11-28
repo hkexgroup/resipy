@@ -86,8 +86,16 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
     mz = 0*m.rename('mz')
     n = df.n#-df.a[0]
     nz = 0*n.rename('nz')
-    resist = df.resist
-    ip = df.ip
+    if 'resist' in df.columns:
+        resist = df.resist
+    else:
+        resist = df.res
+    if 'ip' in df.columns:
+        ip = df.ip
+    elif'phase' in df.columns:
+        ip = df.phase
+    else:
+        ip = 0*resist.rename('ip')
     dfr2d = pd.concat((a,az,b,bz,m,mz,n,nz,resist,ip), axis =1)
     param['num_meas'] = len(dfr2d)
     if typ == 'R2':
@@ -181,20 +189,24 @@ def writeSrv(fname, df, elec): # pragma: no cover
                 1)#buried flag 
         fh.write(line)
     #now write the scheduling matrix to file 
-    ie = df['irecip'].values >= 0 # reciprocal + non-paired
-    df = df[ie]
+    # ie = df['irecip'].values >= 0 # reciprocal + non-paired
+    # df = df[ie]
     nomeas = len(df) # number of measurements 
     df = df.reset_index().copy()
     fh.write('\n%i number of measurements \n'%nomeas)
     
     if not 'resError' in df.columns or all(np.isnan(df['resError'])) is True: # the columns don't exist or are empty 
         #estimate error if not given 
-        res = np.array(df['resist'])
+        if 'resist' in df.columns:
+            res = np.array(df['resist'])
+        else:
+            res = np.array(df['res'])
         a_wgt = 0.1
         b_wgt = 0.2
         var_res = (a_wgt*a_wgt)+(b_wgt*b_wgt) * (res*res)
         std_res = np.sqrt(var_res)
         df['resError'] = std_res
+        
     
     # format >>> m_indx a b m n V/I stdev_V/I
     for i in range(nomeas): 

@@ -5804,41 +5804,41 @@ class Project(object): # Project master class instanciated by the GUI
         dff.to_csv(fname, index=False)
 
 
-    def saveFilteredData(self, fname, savetyp='Res2DInv (*.dat)'):
-        """Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
+    # def saveFilteredData(self, fname, savetyp='Res2DInv (*.dat)'):
+    #     """Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
 
-        Parameters
-        ----------
-        fname : str
-            Path where to save the file.
-        savetyp : str, optional
-            Saving format. To be determined in GUI. Default: Res2DInv (.dat)
-        """
-        elec = self.elec[['x','y','z']].values
-        spacing = elec[1,0] - elec[0,0] # TODO (gb) not sure if this is needed
-        for s, i in zip(self.surveys, range(len(self.surveys))):
-            df = s.df.query('irecip >=0').copy() # not saving reciprocal data
-            # if spacing == None:
-            #     spacing = elec[1,0]-elec[0,0] # for batch surveys the spacing can differ and not follow user input
-            # else:
-            #     spacing = spacing
-            # df[['a','b','m','n']] *= spacing
-            lookupDict = dict(zip(self.elec['label'], self.elec['x'].values))
-            data = df[['a','b','m','n']].replace(lookupDict).values
-            for i, a in enumerate(['a','b','m','n']):
-                df[a] = data[:,i] # this way should avoid warnings 
-            # df[['a','b','m','n']] = data
-            if savetyp == 'Res2DInv (*.dat)':
-                param = {'num_meas': df.shape[0],
-                         'lineTitle': self.param['lineTitle'],
-                         'spacing': spacing}
-                write2Res2DInv(param, fname, df, elec, self.typ)
-            elif savetyp == 'Comma Separated Values (*.csv)':
-                write2csv(fname, df, elec, self.typ)
-            elif savetyp == 'E4D survey file (*.srv)':
-                writeSrv(fname, df, elec)
+    #     Parameters
+    #     ----------
+    #     fname : str
+    #         Path where to save the file.
+    #     savetyp : str, optional
+    #         Saving format. To be determined in GUI. Default: Res2DInv (.dat)
+    #     """
+    #     elec = self.elec[['x','y','z']].values
+    #     spacing = elec[1,0] - elec[0,0] # TODO (gb) not sure if this is needed
+    #     for s, i in zip(self.surveys, range(len(self.surveys))):
+    #         df = s.df.query('irecip >=0').copy() # not saving reciprocal data
+    #         # if spacing == None:
+    #         #     spacing = elec[1,0]-elec[0,0] # for batch surveys the spacing can differ and not follow user input
+    #         # else:
+    #         #     spacing = spacing
+    #         # df[['a','b','m','n']] *= spacing
+    #         lookupDict = dict(zip(self.elec['label'], self.elec['x'].values))
+    #         data = df[['a','b','m','n']].replace(lookupDict).values
+    #         for i, a in enumerate(['a','b','m','n']):
+    #             df[a] = data[:,i] # this way should avoid warnings 
+    #         # df[['a','b','m','n']] = data
+    #         if savetyp == 'Res2DInv (*.dat)':
+    #             param = {'num_meas': df.shape[0],
+    #                      'lineTitle': self.param['lineTitle'],
+    #                      'spacing': spacing}
+    #             write2Res2DInv(param, fname, df, elec, self.typ)
+    #         elif savetyp == 'Comma Separated Values (*.csv)':
+    #             write2csv(fname, df, elec, self.typ)
+    #         elif savetyp == 'E4D survey file (*.srv)':
+    #             writeSrv(fname, df, elec)
 
-            fname = fname[:-4] + str(i) + fname[-4:] # to iterate file numbers in case of timelapse survey
+    #         fname = fname[:-4] + str(i) + fname[-4:] # to iterate file numbers in case of timelapse survey
 
 
     def forward(self, noise=0.0, noiseIP=0.0, iplot=False, dump=None):
@@ -7327,82 +7327,182 @@ class Project(object): # Project master class instanciated by the GUI
         """
         self.saveCwd(outputdir)
         
-    def exportData(self, outputname=None, ftype='protocol', err=False, 
-                   recip=False):
-        """
-        Export preconditioned data used by ResIPy into another format (
-        different to project.saveData).
+    
+    
+    
+    
+    # def saveFilteredData(self, fname, savetyp='Res2DInv (*.dat)'):
+    #     """Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
+
+    #     Parameters
+    #     ----------
+    #     fname : str
+    #         Path where to save the file.
+    #     savetyp : str, optional
+    #         Saving format. To be determined in GUI. Default: Res2DInv (.dat)
+    #     """
+    #     elec = self.elec[['x','y','z']].values
+    #     spacing = elec[1,0] - elec[0,0] # TODO (gb) not sure if this is needed
+    #     for s, i in zip(self.surveys, range(len(self.surveys))):
+    #         df = s.df.query('irecip >=0').copy() # not saving reciprocal data
+    #         # if spacing == None:
+    #         #     spacing = elec[1,0]-elec[0,0] # for batch surveys the spacing can differ and not follow user input
+    #         # else:
+    #         #     spacing = spacing
+    #         # df[['a','b','m','n']] *= spacing
+    #         lookupDict = dict(zip(self.elec['label'], self.elec['x'].values))
+    #         data = df[['a','b','m','n']].replace(lookupDict).values
+    #         for i, a in enumerate(['a','b','m','n']):
+    #             df[a] = data[:,i] # this way should avoid warnings 
+    #         # df[['a','b','m','n']] = data
+    #         if savetyp == 'Res2DInv (*.dat)':
+    #             param = {'num_meas': df.shape[0],
+    #                      'lineTitle': self.param['lineTitle'],
+    #                      'spacing': spacing}
+    #             write2Res2DInv(param, fname, df, elec, self.typ)
+    #         elif savetyp == 'Comma Separated Values (*.csv)':
+    #             write2csv(fname, df, elec, self.typ)
+    #         elif savetyp == 'E4D survey file (*.srv)':
+    #             writeSrv(fname, df, elec)
+
+    #         fname = fname[:-4] + str(i) + fname[-4:] # to iterate file numbers in case of timelapse survey
+
+    
+    
+    def exportData(self, fname, savetyp='Res2DInv (*.dat)', err=False, recip=False):
+        """Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
 
         Parameters
         ----------
-        outputname : str, optional
-            Outputname. The default is None. If not given then the function falls
-            back on the survey name. If set then a number will be appended to the 
-            file name in the case of time-lapse (or batch) surveys. 
-        ftype : str, optional
-            Export File type, choose from either protocol, srv, csv, ResInv. 
-            The default is 'protocol'.
+        fname : str
+            Path where to save the file.
+        savetyp : str, optional
+            Saving format. To be determined in GUI. Default: Res2DInv (.dat)
         err : bool, optional
             Flag to include errors. The default is False.
         recip : bool, optional
             Flag to include reciprocals. The default is False.
         """
-        
-        # check the ftype 
-        ext = '.dat'
-        if ftype == 'protocol':
-            ext == '.dat'
-        elif ftype == 'ResInv':
-            ext = '.dat'
-        elif ftype == 'srv':
-            ext = '.srv'
-        elif ftype == 'csv':
-            ext == '.csv'
-        else:
-            raise Exception('unknown file type')
-            
         flag3d = False 
         if '3' in self.typ:
-            flag3d = True 
-            
-        for i,s in enumerate(self.surveys): 
+            flag3d = True
+        
+        ipFlag = False
+        if 'c' in self.typ:
+            ipFlag = True
+        
+        elec = self.elec[['x','y','z']].values
+        for s, i in zip(self.surveys, range(len(self.surveys))):
             if recip:
                 isubset = [True]*len(s.df)
+                df = s.df
             else:
-                isubset = None 
-                
-            protocol = s.write2protocol(err=err, isubset=isubset, threed=flag3d)
+                isubset = None
+                df = s.df.query('irecip >=0').copy() # not saving reciprocal data
             
-            # decide on file outputname 
-            if outputname is None: 
-                fout = s.name 
-                if fout == '':
-                    fout = 'SurveyData'
-                    if len(self.surveys) > 1:
-                        fout = 'SurveyData_{:0>3d}'.format(i)
+            if savetyp == 'Protocol (*.dat)':
+                protocol = s.write2protocol(outputname=fname, err=err, isubset=isubset, threed=flag3d, ip=ipFlag)
             else:
-                fout = outputname 
-                if fout.endswith(ext):
-                    fout = fout.replace(ext,'')
-                if len(self.surveys) > 1: 
-                    fout += '_{:0>3d}'.format(i)
+                protocol = s.write2protocol(err=err, isubset=isubset, threed=flag3d, ip=ipFlag)
+            
+            lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+            data = df[['a','b','m','n']].replace(lookupDict).values
+            for i, a in enumerate(['a','b','m','n']):
+                df[a] = data[:,i] 
+            df[['a','b','m','n']] = df[['a','b','m','n']] + 1
+            if savetyp == 'Res2DInv (*.dat)':
+                spacing = elec[1,0] - elec[0,0]
+                param = {'num_meas': protocol.shape[0],
+                         'lineTitle': self.param['lineTitle'],
+                         'spacing': spacing}
+                write2Res2DInv(param, fname, df, elec, self.typ)
+            elif savetyp == 'Comma Separated Values (*.csv)':
+                write2csv(fname, df, elec, self.typ)
+            elif savetyp == 'E4D survey file (*.srv)':
+                writeSrv(fname, df, elec)
+
+            fname = fname[:-4] + str(i) + fname[-4:] # to iterate file numbers in case of timelapse survey
+    
+    
+    
+    
+    
+    # def exportData(self, outputname=None, ftype='protocol', err=False, 
+    #                recip=False):
+    #     """
+    #     Export preconditioned data used by ResIPy into another format (
+    #     different to project.saveData).
+
+    #     Parameters
+    #     ----------
+    #     outputname : str, optional
+    #         Outputname. The default is None. If not given then the function falls
+    #         back on the survey name. If set then a number will be appended to the 
+    #         file name in the case of time-lapse (or batch) surveys. 
+    #     ftype : str, optional
+    #         Export File type, choose from either protocol, srv, csv, ResInv. 
+    #         The default is 'protocol'.
+    #     err : bool, optional
+    #         Flag to include errors. The default is False.
+    #     recip : bool, optional
+    #         Flag to include reciprocals. The default is False.
+    #     """
+        
+    #     # check the ftype 
+    #     ext = '.dat'
+    #     if ftype == 'protocol':
+    #         ext == '.dat'
+    #     elif ftype == 'ResInv':
+    #         ext = '.dat'
+    #     elif ftype == 'srv':
+    #         ext = '.srv'
+    #     elif ftype == 'csv':
+    #         ext == '.csv'
+    #     else:
+    #         raise Exception('unknown file type')
+            
+    #     flag3d = False 
+    #     if '3' in self.typ:
+    #         flag3d = True 
+            
+    #     for i,s in enumerate(self.surveys): 
+    #         if recip:
+    #             isubset = [True]*len(s.df)
+    #         else:
+    #             isubset = None 
+                
+    #         protocol = s.write2protocol(err=err, isubset=isubset, threed=flag3d)
+            
+    #         # decide on file outputname 
+    #         if outputname is None: 
+    #             fout = s.name 
+    #             if fout == '':
+    #                 fout = 'SurveyData'
+    #                 if len(self.surveys) > 1:
+    #                     fout = 'SurveyData_{:0>3d}'.format(i)
+    #         else:
+    #             fout = outputname 
+    #             if fout.endswith(ext):
+    #                 fout = fout.replace(ext,'')
+    #             if len(self.surveys) > 1: 
+    #                 fout += '_{:0>3d}'.format(i)
                     
-            if not fout.endswith(ext):
-                fout += ext 
+    #         if not fout.endswith(ext):
+    #             fout += ext 
                 
-            # write to file 
-            if ftype == 'protocol':
-                protocol.to_csv(fout, index=False, sep='\t', lineterminator='\n')
-            elif ftype == 'ResInv':
-                param = {'lineTitle':s.name}
-                write2Res2DInv(param, fout, protocol, 
-                               self.elec[['x','y','z']].values)
-            elif ftype =='srv':
-                writeSrv(fout, protocol, self.elec[['x','y','z']].values)
-            elif ftype =='csv':
-                protocol.to_csv(fout, index=False, sep=',', lineterminator='\n')
+    #         # write to file 
+    #         if ftype == 'protocol':
+    #             protocol.to_csv(fout, index=False, sep='\t', lineterminator='\n')
+    #         elif ftype == 'ResInv':
+    #             param = {'lineTitle':s.name}
+    #             write2Res2DInv(param, fout, protocol, 
+    #                            self.elec[['x','y','z']].values)
+    #         elif ftype =='srv':
+    #             writeSrv(fout, protocol, self.elec[['x','y','z']].values)
+    #         elif ftype =='csv':
+    #             protocol.to_csv(fout, index=False, sep=',', lineterminator='\n')
                 
-        return 
+    #     return 
                 
 
     def showParam(self):

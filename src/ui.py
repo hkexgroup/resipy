@@ -2908,11 +2908,37 @@ class App(QMainWindow):
         self.recipErrorResetBtn.setToolTip('This will restore all deleted measurements at this stage')
         self.recipErrorResetBtn.clicked.connect(resetRecipFilter)
 
-        def saveFilteredData():
+        
+        ## Old way - functional
+        # def saveFilteredData():
+        #     fname, savetyp = QFileDialog.getSaveFileName(self.tabImportingData,'Save Filtered Data',
+        #                                                  self.datadir, 'Res2DInv (*.dat);;Comma Separated Values (*.csv);;'
+        #                                                  'E4D survey file (*.srv)') # can add Protocol (*.dat) and so on
+        #     if fname != '':
+        #         # elec = self.elecTable.getTable() # getting the topography info
+        #         self.project.param['lineTitle'] = self.titleEdit.text()
+        #         # if not (self.project.iBatch or self.project.iTimeLapse):
+        #             # spacing = float(self.elecDxEdit.text())
+        #         # else:
+        #             # spacing = None
+        #         # self.project.saveFilteredData(fname, elec, savetyp, spacing=spacing)
+        #         self.project.saveFilteredData(fname, savetyp) # elec is already known to self.project because of self.updateElec()
+        #         self.writeLog('k.saveFilteredData("{:s}", {:s})'.format(fname, savetyp))
+        
+        ## Better way - used in Eport tab too
+        def savePPdataFunc():
             fname, savetyp = QFileDialog.getSaveFileName(self.tabImportingData,'Save Filtered Data',
-                                                         self.datadir, 'Res2DInv (*.dat);;Comma Separated Values (*.csv);;'
-                                                         'E4D survey file (*.srv)') # can add Protocol (*.dat) and so on
+                                                         self.datadir, 'Protocol (*.dat);;Res2DInv (*.dat);;Comma Separated Values (*.csv);;'
+                                                         'E4D survey file (*.srv)') 
             if fname != '':
+                self.loadingWidget('Saving conditioned data...')
+                includeError = False
+                includeRecip = False
+                if self.exportPpDataErrorCheck.isChecked():
+                    includeError = True
+                if self.exportPpDataRecipCheck.isChecked():
+                    includeRecip = True
+                    
                 # elec = self.elecTable.getTable() # getting the topography info
                 self.project.param['lineTitle'] = self.titleEdit.text()
                 # if not (self.project.iBatch or self.project.iTimeLapse):
@@ -2920,14 +2946,20 @@ class App(QMainWindow):
                 # else:
                     # spacing = None
                 # self.project.saveFilteredData(fname, elec, savetyp, spacing=spacing)
-                self.project.saveFilteredData(fname, savetyp) # elec is already known to self.project because of self.updateElec()
-                self.writeLog('k.saveFilteredData("{:s}", {:s})'.format(fname, savetyp))
+                # self.project.exportData(fname, savetyp) # elec is already known to self.project because of self.updateElec()
+                # self.writeLog('k.exportData("{:s}", {:s})'.format(fname, savetyp))
+                
+                self.project.exportData(fname, savetyp, includeError, includeRecip)
+                self.writeLog('k.exportData("{:s}", "{:s}", {:s}, {:s})'.format(fname, savetyp, str(includeError),str(includeRecip)))
+                self.infoDump('Exported pre processed data.')
+                self.loadingWidget(exitflag=True)
 
         self.recipErrorSaveBtn = QPushButton('Save data')
         self.recipErrorSaveBtn.setFixedWidth(100)
         self.recipErrorSaveBtn.setStyleSheet("color: green")
         self.recipErrorSaveBtn.setToolTip('This will save the data in available formats (e.g., Res2DInv.dat)')
-        self.recipErrorSaveBtn.clicked.connect(saveFilteredData)
+        # self.recipErrorSaveBtn.clicked.connect(saveFilteredData)
+        self.recipErrorSaveBtn.clicked.connect(savePPdataFunc)
 
         self.mwRecipError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
 
@@ -3193,7 +3225,8 @@ class App(QMainWindow):
         self.phaseSavebtn = QPushButton('Save data')
         self.phaseSavebtn.setStyleSheet("color: green")
         self.phaseSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
-        self.phaseSavebtn.clicked.connect(saveFilteredData)
+        # self.phaseSavebtn.clicked.connect(saveFilteredData)
+        self.phaseSavebtn.clicked.connect(savePPdataFunc)
         self.phaseSavebtn.setFixedWidth(150)
 
         self.filtreset = QPushButton('Reset phase filters')
@@ -6805,26 +6838,30 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.loadingWidget(exitflag=True)
                 self.infoDump('Successfully! copied working directory')
 
-        def savePPdataFunc():
-            dataout,_ = QFileDialog.getSaveFileName(
-                self,
-                'Open File',
-                self.datadir,
-                'CSV (*.csv);;DAT (*.dat);;SRV (*.srv) ')
 
-            ftype = str(self.exportPpDataFtypeMenu.currentText())
-            if dataout != '':
-                self.loadingWidget('Saving conditioned data...')
-                includeError = False
-                includeRecip = False
-                if self.exportPpDataErrorCheck.isChecked():
-                    includeError = True
-                if self.exportPpDataRecipCheck.isChecked():
-                    includeRecip = True
+        
 
-                self.project.exportData(dataout, ftype, includeError, includeRecip)
-                self.writeLog('k.exportData("{:s}","{:s}",{:s},{:s})'.format(dataout,ftype, str(includeError),str(includeRecip)))
-                self.infoDump('Exported pre processed data.')
+        ## Old way - The new way is in pre processing tab section
+        # def savePPdataFunc():
+        #     dataout,_ = QFileDialog.getSaveFileName(
+        #         self,
+        #         'Open File',
+        #         self.datadir,
+        #         'CSV (*.csv);;DAT (*.dat);;SRV (*.srv) ')
+
+        #     ftype = str(self.exportPpDataFtypeMenu.currentText())
+        #     if dataout != '':
+        #         self.loadingWidget('Saving conditioned data...')
+        #         includeError = False
+        #         includeRecip = False
+        #         if self.exportPpDataErrorCheck.isChecked():
+        #             includeError = True
+        #         if self.exportPpDataRecipCheck.isChecked():
+        #             includeRecip = True
+
+        #         self.project.exportData(dataout, ftype, includeError, includeRecip)
+        #         self.writeLog('k.exportData("{:s}","{:s}",{:s},{:s})'.format(dataout,ftype, str(includeError),str(includeRecip)))
+        #         self.infoDump('Exported pre processed data.')
 
 
         def saveMeshFunc():
@@ -6843,6 +6880,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     _forceLocal = True
                 self.project.exportMesh(mfpathout,voxel,_forceLocal)
                 self.writeLog('k.exportMesh("{:s}",{:s},{:s})'.format(mfpathout,str(voxel),str(_forceLocal)))
+                self.loadingWidget(exitflag=True)
 
         def exportElecBtnFunc():
             fpathout, _ = QFileDialog.getSaveFileName(
@@ -6858,6 +6896,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     _forceLocal = True
                 self.project.exportElec(fpathout,_forceLocal)
                 self.writeLog('k.exportElec("{:s}",{:s})'.format(fpathout,str(_forceLocal)))
+                self.loadingWidget(exitflag=True)
 
         def exportMeshResultsBtnFunc():
             fdir = QFileDialog.getExistingDirectory(self.tabImportingData,
@@ -6866,7 +6905,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
             ftype = str(self.exportResultsFtypeMenu.currentText())
             if fdir != '':
-                self.loadingWidget('Exporting mesh results...')
                 voxel = False
                 _forceLocal = False
                 self.loadingWidget('Saving mesh result file(s)...')
@@ -6880,6 +6918,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                                _forceLocal=_forceLocal)
                 self.writeLog('k.exportMeshResults("{:s}","{:s}",{:s},{:s})'.format(fdir,ftype,str(voxel),str(_forceLocal)))
                 self.infoDump('Successfully saved meshed results!')
+                self.loadingWidget(exitflag=True)
 
         def checkMeshResultsBtnQbox():
             ftype = str(self.exportResultsFtypeMenu.currentText())
@@ -6965,12 +7004,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportPpDataRecipCheck = QCheckBox('Include Reciprocals')
         self.exportPpDataCheckBoxes.addWidget(self.exportPpDataErrorCheck)
         self.exportPpDataCheckBoxes.addWidget(self.exportPpDataRecipCheck)
-        self.exportPpDataFtypeMenu = QComboBox()
-        self.exportPpDataFtypeMenu.addItem('protocol')
-        self.exportPpDataFtypeMenu.addItem('srv')
-        self.exportPpDataFtypeMenu.addItem('csv')
-        self.exportPpDataFtypeMenu.addItem('ResInv')
-        self.exportPpDataCheckBoxes.addWidget(self.exportPpDataFtypeMenu)
+        # self.exportPpDataFtypeMenu = QComboBox()
+        # self.exportPpDataFtypeMenu.addItem('protocol')
+        # self.exportPpDataFtypeMenu.addItem('srv')
+        # self.exportPpDataFtypeMenu.addItem('csv')
+        # self.exportPpDataFtypeMenu.addItem('ResInv')
+        # self.exportPpDataCheckBoxes.addWidget(self.exportPpDataFtypeMenu)
         nrow += 1
         self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
         nrow += 1
