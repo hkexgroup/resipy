@@ -11,11 +11,11 @@ ResIPy aims to be
 
 Downloads
 ---------
-Version 3.5.4:
+Version 3.6.2:
 <br>
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.5.4-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.5.4-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-macos.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.4-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-linux)
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.6.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.6.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-macos.dmg "wine is required - see below")
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.6.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-linux)
 <br>
 macOS Mojave and before: [![mac](https://img.shields.io/badge/macOS%20Mojave%2064bit-ResIPy%20v3.4.5-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-macos_mojave.dmg "wine is required - see below")
 
@@ -28,9 +28,10 @@ Notes for Mac and Linux users:
 - On Linux: If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 Zip files:<br>
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.5.4%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-windows.zip)
-[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.5.4%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-macos.zip "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.4%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-linux.zip)<br>
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.6.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-windows.zip)
+[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.6.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-macos.zip "wine is required - see above")
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.6.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-linux.zip)<br>
+<br>
 macOS Mojave and before: [![mac](https://img.shields.io/badge/macOS%20Mojave%2064bit-ResIPy%20v3.4.5%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-macos_mojave.zip "wine is required - see below")
 
 
@@ -178,12 +179,16 @@ Below are the links to current and previous releases of ResIPy/pyR2. Note that p
 the latest release available.
 
 *Current stable release*:
+- v3.6.2
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.6.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.6.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-macos.dmg "wine is required - see above")
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.6.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-linux)<br>
+
+*Past releases*:
 - v3.5.4
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.5.4-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.5.4-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-macos.dmg "wine is required - see above")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.4-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-linux)<br>
-
-*Past releases*:
 - v3.4.5
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.4.5-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.4.5-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-macOS.dmg "wine is required - see above")
