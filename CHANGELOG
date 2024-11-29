@@ -1,3 +1,17 @@
+v3.6.2
+------
+- Fix bug #556 (3D forward modelling)
+- Fix computation of modeling error magnitudes
+- Fix bug IP workflow causing modeling errors to crash (though IP modeling error is not accounted for) #617
+- Fix bug where survey data frames were incorrectly indexed when electrodes were removed*. 
+- Add filter-by electrode labels to the pre-processing tab, the filtered pseudo section is now viewable in 3D
+- Add the possibility to use user-supplied error (e.g. stacking error as weight in the inversion)
+- Added merged format for importing multiple datasets across multiple time steps 
+- Added export options tab 
+- Tweaked 3D meshing, which should improve discretization in the case of irregular grids 
+- *Fix pseudo-section when removing one electrode (#620)
+- **Full Changelog**: https://github.com/hkexgroup/resipy/compare/v3.5.4...v3.6.2 
+
 v3.5.4
 ------
 - Bug fix: Reciprocal error miscalculation
