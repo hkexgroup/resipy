@@ -11,7 +11,6 @@ v3.6.2
 - Bug fix: computation of modeling error magnitudes.
 - Bug fix: IP workflow causing modeling errors to crash (#617).
 - Bug fix: Survey DataFrames incorrectly indexed when electrodes removed.
-- <a href="https://github.com/hkexgroup/resipy/compare/v3.5.4...v3.6.2"><i>Full Changelog</i></a>
 
 
 v3.5.4
