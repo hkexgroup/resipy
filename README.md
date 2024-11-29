@@ -175,46 +175,7 @@ be automatically deleted by Windows or third party apps (such as CC cleaner) whe
 
 All releases
 -----------------
-Below are the links to current and previous releases of ResIPy/pyR2. Note that previous releases may contain bugs/issues and it is recommended to always use
-the latest release available.
-
-*Current stable release*:
-- v3.6.2
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.6.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.6.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-macos.dmg "wine is required - see above")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.6.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.6.2/ResIPy-linux)<br>
-
-*Past releases*:
-- v3.5.4
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.5.4-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%20Mx-ResIPy%20v3.5.4-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-macos.dmg "wine is required - see above")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.5.4-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.5.4/ResIPy-linux)<br>
-- v3.4.5
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.4.5-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.4.5-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-macOS.dmg "wine is required - see above")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.4.5-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-linux)<br>
-macOS Mojave and before: [![mac](https://img.shields.io/badge/macOS%20Mojave%2064bit-ResIPy%20v3.4.5-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.5/ResIPy-macos_mojave.dmg "wine is required - see above")
-- v3.4.2
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.4.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.2/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.4.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.2/ResIPy-macOS.dmg "wine is required - see above")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.4.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.4.2/ResIPy-linux)
-- v3.3.3
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.3.3-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.3/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.3.3-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.3/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.3.3-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.3/ResIPy-linux)
-- v3.3.1
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.3.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.1/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.3.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.1/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.3.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.1/ResIPy-linux)
-- v3.2.3
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.2.3-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.2.3/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.2.3-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.2.3/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.2.3-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.2.3/ResIPy-linux)
-- v3.0.3
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.3-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.3/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.3-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.3/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.3-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.3/ResIPy-linux)
-- Older versions are available on github: https://github.com/hkexgroup/resipy/releases
+The links to current and previous releases of ResIPy/pyR2 are available on github: https://github.com/hkexgroup/resipy/releases. Note that previous releases may contain bugs/issues and it is recommended to always use the latest release available.
 
 Zenodo project DOI: [![zenodo doi](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
 
