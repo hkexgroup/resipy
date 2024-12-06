@@ -1710,7 +1710,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.createSurvey(finfo.fpath[i].strip(), ftype=finfo.ftype[i], 
                               debug=debug, estMemory=False, string=finfo.string[i])
             sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
-            print(sidx)
+            # print(sidx)
             _ = sidx.pop(0)
                 
             for j in sidx: 
@@ -5912,7 +5912,8 @@ class Project(object): # Project master class instanciated by the GUI
             self.createSequence()
             dump('done\n')
         elif isinstance(self.sequence, pd.core.frame.DataFrame):
-            pass
+            if len(self.sequence.columns) != 4: 
+                raise Exception('Sequence should have 4 columns')
         elif isinstance(self.sequence,np.ndarray): # check sequence is a matrix of string etc
             if self.sequence.shape[1] != 4: 
                 raise Exception('Sequence should have 4 columns')

@@ -696,14 +696,28 @@ class Survey(object):
         
         data = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
         
-        if string > 0: 
-            if type(elec) == np.ndarray: # 
-                _elec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
+        if type(elec) == np.ndarray: # 
+            _elec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
+            _elec['remote'] = False
+            _elec['buried'] = False
+            _elec['label'] = (1 + np.arange(elec.shape[0])).astype(str)
+        else:
+            _elec = elec.copy()
+            if 'remote' not in _elec.columns:
                 _elec['remote'] = False
+            if 'buried' not in _elec.columns:
                 _elec['buried'] = False
+            if 'remote' not in _elec.columns:
                 _elec['label'] = (1 + np.arange(elec.shape[0])).astype(str)
-            else:
-                _elec = elec.copy()
+                
+        
+        # check if new electrodes present 
+        if string==0:
+            for i,label in enumerate(_elec.label):
+                if label not in self.elec.label.values: 
+                    line = _elec[_elec.index==i]
+                    self.elec = pd.concat([self.elec,line]).reset_index(drop=True)
+        elif string > 0: 
             data.reset_index(drop=True, inplace=True)
             appendString(_elec, data, string)
             self.elec = pd.concat([self.elec,_elec]).reset_index(drop = True) 

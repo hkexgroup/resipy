@@ -1624,6 +1624,7 @@ class Mesh:
         else:
             self.fig = ax.figure
             self.ax = ax
+        self.fig.set_tight_layout(True) # set figure to tight layout 
         
         # if no dimensions are given then set the plot limits to edge of mesh
         try: 
@@ -1702,8 +1703,8 @@ class Mesh:
             if vmax is None:
                 vmax = np.nanmax(zc)
             if vmax > vmin:
-                levels = MaxNLocator().tick_values(vmin, vmax)
-                #levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
+                # levels = MaxNLocator().tick_values(vmin, vmax)
+                levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
             else:
                 levels = None
             
@@ -1736,8 +1737,8 @@ class Mesh:
                     self.cbar.set_ticks([1])
                 self.cbar.set_ticklabels(val)
             elif 'log' in attr:
-                levels = MaxNLocator().tick_values(vmin, vmax)
-                # levels = np.linspace(vmin, vmax, 13)
+                # levels = MaxNLocator().tick_values(vmin, vmax)
+                levels = np.linspace(vmin, vmax, 13)
                 if vmax < 0.01:
                     ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
                 else:
@@ -1890,8 +1891,8 @@ class Mesh:
                 self.cbar.set_ticks([1])
             self.cbar.set_ticklabels(val) 
         elif 'log' in attr: 
-            levels = MaxNLocator().tick_values(vmin, vmax)
-            # levels = np.linspace(vmin, vmax,13)
+            # levels = MaxNLocator().tick_values(vmin, vmax)
+            levels = np.linspace(vmin, vmax,13)
             if vmax < 0.01:
                 ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
             else:
