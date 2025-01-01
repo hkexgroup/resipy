@@ -1089,10 +1089,16 @@ class Survey(object):
         errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
         if errPercent > 100:
             errPercent = 100
-        parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
-        KDEfit = gaussian_kde(errMax)
-        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
-        ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'blue',label="KDE fit")
+            
+        try: # sometimes these don't work!
+            parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+            KDEfit = gaussian_kde(errMax)
+            ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+            ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'blue',label="KDE fit")
+        except:
+            print('Parametric or KDE fit did not work.')
+            pass
+        
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
         ax.set_ylabel('Probability')
