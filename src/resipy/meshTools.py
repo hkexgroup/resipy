@@ -1624,6 +1624,7 @@ class Mesh:
         else:
             self.fig = ax.figure
             self.ax = ax
+        self.fig.set_tight_layout(True) # set figure to tight layout 
         
         # if no dimensions are given then set the plot limits to edge of mesh
         try: 
@@ -1702,8 +1703,8 @@ class Mesh:
             if vmax is None:
                 vmax = np.nanmax(zc)
             if vmax > vmin:
-                levels = MaxNLocator().tick_values(vmin, vmax)
-                #levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
+                # levels = MaxNLocator().tick_values(vmin, vmax)
+                levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
             else:
                 levels = None
             
@@ -1736,8 +1737,8 @@ class Mesh:
                     self.cbar.set_ticks([1])
                 self.cbar.set_ticklabels(val)
             elif 'log' in attr:
-                levels = MaxNLocator().tick_values(vmin, vmax)
-                # levels = np.linspace(vmin, vmax, 13)
+                # levels = MaxNLocator().tick_values(vmin, vmax)
+                levels = np.linspace(vmin, vmax, 13)
                 if vmax < 0.01:
                     ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
                 else:
@@ -1890,8 +1891,8 @@ class Mesh:
                 self.cbar.set_ticks([1])
             self.cbar.set_ticklabels(val) 
         elif 'log' in attr: 
-            levels = MaxNLocator().tick_values(vmin, vmax)
-            # levels = np.linspace(vmin, vmax,13)
+            # levels = MaxNLocator().tick_values(vmin, vmax)
+            levels = np.linspace(vmin, vmax,13)
             if vmax < 0.01:
                 ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
             else:
@@ -5727,6 +5728,10 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         # cant use triangulation methods if there is no surface refinement and 
         # there is no depth in the Y axis 
         interp_method = 'nearest'
+    elif all(np.array(elec_x)==elec_x[0]) and surface_refinement is None:
+        # cant use triangulation methods if there is no surface refinement and 
+        # there is no depth in the X axis 
+        interp_method = 'nearest'
         
     if whole_space: # if whole space problem ignore interpolation 
         interp_method = None 
@@ -6009,11 +6014,26 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             cpy = np.append(cpy,cby)
             cpz = np.append(cpz,cbz)
             cpl = np.append(cpl,cbl)
+            # check that if electodes are close to the surface then add some 
+            # control at the surface 
+            min_dist_from_sur = abs(max(bur_elec_z))
+
+            if min_dist_from_sur <= (cl*cl_factor):
+                ux = np.unique(bur_elec_x)
+                uy = np.unique(bur_elec_y)
+                for i in range(len(ux)):
+                    for j in range(len(uy)):
+                        cpx = np.append(cpx,ux[i])
+                        cpy = np.append(cpy,uy[j])
+                        cpz = np.append(cpz,0)
+                        cpl = np.append(cpl,cl)
                 
         # one last check that no points are duplicates of electrodes 
         idist,_ = tree.query(np.c_[cpx,cpy,cpz]) 
         tokeep = [True]*len(cpx)
         for i in range(len(cpx)):
+            if cpz[i] == 0 and len(surf_elec_x) == 0:
+                continue 
             if idist[i] < (cps*0.8):
                 tokeep[i] = False 
         cpx = cpx[tokeep]
