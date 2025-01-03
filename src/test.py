@@ -28,6 +28,7 @@ print('======================= GENERAL METHOD TESTS =====================')
 #%% testing all importing features
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
+k.createSurvey(testdir + 'dc-2d/WSReciprocal.bin', ftype='Syscal')
 k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
 k.createSurvey(testdir + 'dc-2d/syscal-normal-only.csv', ftype='Syscal')
 k.addData(fname=testdir + 'dc-2d/syscal-reciprocal-only.csv', ftype='Syscal')

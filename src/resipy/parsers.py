@@ -6,14 +6,9 @@ Parse device-specific format and extract data as pandas.Dataframe
 and electrode positions as numpy.array
 @authors: Guillaume, Jimmy, Sina, Pedro Concha
 """
-
+import os, warnings, struct, re, io, chardet 
 import numpy as np
 import pandas as pd
-import os, warnings 
-import re
-import io
-import chardet
-
 
 #%% function to compute geometric factor - Jamyd91
 def geom_fac(C1,C2,P1,P2):
@@ -101,216 +96,436 @@ def geom_factor_3D(df, elec, array_type):
     return k
 
 #%% usual syscal parser
-def syscalParser(fname):#, spacing=None):
-        df = pd.read_csv(fname, skipinitialspace=True, engine='python', encoding_errors='ignore')
-        # delete space at the end and the beginning of columns names
-        headers = df.columns
-        if 'Spa.1' in headers:
-            newheaders = list(map(str.strip, headers)) 
-            dico = dict(zip(headers, newheaders))
-            df = df.rename(index=str, columns=dico)
-            df = df.rename(columns={'Spa.1':'a',
-                                    'Spa.2':'b',
-                                    'Spa.3':'m',
-                                    'Spa.4':'n',
-                                    'In':'i',
-                                    'Vp':'vp',
-                                    'Dev.':'dev',
-                                    'M':'ip', #M1, M2,...Mn are good for now when importing
-                                    'Sp':'sp'})
-        elif 'xA(m)' in headers: # latest Prosys II
-            newheaders = list(map(str.strip, headers)) 
-            dico = dict(zip(headers, newheaders))
-            df = df.rename(index=str, columns=dico)
-            df = df.rename(columns={'xA(m)':'a',
-                                    'xB(m)':'b',
-                                    'xM(m)':'m',
-                                    'xN(m)':'n',
-                                    'Dev.':'dev',
-                                    'M (mV/V)':'ip',
-                                    'SP (mV)':'sp',
-                                    'VMN (mV)':'vp',
-                                    'IAB (mA)':'i',
-                                    'yA (m)':'ya', # new Syscal format supports topography and 3D output in the csv file
-                                    'yB (m)':'yb',
-                                    'yM (m)':'ym',
-                                    'yN (m)':'yn',
-                                    'zA (m)':'za',
-                                    'zB (m)':'zb',
-                                    'zM (m)':'zm',
-                                    'zN (m)':'zn',
-                                    'M1 (mV/V)':'M1',
-                                    'M2 (mV/V)':'M2',
-                                    'M3 (mV/V)':'M3',
-                                    'M4 (mV/V)':'M4',
-                                    'M5 (mV/V)':'M5',
-                                    'M6 (mV/V)':'M6',
-                                    'M7 (mV/V)':'M7',
-                                    'M8 (mV/V)':'M8',
-                                    'M9 (mV/V)':'M9',
-                                    'M10 (mV/V)':'M10',
-                                    'M11 (mV/V)':'M11',
-                                    'M12 (mV/V)':'M12',
-                                    'M13 (mV/V)':'M13',
-                                    'M14 (mV/V)':'M14',
-                                    'M15 (mV/V)':'M15',
-                                    'M16 (mV/V)':'M16',
-                                    'M17 (mV/V)':'M17',
-                                    'M18 (mV/V)':'M18',
-                                    'M19 (mV/V)':'M19',
-                                    'M20 (mV/V)':'M20',
-                                    'TM1 (ms)':'TM1'})
-        
-        else: # Prosys III format
-            newheaders = list(map(str.strip, headers)) 
-            dico = dict(zip(headers, newheaders))
-            df = df.rename(index=str, columns=dico)
-            df = df.rename(columns={'xA (m)':'a',
-                                    'xB (m)':'b',
-                                    'xM (m)':'m',
-                                    'xN (m)':'n',
-                                    'Dev. Rho (%)':'dev', # there is also Dev. M
-                                    'M (mV/V)':'ip',
-                                    'SP (mV)':'sp',
-                                    'VMN (mV)':'vp',
-                                    'IAB (mA)':'i',
-                                    'yA (m)':'ya', # new Syscal format supports topography and 3D output in the csv file
-                                    'yB (m)':'yb',
-                                    'yM (m)':'ym',
-                                    'yN (m)':'yn',
-                                    'zA (m)':'za',
-                                    'zB (m)':'zb',
-                                    'zM (m)':'zm',
-                                    'zN (m)':'zn',
-                                    'M1 (mV/V)':'M1',
-                                    'M2 (mV/V)':'M2',
-                                    'M3 (mV/V)':'M3',
-                                    'M4 (mV/V)':'M4',
-                                    'M5 (mV/V)':'M5',
-                                    'M6 (mV/V)':'M6',
-                                    'M7 (mV/V)':'M7',
-                                    'M8 (mV/V)':'M8',
-                                    'M9 (mV/V)':'M9',
-                                    'M10 (mV/V)':'M10',
-                                    'M11 (mV/V)':'M11',
-                                    'M12 (mV/V)':'M12',
-                                    'M13 (mV/V)':'M13',
-                                    'M14 (mV/V)':'M14',
-                                    'M15 (mV/V)':'M15',
-                                    'M16 (mV/V)':'M16',
-                                    'M17 (mV/V)':'M17',
-                                    'M18 (mV/V)':'M18',
-                                    'M19 (mV/V)':'M19',
-                                    'M20 (mV/V)':'M20',
-                                    'TM1 (ms)':'TM1'})
+def syscalParser(fname):
+    # check if binary format 
+    if fname.endswith('bin'):
+        return syscalBinParser(fname)
     
-        df['resist'] = df['vp']/df['i']
-        
-        # find if input contains 3D coordinates
-        if 'ya' in df.columns: # it's a 3D format file - not necessary a 3D survey!
-            syscal3D = True
-        else: # it's a 2D format file
-            syscal3D = False
-        
-        if syscal3D is False:
-            # if spacing is None:    
-            # for unregularly spaced array
-            array = df[['a','b','m','n']].values
-            
-            # get unique electrode positions and create ordered labels for them
-            val = np.sort(np.unique(array.flatten()))
-            elecLabel = 1 + np.arange(len(val))
-            searchsoterdArr = np.searchsorted(val, array)
-            newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-            df[['a','b','m','n']] = newval # assign new label
-            
-            # build electrode array
-            if 'za' in df.columns and not np.all(df[['za','zb','zm','zn']].values == 0): # see if we have topography
-                zarray = df[['za','zb','zm','zn']].values
-                zvalflat = np.c_[searchsoterdArr.flatten(), zarray.flatten()]
-                zval = np.unique(zvalflat[zvalflat[:,0].argsort()], axis=0)[:,1]
-            else:
-                zval = np.zeros_like(val)
-                
-            yval = np.zeros_like(val) # 2D so Y values are all zeros
-            elec = np.c_[val, yval, zval]
-        
-        else: # we have 3D format file
-            df = df.rename(columns={'a':'xa','b':'xb','m':'xm','n':'xn'})
-            xarray = df[['xa','xb','xm','xn']].values.flatten()
-            yarray = df[['ya','yb','ym','yn']].values.flatten()
-            zarray = df[['za','zb','zm','zn']].values.flatten()
-            arrayFull = np.c_[xarray, yarray, zarray]
+    df = pd.read_csv(fname, skipinitialspace=True, engine='python', encoding_errors='ignore')
+    # delete space at the end and the beginning of columns names
+    headers = df.columns
+    if 'Spa.1' in headers:
+        newheaders = list(map(str.strip, headers)) 
+        dico = dict(zip(headers, newheaders))
+        df = df.rename(index=str, columns=dico)
+        df = df.rename(columns={'Spa.1':'a',
+                                'Spa.2':'b',
+                                'Spa.3':'m',
+                                'Spa.4':'n',
+                                'In':'i',
+                                'Vp':'vp',
+                                'Dev.':'dev',
+                                'M':'ip', #M1, M2,...Mn are good for now when importing
+                                'Sp':'sp'})
+    elif 'xA(m)' in headers: # latest Prosys II
+        newheaders = list(map(str.strip, headers)) 
+        dico = dict(zip(headers, newheaders))
+        df = df.rename(index=str, columns=dico)
+        df = df.rename(columns={'xA(m)':'a',
+                                'xB(m)':'b',
+                                'xM(m)':'m',
+                                'xN(m)':'n',
+                                'Dev.':'dev',
+                                'M (mV/V)':'ip',
+                                'SP (mV)':'sp',
+                                'VMN (mV)':'vp',
+                                'IAB (mA)':'i',
+                                'yA (m)':'ya', # new Syscal format supports topography and 3D output in the csv file
+                                'yB (m)':'yb',
+                                'yM (m)':'ym',
+                                'yN (m)':'yn',
+                                'zA (m)':'za',
+                                'zB (m)':'zb',
+                                'zM (m)':'zm',
+                                'zN (m)':'zn',
+                                'M1 (mV/V)':'M1',
+                                'M2 (mV/V)':'M2',
+                                'M3 (mV/V)':'M3',
+                                'M4 (mV/V)':'M4',
+                                'M5 (mV/V)':'M5',
+                                'M6 (mV/V)':'M6',
+                                'M7 (mV/V)':'M7',
+                                'M8 (mV/V)':'M8',
+                                'M9 (mV/V)':'M9',
+                                'M10 (mV/V)':'M10',
+                                'M11 (mV/V)':'M11',
+                                'M12 (mV/V)':'M12',
+                                'M13 (mV/V)':'M13',
+                                'M14 (mV/V)':'M14',
+                                'M15 (mV/V)':'M15',
+                                'M16 (mV/V)':'M16',
+                                'M17 (mV/V)':'M17',
+                                'M18 (mV/V)':'M18',
+                                'M19 (mV/V)':'M19',
+                                'M20 (mV/V)':'M20',
+                                'TM1 (ms)':'TM1'})
     
-            elec = np.unique(arrayFull, axis=0)
+    else: # Prosys III format
+        newheaders = list(map(str.strip, headers)) 
+        dico = dict(zip(headers, newheaders))
+        df = df.rename(index=str, columns=dico)
+        df = df.rename(columns={'xA (m)':'a',
+                                'xB (m)':'b',
+                                'xM (m)':'m',
+                                'xN (m)':'n',
+                                'Dev. Rho (%)':'dev', # there is also Dev. M
+                                'M (mV/V)':'ip',
+                                'SP (mV)':'sp',
+                                'VMN (mV)':'vp',
+                                'IAB (mA)':'i',
+                                'yA (m)':'ya', # new Syscal format supports topography and 3D output in the csv file
+                                'yB (m)':'yb',
+                                'yM (m)':'ym',
+                                'yN (m)':'yn',
+                                'zA (m)':'za',
+                                'zB (m)':'zb',
+                                'zM (m)':'zm',
+                                'zN (m)':'zn',
+                                'M1 (mV/V)':'M1',
+                                'M2 (mV/V)':'M2',
+                                'M3 (mV/V)':'M3',
+                                'M4 (mV/V)':'M4',
+                                'M5 (mV/V)':'M5',
+                                'M6 (mV/V)':'M6',
+                                'M7 (mV/V)':'M7',
+                                'M8 (mV/V)':'M8',
+                                'M9 (mV/V)':'M9',
+                                'M10 (mV/V)':'M10',
+                                'M11 (mV/V)':'M11',
+                                'M12 (mV/V)':'M12',
+                                'M13 (mV/V)':'M13',
+                                'M14 (mV/V)':'M14',
+                                'M15 (mV/V)':'M15',
+                                'M16 (mV/V)':'M16',
+                                'M17 (mV/V)':'M17',
+                                'M18 (mV/V)':'M18',
+                                'M19 (mV/V)':'M19',
+                                'M20 (mV/V)':'M20',
+                                'TM1 (ms)':'TM1'})
+
+    df['resist'] = df['vp']/df['i']
     
-            elecdf = pd.DataFrame(np.c_[elec, 1 + np.arange(len(elec))], columns=['x', 'y', 'z', 'elecnum'])
-            elecs = ['a','b','m','n']
-            for i in range(4):
-                df = df.merge(elecdf, how='outer', left_on=['x%s' % elecs[i],'y%s' % elecs[i],'z%s' % elecs[i]], right_on=['x', 'y', 'z'])
-                df = df.rename(columns={'elecnum':'%s' % elecs[i]})
-                df = df.drop(['x', 'y', 'z'], axis=1)
-                
-            df = df.dropna(subset=['a','b','m','n'])
-            df = df.astype({'a':int, 'b':int, 'm':int, 'n':int}).copy()
-            val = np.sort(elec[:,0])
+    # find if input contains 3D coordinates
+    if 'ya' in df.columns: # it's a 3D format file - not necessary a 3D survey!
+        syscal3D = True
+    else: # it's a 2D format file
+        syscal3D = False
+    
+    if syscal3D is False:
+        # if spacing is None:    
+        # for unregularly spaced array
+        array = df[['a','b','m','n']].values
+        
+        # get unique electrode positions and create ordered labels for them
+        val = np.sort(np.unique(array.flatten()))
+        elecLabel = 1 + np.arange(len(val))
+        searchsoterdArr = np.searchsorted(val, array)
+        newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+        df[['a','b','m','n']] = newval # assign new label
+        
+        # build electrode array
+        if 'za' in df.columns and not np.all(df[['za','zb','zm','zn']].values == 0): # see if we have topography
+            zarray = df[['za','zb','zm','zn']].values
+            zvalflat = np.c_[searchsoterdArr.flatten(), zarray.flatten()]
+            zval = np.unique(zvalflat[zvalflat[:,0].argsort()], axis=0)[:,1]
+        else:
+            zval = np.zeros_like(val)
             
-        # NOTE: remote electrode identification is done in R2.setElec()
-        # but we notice that setting same number for remote (-99999) makes
-        # the pseudo-section of remote electrode survey nicer...
-        remoteFlags_p1 = np.array([-9999999, -999999, -99999,-9999,-999])
-        remoteFlags_p2 = np.array([9999999, 999999, 99999, 9999, 999])
-        iremote_p1 = np.in1d(val, remoteFlags_p1)
-        elec[iremote_p1, 0] = -99999
-        iremote_p2 = np.in1d(val, remoteFlags_p2)
-        elec[iremote_p2, 0] = 99999
+        yval = np.zeros_like(val) # 2D so Y values are all zeros
+        elec = np.c_[val, yval, zval]
+    
+    else: # we have 3D format file
+        df = df.rename(columns={'a':'xa','b':'xb','m':'xm','n':'xn'})
+        xarray = df[['xa','xb','xm','xn']].values.flatten()
+        yarray = df[['ya','yb','ym','yn']].values.flatten()
+        zarray = df[['za','zb','zm','zn']].values.flatten()
+        arrayFull = np.c_[xarray, yarray, zarray]
+
+        elec = np.unique(arrayFull, axis=0)
+
+        elecdf = pd.DataFrame(np.c_[elec, 1 + np.arange(len(elec))], columns=['x', 'y', 'z', 'elecnum'])
+        elecs = ['a','b','m','n']
+        for i in range(4):
+            df = df.merge(elecdf, how='outer', left_on=['x%s' % elecs[i],'y%s' % elecs[i],'z%s' % elecs[i]], right_on=['x', 'y', 'z'])
+            df = df.rename(columns={'elecnum':'%s' % elecs[i]})
+            df = df.drop(['x', 'y', 'z'], axis=1)
+            
+        df = df.dropna(subset=['a','b','m','n'])
+        df = df.astype({'a':int, 'b':int, 'm':int, 'n':int}).copy()
+        val = np.sort(elec[:,0])
         
-        if np.all(df['dev'].values == 0) and 'Dev. M' in df.columns: # Prosys III has to Dev. lists, assuming Dev. Rho (%) == 0 and Dev. M != 0 when IP data is collected.
-            df['dev'] = df['Dev. M'].values
+    # NOTE: remote electrode identification is done in R2.setElec()
+    # but we notice that setting same number for remote (-99999) makes
+    # the pseudo-section of remote electrode survey nicer...
+    remoteFlags_p1 = np.array([-9999999, -999999, -99999,-9999,-999])
+    remoteFlags_p2 = np.array([9999999, 999999, 99999, 9999, 999])
+    iremote_p1 = np.in1d(val, remoteFlags_p1)
+    elec[iremote_p1, 0] = -99999
+    iremote_p2 = np.in1d(val, remoteFlags_p2)
+    elec[iremote_p2, 0] = 99999
+    
+    if np.all(df['dev'].values == 0) and 'Dev. M' in df.columns: # Prosys III has to Dev. lists, assuming Dev. Rho (%) == 0 and Dev. M != 0 when IP data is collected.
+        df['dev'] = df['Dev. M'].values
+    
+    if 'ip' not in df.columns: # incase they forgot to enable 'M (mV/V)' column in Prosys
+        df['ip'] = np.nan
+
+    return elec, df
+    
+
+# syscal bin format 
+def fread(fh, dtype, nbyte=None):
+    # convert matlab to struct data dtypes 
+    dlookup = {
+        '*char':'s',
+        'char':'c',
+        'short':'h',
+        'ushort':'H',
+        'long':'i',
+        'ulong':'I',
+        'int8':'b',
+        'uint8':'B',
+        'int16':'h',
+        'uint16':'H',
+        'float':'e',
+        'float32':'f',
+        'double':'d',
+        'ubit1':'b',
+        'ubit4':'b',
+        'ubit6':'b',
+        'ubit16':'b',
+        }
+    
+    if nbyte is None: 
+        nbyte = 1 
+        if dlookup[dtype].lower() in ['h','e']:
+            nbyte = 2 
+        elif dlookup[dtype].lower() in ['i','f']:
+            nbyte = 4 
+        elif dlookup[dtype].lower() in ['d']:
+            nbyte = 8 
+    else:
+        nbyte = int(nbyte)
+    
+    vb = fh.read(nbyte) # value in bytes 
+    fmt = dlookup[dtype] # get the struct format for unpacking  
+    if '*' in dtype: # special case where the output is an array (string characters etc)
+        fmt = '%i%s'%(nbyte,dlookup[dtype])
+    x = struct.unpack(fmt, vb)[0] # value 
+    return x 
+
+def syscalBinParser(fname):
+    data = {
+            'version':0,
+            'TypeOfSyscal':0,
+            'comment':'no comment',
+            'ColeCole':None, 
+            'Measure':[], # list will be populated with measurements! 
+            }
+    
+    # find file length before doing anything else ... 
+    with open(fname,'rb') as fid0:
+        flength = len(fid0.read())
+    if flength == 0:
+        pass # do something to stop function here 
+            
+    print('Reading the BIN file...') 
+    
+    fid = open(fname,'rb')
+    data['version'] = fread(fid,'ulong')
+    # print('version ', data['version'])
+    data['TypeOfSyscal'] = fread(fid,'uint8')
+    # print('Type of syscal ', data['TypeOfSyscal'])
+    
+    if data['TypeOfSyscal'] in [8, 9, 3, 11, 4, 5, 10]:
+        data['comment']=fread(fid,'*char',1024)#.decode()
+    elif data['version'] >= 2147483650:
+        data['comment']=fread(fid,'*char',1024).decode()
+    
+    ## this part is untested! 
+    if data['version'] > 2147483651:
+        print('trigger')
+        if data['TypeOfSyscal'] in [8, 9, 3, 11, 4, 5, 1, 6, 10]:
+            ColeCole = [[0,0,0]]*64000
+            for i in range(64000):
+                for j in range(3):
+                    ColeCole[i][j] = fread(fid,'float32') 
+            data['ColeCole'] = ColeCole 
+    
+    if data['version'] >= 2147483652: #0x80000004 en  HEXA
+        print('trigger')
+        data['CommonFilePath'] = fread(fid,'*char',260)#.decode()
+        data['NbFiles'] = fread(fid,'ushort')
+        data['SizeFileName'] = [0]*data['NbFiles']
+        data['FileNameIabOrVmn'] = [0]*data['NbFiles']
+        for i in range(data['NbFiles']): 
+            data['SizeFileName'][i] = fread(fid,'ushort')
+            data['FileNameIabOrVmn'][i] = fread(fid,'*char', data['SizeFileName'][i])
+    
+    if data['TypeOfSyscal'] not in [8, 9, 3, 11, 4, 5]:
+        pass # exit function here 
+    
+    i = 0 
+    print('Parsing measurements...')
+    while fid.tell() < flength: 
+        if (flength - fid.tell()) < 5:
+            break
+        data['Measure'].append({}) 
+        # Reading electrode array
+        data['Measure'][i]['el_array']=fread(fid,'uint16')
+        # Reading ???
+        data['Measure'][i]['MoreTMesure']=fread(fid,'short');
+        # Reading Injection time
+        data['Measure'][i]['time']=fread(fid,'float32');
+        # Reading M_delay
+        data['Measure'][i]['m_dly'] =fread(fid,'float32');
+        # Reading Kid or not
+        data['Measure'][i]['TypeCpXyz']=fread(fid,'int16');
+        if data['Measure'][i]['TypeCpXyz'] == 0:
+            raise Exception('These data have been recorded with the Syscal KID and cannot be read')
+            
+        # Reading ignored parameter
+        data['Measure'][i]['Q']=fread(fid,'int16')
+        # Reading electrode positions
+        data['Measure'][i]['pos'] = [0.0]*12
+        for j in range(12):
+            data['Measure'][i]['pos'][j]=fread(fid,'float32')
+        # Reading PS - spontaneous polarisation 
+        data['Measure'][i]['Ps']=fread(fid,'float32');
+        # Reading Vp - voltage, in mV 
+        data['Measure'][i]['Vp']=fread(fid,'float32'); 
+        # Reading In - current, in mA 
+        data['Measure'][i]['In']=fread(fid,'float32');
+        # Reading resistivity
+        data['Measure'][i]['rho']=fread(fid,'float32');
+        # Reading chargeability
+        data['Measure'][i]['m']=fread(fid,'float32');
+        # Reading Q
+        data['Measure'][i]['dev']=fread(fid,'float32');
+        # Reading IP Windows duration (Tm) - milliseconds 
+        data['Measure'][i]['Tm(1:20)'] = [0.0]*20
+        for j in range(20):
+            data['Measure'][i]['Tm(1:20)'][j]=fread(fid,'float32');
+        # Reading IP Windows values (Mx) - mV/V 
+        data['Measure'][i]['Mx(1:20)'] = [0.0]*20
+        for j in range(20):
+            data['Measure'][i]['Mx(1:20)'][j]=fread(fid,'float32');
         
-        if 'ip' not in df.columns: # incase they forgot to enable 'M (mV/V)' column in Prosys
-            df['ip'] = np.nan
+        fid.read(4) # next bytes are not used, so ignore them, can't figure out how to parse the below information anyway 
+        # data['Measure'][i]['Channel']=fread(fid,'ubit4');
+        # data['Measure'][i]['NbChannel']=fread(fid,'ubit4');
+        # data['Measure'][i]['Overload']=fread(fid,'ubit1');
+        # data['Measure'][i]['ChannelValide']=fread(fid,'ubit1');
+        # data['Measure'][i]['unused']=fread(fid,'ubit6');
+        # data['Measure'][i]['QuadNumber']=fread(fid,'ubit16');
         
-        # val = np.sort(np.unique(array.flatten()))
-        # iremote = np.in1d(val, remoteFlags)        
-        # remoteFreeArray = array.flatten()[~iremote]
-        # arraySorted = np.sort(np.unique(remoteFreeArray))
-        # elecSpacing = arraySorted[1] - arraySorted[0]
-        # print('elecSpacing=', elecSpacing)
-        # n = np.max(remoteFreeArray/elecSpacing).astype(int)
-        # a = 0
-        # if arraySorted[0] == 0:
-        #     n = n + 1
-        #     a = 1
-        # if np.sum(iremote) > 0:
-        #     n = n + 1
-        # for i in range(4):
-        #     ie = ~np.in1d(array[:,i], remoteFlags)
-        #     array[ie, i] = array[ie, i]/elecSpacing + a
-        #     array[~ie, i] = n
-        # df[['a','b','m','n']] = array.astype(int)
-        # elec = np.zeros((n, 3))
-        # elec[:,0] = np.arange(elec.shape[0])*elecSpacing # assumed regular spacing                
-        # if np.sum(iremote) > 0:
-        #     elec[-1, 0] = -99999
-        # else:
-        #     # for regularly spaced array
-        #     array = df[['a','b','m','n']].values
-        #     arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        #     if arrayMin != 0:
-        #         array -= arrayMin
-        #     espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-        #     if spacing is None:
-        #         spacing = espacing
-        #     array = np.round(array/spacing+1).astype(int)
-        #     df[['a','b','m','n']] = array
-        #     imax = int(np.max(array))
-        #     elec = np.zeros((imax,3))
-        #     elec[:,0] = np.arange(0,imax)*spacing
+        data['Measure'][i]['Name(1:12)'] = ['a']*12
+        for j in range(12):
+            data['Measure'][i]['Name(1:12)'][j]=fread(fid,'char').decode() 
+    
+        data['Measure'][i]['Latitude']=fread(fid,'float32');
+        data['Measure'][i]['Longitude']=fread(fid,'float32');
+        data['Measure'][i]['NbCren']=fread(fid,'float32');
+        data['Measure'][i]['RsChk']=fread(fid,'float32');
+        if data['Measure'][i]['MoreTMesure'] == 2:
+            data['Measure'][i]['TxVab']=fread(fid,'float32');
+            data['Measure'][i]['TxBat']=fread(fid,'float32');
+            data['Measure'][i]['RxBat']=fread(fid,'float32');
+            data['Measure'][i]['Temperature']=fread(fid,'float32');
+        elif data['Measure'][i]['MoreTMesure'] == 3:
+            data['Measure'][i]['TxVab']=fread(fid,'float32');
+            data['Measure'][i]['TxBat']=fread(fid,'float32');
+            data['Measure'][i]['RxBat']=fread(fid,'float32');
+            data['Measure'][i]['Temperature']=fread(fid,'float32');
+            data['Measure'][i]['DateTime']=fread(fid,'double');
+            # need to do something else with the time here - probably not needed for resipy anyway 
+            # data['Measure'][i]['DateTime=datenum(data['Measure'][i].['DateTime + datenum([1899 12 30 00 00 00]));
+    
+        if data['version'] >= 2147483652: #0x80000004 en  HEXA
+            data['Measure'][i]['Iabfile']=fread(fid,'short');
+            data['Measure'][i]['Vmnfile']=fread(fid,'short');
+            
+        i += 1 
+    
+    fid.close()
+    
+    # convert to electrode and measurement dataframe 
+    def fdist(x0, X, y0, Y, z0, Z):
+        sdx = (x0 - X)**2
+        sdy = (y0 - Y)**2
+        sdz = (z0 - Z)**2
+        dist = np.sqrt(sdx + sdy + sdz)
+        return dist 
+    
+    nmeas = len(data['Measure'])
+    print('Number of measurements = %i'%nmeas)
+    # get electrode coordinates 
+    elecx = np.array([data['Measure'][0]['pos'][0]])
+    elecy = np.array([data['Measure'][0]['pos'][4]])
+    elecz = np.array([data['Measure'][0]['pos'][8]])
+    label = ['1']
+    nelec = 1 
+    _df = { # temporary dictionary 
+           'a':[0]*nmeas, 
+           'b':[0]*nmeas,
+           'm':[0]*nmeas,
+           'n':[0]*nmeas,
+           'resist':[0.0]*nmeas,
+           'magErr':[0.0]*nmeas,
+           'ip':[0.0]*nmeas,
+           'cR':[0.0]*nmeas,
+           'Rho':[0.0]*nmeas,
+           'vp':[0.0]*nmeas,
+           }
+    
+    print('Converting to ResIPy internal format')
+    for i in range(nmeas):
+        for j in range(4):
+            x = data['Measure'][i]['pos'][0+j]
+            y = data['Measure'][i]['pos'][4+j]
+            z = data['Measure'][i]['pos'][8+j]
+            dist = fdist(x, elecx, y, elecy, z, elecz)
+            if min(dist) != 0.0: 
+                nelec += 1 
+                elecx = np.append(elecx,x)
+                elecy = np.append(elecy,y)
+                elecz = np.append(elecz,z)
+                label.append(str(nelec))
                 
-        return elec, df
+    # sort electrodes by x coordinates 
+    sortx = np.argsort(elecx)
+    elecx = elecx[sortx] 
+    elecy = elecy[sortx] 
+    elecz = elecz[sortx] 
+                
+    for i in range(nmeas):
+        for j, e in enumerate(['a','b','m','n']):
+            x = data['Measure'][i]['pos'][0+j]
+            y = data['Measure'][i]['pos'][4+j]
+            z = data['Measure'][i]['pos'][8+j]
+            dist = fdist(x, elecx, y, elecy, z, elecz)
+            idx = np.argmin(dist)
+            _df[e][i] = idx+1 
+        Vp = data['Measure'][i]['Vp']
+        In = data['Measure'][i]['In']
+        _df['vp'][i] = Vp 
+        _df['resist'][i] = Vp/In
+        _df['magErr'][i] = data['Measure'][i]['dev']
+        _df['cR'] = data['Measure'][i]['RsChk']*1000 # contact resistance 
+        _df['Rho'] = data['Measure'][i]['rho']
+        # need to deal with IP measurements 
+        if any(np.array(data['Measure'][i]['Mx(1:20)']) > 0):
+            print('IP not yet supported!')
+        else:
+            _df['ip'][i] = np.nan
+        
+    elec = pd.DataFrame({'label':label,'x':elecx, 'y':elecy, 'z':elecz})
+    df = pd.DataFrame(_df) 
+    
+    return elec, df 
     
 #test code
+# elec, df = syscalParser('examples/WSReciprocal.bin')
 # elec, df = syscalParser('examples/dc-2d/syscal.csv')
 # elec, df = syscalParser('examples/dc-2d-pole-dipole/syscal.csv')
 
@@ -548,12 +763,12 @@ def primeParserTab(fname, espacing=1):
     data_dict = {'a':a,'b':b,'m':m,'n':n}
     data_dict['resist'] = temp["pt_calc_res:"]
     data_dict['vp'] = temp["pt_meas_applied_voltage:"]
-    data_dict['dev'] = temp["pt_calc_res_error:"]
+    data_dict['magErr'] = temp["pt_calc_res_error:"]
     data_dict["Rho"] = [float("nan")]*num_meas
     data_dict["ip"] = [0]*num_meas
     data_dict['cR'] = temp['pt_meas_contact_resistance:']# contact resistance 
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
-    df = df[['a','b','m','n','Rho','dev','ip','resist','cR']] # reorder columns to be consistent with the syscal parser
+    df = df[['a','b','m','n','Rho','magErr','ip','resist','cR']] # reorder columns to be consistent with the syscal parser
     
     #compute default electrode positions
     array = df[['a','b','m','n']].values

@@ -1122,7 +1122,7 @@ class App(QMainWindow):
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
             elif index == 1:
                 self.ftype = 'Syscal'
-                self.fformat = 'Comma Separated Values (*.csv *.CSV)'
+                self.fformat = 'Comma Separated Values (*.csv *.CSV);; Binary (*.bin *.BIN)'
             elif index == 2:
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
@@ -1138,9 +1138,6 @@ class App(QMainWindow):
             elif index == 6:
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
-            # elif index == 7:
-            #     self.ftype = 'ABEM-Terrameter'
-            #     self.fformat = 'DAT (*.DAT *.dat)'
             elif index == 7:
                 self.ftype = 'Lippmann'
                 self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt *.TXT)'
