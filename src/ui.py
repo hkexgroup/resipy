@@ -4732,11 +4732,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.seqLabel.setAlignment(Qt.AlignTop)
 
         # alternative design
-        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
-                   ('wenner', 'Wenner', ['a']),
-                   ('schlum1', 'Schlumberger', ['a','m']),
-                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
-                   ('custSeq', 'Custom Sequence', [])]
+        configs = [
+            ('dpdp', 'Dipole-Dipole', ['amin','amax', 'nmin', 'nmax']),
+            ('wenner', 'Wenner', ['amin','amax']),
+            ('schlum', 'Schlumberger',  ['amin','amax', 'nmin', 'nmax']),
+            ('multigrad', 'Multi-Gradient',  ['amin','amax', 'nmin', 'nmax', 'mmin', 'mmax']),
+            ('custSeq', 'Custom Sequence', [])
+            ]
 
 
         class RowOpt(QHBoxLayout):
@@ -4746,28 +4748,31 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.rmBtn = None
                 self.labels = []
                 self.fields = []
-                self.seq = 'dpdp1'
+                self.seq = 'dpdp'
                 self.iseq = 0
                 self.importBtn = None
                 self.fname = ''
                 self.parent = parent
-#                self.createRow() # this create floating windows
-#                self.showArg()
 
             def createRow(self):
                 self.combo = QComboBox()
-                for row in seqData:
+                for row in configs:
                     self.combo.addItem(row[1])
                 self.combo.activated.connect(self.comboFunc)
                 self.addWidget(self.combo)
-                for a, b in zip(['a','n','m'], ['1','8','']):
-                    lab = QLabel(a + '=')
-                    field = QLineEdit(b)
+
+                for param in configs[3][-1]: # config has the most possible parameters 
+                    lab = QLabel(param + '=')
+                    if 'max' in param:
+                        field = QLineEdit('8')
+                    else:
+                        field = QLineEdit('1')
                     field.setValidator(QIntValidator())
                     self.labels.append(lab)
                     self.fields.append(field)
                     self.addWidget(lab)
                     self.addWidget(field)
+                    
                 self.importBtn = QPushButton('Import Custom Sequence')
                 self.importBtn.clicked.connect(self.importFile)
                 self.importBtn.setVisible(False)
@@ -4783,25 +4788,23 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.importBtn.setText(os.path.basename(fname))
 
             def comboFunc(self, i):
-                self.seq = seqData[i][0]
+                self.seq = configs[i][0]
                 showArray(self.seq) # display help aside
                 self.iseq = i
                 self.showArg()
 
             def showArg(self):
-                n = len(seqData[self.iseq][2])
+                n = len(configs[self.iseq][2])
                 if self.iseq == 4: # custom sequence
                     self.importBtn.setVisible(True)
                 else:
                     self.importBtn.setVisible(False)
-                for i in range(3):
-                    val = False
-                    if i < n:
-                        val = True
-                    self.labels[i].setVisible(val)
-                    self.fields[i].setVisible(val)
-                if self.seq == 'multigrad':
-                    self.labels[-1].setText('s=')
+                for i in range(6):
+                    b = False 
+                    if i < n: 
+                        b = True 
+                    self.labels[i].setVisible(b)
+                    self.fields[i].setVisible(b)
 
             def remove(self):
                 if self.seq == 'custSeq':
@@ -4815,18 +4818,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.importBtn.deleteLater()
                 self.deleteLater()
 
-
-            def getData(self):
+            def getGenParam(self):
+                n = len(configs[self.iseq][2])
+                name = configs[self.iseq][0]
+                genparam = [name]
                 if self.seq == 'custSeq':
-                    return (self.seq, self.fname)
-                else:
-                    n = len(seqData[self.iseq][2])
-                    vals = []
+                    genparam = [name, self.fname] 
+                else: 
                     for i, field in enumerate(self.fields):
-                        if i < n:
-                            val = int(field.text()) if field.text() != '' else -9999
-                            vals.append(val)
-                    return (self.seq, *vals)
+                        if i >= n:
+                            continue 
+                        val = int(field.text()) if field.text() != '' else 0
+                        genparam.append(val)
+                return genparam
 
 
         self.seqRowLayout = QVBoxLayout()
@@ -4841,9 +4845,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         Schlum = resource_path('image/schlum.png')
         Gradient = resource_path('image/gradient.png')
 
-        seqHelp = {'dpdp1' : '<img height=140 src="%s">' % DpDp,
+        seqHelp = {'dpdp' : '<img height=140 src="%s">' % DpDp,
            'wenner': '<img height=140 src="%s">' % Wenner,
-           'schlum1': '<img height=140 src="%s">' % Schlum,
+           'schlum': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
            'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-\n' \
                'It is recommended to use a custom sequence in case of "unconventional surveys"'
@@ -4856,7 +4860,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.arrayLabel.setText('Sequence help not found.')
             else:
                 self.arrayLabel.setText(seqHelp[arg])
-        showArray('dpdp1') # default
+        showArray('dpdp') # default
 
         def addRowBtnFunc():
             a = RowOpt(parent=self)
@@ -4868,33 +4872,28 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.addRowBtn.adjustSize()
         self.addRowBtn.clicked.connect(addRowBtnFunc)
 
-        def getDataBtnFunc():
-            vals = []
+        def getSeqGenParamFunc():
+            rowgenparams = []
             for seqRow in seqRows:
                 try: # because we 'deleteLater() the object it causes error
                     # would be better to check if the object exists
-                    val = seqRow.getData()
-                    ok = True
-                    for j, a in enumerate(val):
-                        if (j != 0) & (a == -9999):
-                            ok = False
-                    if ok is True:
-                        vals.append(val)
+                    rowgenparams.append(seqRow.getGenParam())
                 except:
-                    pass
-            return vals
+                    print('couldnt get row param')
+            return rowgenparams
 
 
         def seqCreateFunc():
             if self.project.elec is None:
                 self.errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
                 return
-            params = getDataBtnFunc()
-            if len(params) == 0:
+            rowgenparams = getSeqGenParamFunc()
+            print(rowgenparams)
+            if len(rowgenparams) == 0:
                 raise ValueError('You must specify at least one sequence.')
                 return
-            self.seqIdx = self.project.createSequence(params=params)
-            self.writeLog('k.createSequence(params={:s})'.format(str(params)))
+            self.seqIdx = self.project.createSequence(params=rowgenparams)
+            self.writeLog('k.createSequence(params={:s})'.format(str(rowgenparams)))
             self.seqOutputLabel.setText('{:d} quadrupoles in total'.format(len(self.project.sequence)))
 
         self.seqOutputLabel = QLabel('')
@@ -4926,11 +4925,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.project.mesh is None: # we need to create mesh to assign starting resistivity
                 self.errorDump('Please specify a mesh and an initial model first.')
                 return
-            # try:
+
             seqCreateFunc()
-            # except:
-                # self.errorDump('Error in sequence generation! Use a custom sequence instead.')
-                # return
+
             if len(self.project.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
                 return

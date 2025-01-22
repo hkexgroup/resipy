@@ -1579,6 +1579,7 @@ class Survey(object):
         R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
         a1 = np.exp(coefs[0])
         a2 = coefs[1]
+        print(a1,a2)
 
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):

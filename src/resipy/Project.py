@@ -41,6 +41,7 @@ import resipy.meshTools as mt
 #from resipy.meshTools import cropSurface
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
+from resipy.seqGen import Generator
 from resipy.SelectPoints import SelectPoints
 from resipy.saveData import (write2Res2DInv, write2csv, writeSrv)
 from resipy.interpolation import rotGridData, invRotGridData, nearest3d
@@ -286,7 +287,7 @@ def donothing(x):
     pass
 sysinfo = systemCheck(dump=donothing)
 
-#%% useful functions for directory management 
+#%% useful function for directory management 
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):
@@ -299,10 +300,19 @@ class cd:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
+#%% other helper functions 
 # distance matrix function for 2D (numpy based from https://stackoverflow.com/questions/22720864/efficiently-calculating-a-euclidean-distance-matrix-using-numpy)
 def cdist(a):
     z = np.array([complex(x[0], x[1]) for x in a])
     return np.abs(z[...,np.newaxis]-z)
+
+def addCustSeq(fname): # add custom sequence 
+    seq = pd.read_csv(fname, header=0)
+    if seq.shape[1] != 4:
+        raise ValueError('The file should be a CSV file with headers with exactly 4 columns '
+                         '(a, b, m, n) with electrode numbers.')
+    else:
+        return seq.values
 
 #%% geometrical functions 
 def bearing(dx,dy):
@@ -729,6 +739,7 @@ class Project(object): # Project master class instanciated by the GUI
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             for s in self.surveys:
+                s.setSeqIds()
                 s.computeK() # recalculate K 
                 
         self.pinfo['Number of electrodes'] = len(self.elec)
@@ -5605,8 +5616,72 @@ class Project(object): # Project master class instanciated by the GUI
                 idx[j]=lidx[j][0]
             seqIdx.append(np.array(idx))
         return seqIdx
+    
+    def createSequence(self, params=[('dpdp',1,8,1,8)], seqIdx=None):
+        """Creates a forward modelling sequence, see examples below for usage.
+
+        Parameters
+        ----------
+        params : list of tuple, optional
+            Each tuple is the form (<array_name>, param1, param2, ...)
+            Types of sequences available are : 	
+                - 'dipole-dipole' (or 'dpdp')
+            	- 'wenner' (or 'w') 
+            	- 'wenner-schlumberger' (or 'schlum', 'ws')
+            	- 'multigradient' (or 'mg')
+                - 'cross' (or 'xbh', 'xli')
+            	- 'custom' 
+            if 'custom' is chosen, param1 should be a string of file path to a .csv
+            file containing a custom sequence with 4 columns (a, b, m, n) containing 
+            forward model sequence.
+        seqIdx: list of array like, optional
+            Each entry in list contains electrode indices (not label and string)
+            for a given electrode string which is to be sequenced. The advantage
+            of a list means that sequences can be of different lengths. 
         
-    def createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
+        Examples
+        --------
+        >>> k = Project()
+        >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
+        >>> k.createMesh(typ='trian')
+        >>> k.createSequence([('dpdp1', 1, 8, 1, 8), ('wenner', 1, 4), ('ws', 1, 8, 1, 8)]) # dipole-dipole sequence
+        >>> k.createSequence([('custom', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
+        >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
+        """
+        avialconfig = [
+            'dipole-dipole', 'dpdp', 
+            'wenner', 'w',
+            'wenner-schlumberger', 'schlum', 'ws', 
+            'multigradient', 'mg', 
+            'cross','xbh', 'xli',
+            'custom', 'custSeq']
+        
+        msg = 'Sorry, given config parameter {:s} is not recognised!'
+        msg += 'Avialable configs are = \n'
+        for config in avialconfig:
+            msg += '\t%s\n'%config 
+        for p in params: 
+            if p[0] not in avialconfig: 
+                warnings.warn(msg.format(p[0])) 
+
+        if seqIdx is None: #(not been set, so use electrode strings)
+            if '3' in self.typ: 
+                if not self.hasElecString():#then find it automatically 
+                    seqIdx = self.detectStrings()
+                else:
+                    seqIdx = self._seqIdxFromLabel()#use electrode strings 
+            else:
+                seqIdx = [np.arange(len(self.elec))]
+                
+        self.sequenceGenerator = Generator(self.elec, seqIdx)
+        
+        sequence = self.sequenceGenerator.generate(params)
+            
+        self.sequence = sequence
+        print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
+        return seqIdx
+        
+    def _createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
                        *kwargs):
         """Creates a forward modelling sequence, see examples below for usage.
 
@@ -5634,13 +5709,6 @@ class Project(object): # Project master class instanciated by the GUI
         >>> k.createSequence([('custSeq', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
         >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
-        def addCustSeq(fname): # add custom sequence 
-            seq = pd.read_csv(fname, header=0)
-            if seq.shape[1] != 4:
-                raise ValueError('The file should be a CSV file with headers with exactly 4 columns '
-                                 '(a, b, m, n) with electrode numbers.')
-            else:
-                return seq.values
         
         fdico = {'dpdp1': dpdp1, # dict referencing the seqeunce gen functions 
               'dpdp2': dpdp2,
@@ -5720,24 +5788,32 @@ class Project(object): # Project master class instanciated by the GUI
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
         return seqIdx
-    
-    def createSequenceXBH(self):
-        """Custom scheme for boreholes (not yet developed)
-        """
-        pass
 
-
-    def saveSequence(self, fname=''):
-        """Save sequence as .csv file.
+    def saveSequence(self, fname='sequence.csv', asis=True, integer = True, 
+                     reciprocals = True, multichannel = True,  
+                     condition = True, maxcha = 8):
+        """Save sequence as .csv file. Ex
 
         Parameters
         ----------
         fname : str, optional
             Path where to save the sequence.
+        integer : bool, optional
+            Flag to convert sequence into integers before export. The default is True.
+        reciprocals : bool, optional
+            Flag to add reciprocal measurements. The default is True.
+        multichannel : bool, optional
+            Flag to convert measurements to a multichannel. The default is True.
+        condition : bool, optional
+            Flag to condition measurements for avoiding IP effects. The default is True.
+        maxcha: int, optional 
+            Maximum number of active channels of the resistivity instrument (normally
+            8 for modern instruments). 
         """
         if self.sequence is not None:
-            df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            df.to_csv(fname, index=False)
+            self.sequenceGenerator.exportSequence(fname, integer, 
+                                                  reciprocals, multichannel, 
+                                                  condition, maxcha)
             
 
     def importElec(self, fname=''):
