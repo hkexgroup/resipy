@@ -5521,7 +5521,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.createMesh(typ='trian', geom_input=geom_input, **kwargs)
 
 
-
     def setStartingRes(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
         """Assign starting resitivity values.
 
@@ -5617,7 +5616,7 @@ class Project(object): # Project master class instanciated by the GUI
             seqIdx.append(np.array(idx))
         return seqIdx
     
-    def createSequence(self, params=[('dpdp',1,8,1,8)], seqIdx=None):
+    def createSequence(self, params=[('dpdp',1,8,1,8)], seqIdx=None, dump=print):
         """Creates a forward modelling sequence, see examples below for usage.
 
         Parameters
@@ -5644,7 +5643,7 @@ class Project(object): # Project master class instanciated by the GUI
         >>> k = Project()
         >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
         >>> k.createMesh(typ='trian')
-        >>> k.createSequence([('dpdp1', 1, 8, 1, 8), ('wenner', 1, 4), ('ws', 1, 8, 1, 8)]) # dipole-dipole sequence
+        >>> k.createSequence([('dpdp', 1, 8, 1, 8), ('wenner', 1, 4), ('ws', 1, 8, 1, 8)]) # dipole-dipole sequence
         >>> k.createSequence([('custom', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
         >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
@@ -5675,7 +5674,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
         self.sequenceGenerator = Generator(self.elec, seqIdx)
         
-        sequence = self.sequenceGenerator.generate(params)
+        sequence = self.sequenceGenerator.generate(params, dump=dump)
             
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
@@ -5790,18 +5789,25 @@ class Project(object): # Project master class instanciated by the GUI
         return seqIdx
 
     def saveSequence(self, fname='sequence.csv', asis=True, integer = True, 
-                     reciprocals = True, multichannel = True,  
-                     condition = True, maxcha = 8):
+                     reciprocals = True, split = False, multichannel = True,  
+                     condition = True, maxcha = 8, dump=print):
         """Save sequence as .csv file. Ex
 
         Parameters
         ----------
         fname : str, optional
             Path where to save the sequence.
+        asis: bool, optional 
+            Flag to save sequence "asis", short cut around other parameters. If
+            True (default) then the sequence will be saved unmodified. If False, 
+            then the other parameters become activated. 
         integer : bool, optional
             Flag to convert sequence into integers before export. The default is True.
         reciprocals : bool, optional
             Flag to add reciprocal measurements. The default is True.
+        split: bool, optional
+            Flag to split reciprocal measurements into seperate files, default 
+            is False. 
         multichannel : bool, optional
             Flag to convert measurements to a multichannel. The default is True.
         condition : bool, optional
@@ -5810,10 +5816,18 @@ class Project(object): # Project master class instanciated by the GUI
             Maximum number of active channels of the resistivity instrument (normally
             8 for modern instruments). 
         """
+        if asis: 
+            integer = False 
+            reciprocals = False 
+            split = False 
+            multichannel = False 
+            condition = False 
+            
         if self.sequence is not None:
-            self.sequenceGenerator.exportSequence(fname, integer, 
-                                                  reciprocals, multichannel, 
-                                                  condition, maxcha)
+            self.sequenceGenerator.exportSequence(
+                fname, integer, split,
+                reciprocals, multichannel, 
+                condition, maxcha)
             
 
     def importElec(self, fname=''):

@@ -46,8 +46,20 @@ class Generator():
         else:
             self.seqIdx = seqIdx 
         self.seq = np.array([]) 
-        self.lines = [] 
+        self.seqR = np.array([]) # reciprocal sequence 
+        self.lines = [] # variable to store multichannel lines 
+        self.linesR = [] # reciprocal lines 
         self.runtime = 0 
+        
+    def copy(self):
+        g = Generator(self.elec, self.seqIdx)
+        g.seq = self.seq.copy() 
+        g.lines = [line for line in self.lines] 
+        g.runtime = self.runtime 
+        # handle reciprocal 
+        g.seqR = self.seqR.copy() 
+        g.linesR = [line for line in self.linesR] 
+        return g 
         
     def clear(self):
         self.seq = np.array([])
@@ -219,7 +231,7 @@ class Generator():
         return np.array(seq)
     
     
-    def xdgen(self, amin=1, amax=5, nmin=1, nmax=8, discrepancy = 0.5):
+    def xdgen(self, amin=0, amax=8, nmin=1, nmax=3, discrepancy = 0.5):
         
         assert isinstance(amin,int)
         assert isinstance(amax,int)
@@ -227,6 +239,11 @@ class Generator():
         assert isinstance(nmax,int)
         
         t0 = time.time() 
+        
+        da = amax - amin
+        dn = nmax - nmin 
+        ia = [amin + i for i in range(da+1)] # possible a values
+        jn = [nmin + i for i in range(dn+1)] # possible n values
         
         felec = self.elec # electrode data frame 
         
@@ -271,34 +288,35 @@ class Generator():
                         continue 
                     i0 = k 
                     i1 = belec1[bindx].index[0]
+                    c1 = i0 
                     
-                    for a in range(amax):
+                    for a in ia:
                         # extend in the positive direction 
-                        c1 = i0 + a 
                         c2 = i1 + a 
-                        for j in range(amin,amax):
-                            p1 = c1 + j 
+                        for n in jn:
+                            if c2 < 0 or c2 >= nelec1:
+                                continue 
+                            p1 = c1 + n 
                             if p1 < 0 or p1 >= nelec0:
                                 continue 
-                            p2 = c2 + j 
+                            p2 = c2 + n
                             if p2 < 0 or p2 >= nelec1:
                                 continue 
-    
                             line = [belec0.label[c1], belec1.label[c2], belec0.label[p1], belec1.label[p2]]
                             if line not in seq: 
                                 seq.append(line)
                         
                         # extend in the NEGATIVE direction 
-                        c1 = i0 - a 
                         c2 = i1 - a 
-                        for j in range(amin,amax):
-                            p1 = c1 - j 
+                        for n in jn:
+                            if c2 < 0 or c2 >= nelec1:
+                                continue 
+                            p1 = c1 - n 
                             if p1 < 0 or p1 >= nelec0:
                                 continue 
-                            p2 = c2 - j 
+                            p2 = c2 - n 
                             if p2 < 0 or p2 >= nelec1:
                                 continue 
-    
                             line = [belec0.label[c1], belec1.label[c2], belec0.label[p1], belec1.label[p2]]
                             if line not in seq: 
                                 seq.append(line)
@@ -416,36 +434,30 @@ class Generator():
         if hasDataString is False and hasElecString is False: 
             # do not need to worry about electrode strings at all in this case 
             # so do not edit the sequence and move on 
-            if self.seq.shape[0] > 0: 
-                self.seq = np.vstack([self.seq, np.array(seq)])
-            else:
-                self.seq = np.array(seq)
-            
-        if hasDataString is True and hasElecString is False: 
+            pass 
+        elif hasDataString is True and hasElecString is False: 
             # this means the user is importing a 3D sequence for 2D problem most likely --> error situation 
             raise Exception('Incoming data has string numbers but electrode data frame is stringless')
-            
-        if hasDataString is True and hasElecString is True: 
+        elif hasDataString is True and hasElecString is True: 
             # the user has imported a 3D sequence and has 3D appropoate electrodes, no edits needed 
-            self.seq = np.vstack([self.seq, seq])
-        
-        if hasDataString is False and hasElecString is True: 
+            pass 
+        elif hasDataString is False and hasElecString is True: 
             # user has imported a 2D sequence but the electrodes are 3D, hence the sequence needs to be doctored 
             for i in range(seq.shape[0]):
                 for j in range(4):
                     seq[i,j] = '1 %s'%seq[i,j]
-                    
-            if self.seq.shape[0] > 0: 
-                self.seq = np.vstack([self.seq, np.array(seq)])
-            else:
-                self.seq = np.array(seq)
+                
+        if self.seq.shape[0] > 0: 
+            self.seq = np.vstack([self.seq, np.array(seq)])
+        else:
+            self.seq = np.array(seq)
             
         t1 = time.time()
         dt = t1 - t0
         self.runtime += dt 
         return seq 
         
-    def generate(self, params = [('dpdp',1,8,1,8)]):
+    def generate(self, params = [('dpdp',1,8,1,8)], dump=print):
         """
         Loop through generation parameters anf generate measurement configurations 
         accordingly. 
@@ -465,11 +477,13 @@ class Generator():
         for p in params: 
             config = p[0]
             if config in ['custom', 'custSeq']:
+                dump('Reading custom sequence...')
                 fname = p[1] 
                 _  = self.fromfile(fname)
                 # skip onwards if custom sequence 
                 continue 
             if config in ['cross','xbh', 'xli']: 
+                dump('Generating cross line/hole configs for amax = %i and nmax = %i...'%(p[2], p[4]))
                 # special case where the sequence index can be ignored as all electrodes need to be considered for cross measurements 
                 if len(p) == 6: 
                     _ = self.xdgen(p[1], p[2], p[3], p[4], p[5]) 
@@ -478,12 +492,16 @@ class Generator():
                 continue 
             for i in range(len(self.seqIdx)):
                 if config in ['dipole-dipole', 'dpdp']:
+                    dump('Generating dp dp configs for amax = %i and nmax = %i...'%(p[2], p[4]))
                     _ = self.ddgen(p[1], p[2], p[3], p[4], i) 
                 elif config in ['wenner', 'w']:
+                    dump('Generating wenner configs for amax = %i...'%(p[2]))
                     _ = self.wgen(p[1], p[2], i)
                 elif config in ['wenner-schlumberger', 'schlum', 'ws']: 
+                    dump('Generating wenner-schlum configs for amax = %i and nmax = %i...'%(p[2], p[4]))
                     _ = self.wsgen(p[1], p[2], p[3], p[4], i) 
                 elif config in ['multigradient', 'mg', 'multigrad']:
+                    dump('Generating multi-grad configs for amax = %i, nmax = %i, and mmax = %i...'%(p[2], p[4], p[6]))
                     _ = self.mggen(p[1], p[2], p[3], p[4], p[5], p[6], i)
                 else:
                     print('Sorry, config "%s" is not recognised'%config)
@@ -548,22 +566,31 @@ class Generator():
                     iseq[i,j] = int(self.seq[i,j])
         
         self.seq = iseq 
+        
+        if self.seqR.shape[0] > 0:
+            g = self.copy()
+            g.seq = self.seqR.copy()
+            g.seqR = np.array([])
+            self.seqR = g.seq2int() 
+            
         return iseq 
             
     ## add reciprocal pairs 
-    def reciprocalise(self):
+    def reciprocalise(self, split=False):
         """
         Add reciprocals to a single channel sequence 
     
         Parameters
         ----------
-        seq : nd array 
-            N by 4 matrix of ints 
+        split: bool
+            If True, split the sequence into forward and recirprocal 
+            measurements. Else append reciprocals to current measurement 
+            sequence. 
     
         Returns
         -------
         nseq : nd array 
-            sequence with reciprocal measurements appended. 
+            reciprocal sequence if "split" is True, else newly appended sequence
     
         """
         rseq = np.zeros_like(self.seq, dtype=int)
@@ -576,11 +603,14 @@ class Generator():
         rseq[:,2] = self.seq[:,1]
         rseq[:,3] = self.seq[:,0]
         
-        nseq = np.vstack([self.seq,rseq])
-        self.seq = nseq 
-        
-        return nseq 
-        
+        if split: 
+            self.seqR = rseq 
+            return rseq  
+        else: 
+            nseq = np.vstack([self.seq,rseq])
+            self.seq = nseq
+            return nseq 
+
         
     ## multichannelise a sequence 
     def multichannelise(self, maxcha=8): 
@@ -638,16 +668,22 @@ class Generator():
         ndig = len(str(cmax))
         nmeas = array.shape[0]
         cpairidn = [0]*nmeas # nested pair ids 
+        cppn = [0]*nmeas # positive current electrode (nested)
         cpairidu = [0]*nmeas # unested pair ids 
+        cppu = [0]*nmeas # positive current electrode (unnested)
         idtemplate= '{:0>%id}{:0>%id}'%(ndig, ndig)
         for i in range(nmeas):
-            if inested[i]: # dont attempt to multichannelise nested measurements 
+            if inested[i]: # dont attempt to string nested measurements together 
                 cpairidn[i] = int(idtemplate.format(self.seq[i,0], self.seq[i,1]))
+                cppn[i] = self.seq[i,1]
             else: 
                 cpairidu[i] = int(idtemplate.format(self.seq[i,0], self.seq[i,1]))
+                cppu[i] = self.seq[i,1]
             
-        uniquepairsu = np.unique(cpairidu)
-        uniquepairsn = np.unique(cpairidn)
+        # note, want to sort by current electrodes so that the potential electrodes trial the current electrodes 
+        uniquepairsu = np.unique(cpairidu)[np.argsort(cppu)]
+        uniquepairsn = np.unique(cpairidn)[np.argsort(cppn)]
+        
         lines = []
         for uid in uniquepairsu: 
             if uid == 0:
@@ -708,9 +744,19 @@ class Generator():
                 line.append(0)
                 
         self.lines = lines 
+        
+        # make reciprocal lines 
+        if self.seqR.shape[0] > 0:
+            g = self.copy()
+            g.seq = self.seqR.copy()
+            g.seqR = np.array([])
+            g.lines = [] 
+            g.linesR = [] 
+            self.linesR = g.multichannelise(maxcha) 
+            
         return lines 
     
-    def conditionSequence(self, plot=False):
+    def conditionSequence(self, plot=False, dump=print):
         """
         Condition a multichannel sequence to avoid reusing potential electrodes 
         after they have just been used for injecting current. This avoids IP effects. 
@@ -727,6 +773,7 @@ class Generator():
             reliability. 
     
         """
+        dump('Conditioning sequence to avoid IP effects')
         # condition sequence to avoid using current electrodes
         # immiediately after measurement
         nswap = 0 # total number of swaps for all values of n, i, j etc... 
@@ -741,7 +788,7 @@ class Generator():
         iswapcache = -1 
         while min(condcmdsep) < minsep:
             loop += 1 
-            print('Resorting iteration %i...'%loop)
+            dump('Resorting iteration %i...'%loop)
             iswapcache = iswap 
             iswap = 0 # number of swaps for all values in loop 
             for i in range(ncmdline-1):
@@ -774,12 +821,12 @@ class Generator():
                         nswap += 1 
                         iswap += 1 
                         
-            print('Total swaps = %i'%nswap) 
-            print('Iteration swaps = %i'%iswap) 
+            dump('Total swaps = %i'%nswap) 
+            dump('Iteration swaps = %i'%iswap) 
             condcmdsep = checkCmdSep(condLines, minsep)
     
             if iswapcache <= iswap:# and loop>10: 
-                print('No improvement in number of swaps over last 2 iterations, treating as sorted...')
+                dump('No improvement in number of swaps over last 2 iterations, treating as sorted...')
                 break 
             
         if plot: 
@@ -802,49 +849,85 @@ class Generator():
                 ax.set_ylim([0,max(ucon)])
         
         self.lines = condLines 
+        
+        if len(self.linesR) > 0:
+            g = self.copy()
+            g.seq = self.seqR.copy()
+            g.lines = [line for line in self.linesR]
+            g.seqR = np.array([])
+            g.linesR = [] 
+            self.linesR = g.conditionSequence() 
+            
         return condLines
     
     ## write to file 
-    def write2csv(self, fname):
-        if len(self.lines) == 0:
-            tmp = {
-                'a':self.seq[:,0], 
-                'b':self.seq[:,1],
-                'm':self.seq[:,2],
-                'n':self.seq[:,3],
-                }
-            pd.DataFrame(tmp).to_csv(fname, index=False)
+    def write2csv(self, fname, singlechannel = False):
+        
+        #check for csv ext
+        if not fname.lower().endswith('.csv'):
+            fname = fname + '.csv'
+        
+        fnamef = fname 
+        fnamer = None 
+        if self.seqR.shape[0] > 0 or len(self.linesR) > 0: 
+            fnamef = fname.lower().replace('.csv','_F.csv')
+            fnamer = fname.lower().replace('.csv','_R.csv')
+        fnames = [fnamef, fnamer]
+        
+        if singlechannel:
+            for i, seq in enumerate([self.seq, self.seqR]):
+                fname = fnames[i]
+                if fname is None:
+                    continue 
+                if seq.shape[0] == 0:
+                    continue 
+                tmp = {
+                    'a':seq[:,0], 
+                    'b':seq[:,1],
+                    'm':seq[:,2],
+                    'n':seq[:,3],
+                    }
+                pd.DataFrame(tmp).to_csv(fname, index=False)
             return 
         
-        fh = open(fname, 'w')
-        nperline = len(self.lines[0])
-        header = 'C1, C2, '
-        i = 1 
-        while len(header.split(',')) < nperline: 
-            header += 'P%i, '%i
-            i+=1 
-        
-        header += 'ChannelIDs\n'
-        fh.write(header)
-        
-        for line in self.lines: 
-            channels = '' 
-            count = 0 
-            for n in line: 
-                fh.write('%i, '%n)
-                if n > 0: 
-                    count += 1
-            for i in range(count-3):
-                channels += '%i'%(i+1)
+        lines2write = [self.lines, self.linesR]
+        for i, lines in enumerate(lines2write):
+            if len(lines) == 0:
+                continue 
+            fname = fnames[i]
+            if fname is None:
+                continue 
+            fh = open(fname, 'w')
+            nperline = len(lines[0])
+            header = 'C1, C2, '
+            i = 1 
+            while len(header.split(',')) <= nperline: 
+                header += 'P%i, '%i
+                i+=1 
             
-            fh.write(channels)
-            fh.write('\n')
+            header += 'ChannelIDs\n'
+            fh.write(header)
             
-        fh.close() 
+            for line in lines: 
+                channels = '' 
+                count = 0 
+                for n in line: 
+                    fh.write('%i, '%n)
+                    if n > 0: 
+                        count += 1
+                for i in range(count-3):
+                    channels += '%i'%(i+1)
+                
+                fh.write(channels)
+                fh.write('\n')
+                
+            fh.close() 
+        
         
     ## export sequence 
-    def exportSequence(self, fname, integer = True, reciprocals = True, 
-                       multichannel = True,  condition = True, maxcha = 8): 
+    def exportSequence(self, fname, integer = True, reciprocals = True,  
+                       split=True, multichannel = True,  condition = True, 
+                       maxcha = 8, dump=print): 
         """
         Export single channel sequence (ie for forward modelling) into something 
         usable by a resistivity instrument 
@@ -861,6 +944,8 @@ class Generator():
             Flag to convert sequence into integers before export. The default is True.
         reciprocals : bool, optional
             Flag to add reciprocal measurements. The default is True.
+        split: bool, optional 
+            If reciprocals added, split them across two files 
         multichannel : bool, optional
             Flag to convert measurements to a multichannel. The default is True.
         condition : bool, optional
@@ -878,13 +963,20 @@ class Generator():
             self.seq2int()
             
         if reciprocals: 
-            self.reciprocalise()
+            dump('Generating reciprocals...')
+            self.reciprocalise(split)
             
         if multichannel or condition: 
             self.multichannelise(maxcha)
+        else: 
+            dump('Writing to csv...')
+            self.write2csv(fname, True)
+            return 
         
         if condition:
-            self.conditionSequence()
+            self.conditionSequence(dump=dump)
             
+        dump('Writing to csv...')
         self.write2csv(fname)
+        return 
     

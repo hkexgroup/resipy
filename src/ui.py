@@ -373,7 +373,142 @@ class MatplotlibWidget(QWidget):
         self.axis.clear()
         self.figure.clear()
         self.canvas.draw()
+        
+        
+#%% export sequence helper 
+class SequenceHelper(QWidget):
+    """
+    This "window" is a QWidget. If it has no parent, it
+    will appear as a free-floating window as we want.
+    """
+    def __init__(self, project):
+        self.generator = project.sequenceGenerator
+        self.datadir = project.dirname 
+        super().__init__()
+        self.layout = QVBoxLayout()
+        self.title = QLabel("<b> Sequence options </b>")
+        self.layout.addWidget(self.title)
+        
+        self.rows = [
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            ]
 
+        # integer handling 
+        self.intlabel = QLabel('Force integer')
+        self.intcheck = QCheckBox()
+        self.rows[0].addWidget(self.intlabel)
+        self.rows[0].addWidget(self.intcheck)
+        
+        # include reciprocals 
+        self.reclabel = QLabel('Include Reciprocals')
+        self.reccheck = QCheckBox()
+        self.rows[1].addWidget(self.reclabel)
+        self.rows[1].addWidget(self.reccheck)
+        
+        # split reciprocals 
+        self.spllabel = QLabel('Split Reciprocals')
+        self.splcheck = QCheckBox()
+        self.rows[2].addWidget(self.spllabel)
+        self.rows[2].addWidget(self.splcheck)
+        self.splcheck.clicked.connect(self.checkRecip)
+        
+        # multichannel 
+        self.mullabel = QLabel('Multichannelise')
+        self.mulcheck = QCheckBox() 
+        self.rows[3].addWidget(self.mullabel)
+        self.rows[3].addWidget(self.mulcheck)
+        self.mulcheck.clicked.connect(self.checkMult)
+        
+        # condition for ip
+        self.conlabel = QLabel('Condition')
+        self.concheck = QCheckBox()
+        self.rows[4].addWidget(self.conlabel)
+        self.rows[4].addWidget(self.concheck)
+        self.concheck.clicked.connect(self.checkCond)
+        
+        # handle maxmimum number of channels 
+        self.chalabel = QLabel("Number of Channels")
+        self.chaedit = QLineEdit()
+        self.chaedit.setValidator(QIntValidator())
+        self.chaedit.setText('8')
+        self.rows[5].addWidget(self.chalabel)
+        self.rows[5].addWidget(self.chaedit)
+        
+        # export button 
+        self.exportBtn = QPushButton('Export')
+        self.exportBtn.clicked.connect(self.exportFunc)
+        self.rows[6].addWidget(self.exportBtn)    
+        
+        # log 
+        self.logText = QTextEdit()
+        self.logText.setReadOnly(True)
+        self.rows[7].addWidget(self.logText)    
+    
+        # add rows 
+        for row in self.rows: 
+            self.layout.addLayout(row)
+        
+        self.setLayout(self.layout)
+
+        self.setWindowTitle('Export Sequence')
+
+        print('export sequence window launched')
+        
+    def logTextFunc(self, text):
+        cursor = self.logText.textCursor()
+        cursor.movePosition(cursor.End)
+        cursor.insertText(text+'\n')
+        self.logText.ensureCursorVisible()
+        QApplication.processEvents()
+        
+    def checkMult(self): 
+        if self.mulcheck.isChecked():
+            self.intcheck.setChecked(True)
+            self.intcheck.setEnabled(False)
+        else:
+            self.intcheck.setEnabled(True)
+        
+    def checkCond(self):
+        if self.concheck.isChecked(): 
+            self.mulcheck.setChecked(True)
+            self.mulcheck.setEnabled(False)
+        else:
+            self.mulcheck.setEnabled(True)
+        self.checkMult()
+        
+    def checkRecip(self):
+        if self.splcheck.isChecked():
+            self.reccheck.setChecked(True)
+            self.reccheck.setEnabled(False)
+        else:
+            self.reccheck.setEnabled(True)
+
+    def exportFunc(self):
+        fname, _ = QFileDialog.getSaveFileName(self,'Export File', self.datadir, 'Comma Separated Values (*.csv)')
+        integer = self.intcheck.isChecked()
+        recip = self.reccheck.isChecked()
+        split = self.splcheck.isChecked()
+        multi = self.mulcheck.isChecked()
+        cond = self.concheck.isChecked()
+        maxcha = int(self.chaedit.text())
+
+        if fname != '':
+            self.generator.exportSequence(
+                fname, integer, 
+                recip, split, 
+                multi, cond, maxcha, 
+                self.logTextFunc)
+        
+        time.sleep(1)
+        self.hide()
+        self = None 
 
 #%% Main class
 class App(QMainWindow):
@@ -4737,6 +4872,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             ('wenner', 'Wenner', ['amin','amax']),
             ('schlum', 'Schlumberger',  ['amin','amax', 'nmin', 'nmax']),
             ('multigrad', 'Multi-Gradient',  ['amin','amax', 'nmin', 'nmax', 'mmin', 'mmax']),
+            ('cross', 'Cross-Dipole',  ['amin','amax', 'nmin', 'nmax']),
             ('custSeq', 'Custom Sequence', [])
             ]
 
@@ -4795,7 +4931,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
             def showArg(self):
                 n = len(configs[self.iseq][2])
-                if self.iseq == 4: # custom sequence
+                if self.seq == 'custSeq': # custom sequence
                     self.importBtn.setVisible(True)
                 else:
                     self.importBtn.setVisible(False)
@@ -4844,11 +4980,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         Wenner = resource_path('image/wenner.png')
         Schlum = resource_path('image/schlum.png')
         Gradient = resource_path('image/gradient.png')
+        XDpDp = resource_path('image/cross-dpdp.png')
 
         seqHelp = {'dpdp' : '<img height=140 src="%s">' % DpDp,
            'wenner': '<img height=140 src="%s">' % Wenner,
            'schlum': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
+           'cross':'<img height=140 src="%s">' % XDpDp,
            'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-\n' \
                'It is recommended to use a custom sequence in case of "unconventional surveys"'
             }
@@ -4881,6 +5019,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 except:
                     print('couldnt get row param')
             return rowgenparams
+        
+        self.forwardLogText = QTextEdit()
+        self.forwardLogText.setReadOnly(True)
+        def forwardLogTextFunc(text, end=''):
+            cursor = self.forwardLogText.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertText(text + end)
+            self.forwardLogText.ensureCursorVisible()
+            QApplication.processEvents()
+            if text == 'Forward modelling done.':
+                forwardOutputStack.setCurrentIndex(1) # switch to graph
+                if pvfound and self.project.typ[-1]=='t':
+                    forwardOutputStack.setCurrentIndex(2)
 
 
         def seqCreateFunc():
@@ -4892,7 +5043,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if len(rowgenparams) == 0:
                 raise ValueError('You must specify at least one sequence.')
                 return
-            self.seqIdx = self.project.createSequence(params=rowgenparams)
+            
+            def f(text): # function to write generator outputs to log 
+                forwardLogTextFunc(text, '\n')
+                
+            self.seqIdx = self.project.createSequence(params=rowgenparams, dump=f)
+            # time.sleep(1.0)
             self.writeLog('k.createSequence(params={:s})'.format(str(rowgenparams)))
             self.seqOutputLabel.setText('{:d} quadrupoles in total'.format(len(self.project.sequence)))
 
@@ -4911,12 +5067,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.noiseEditIP.setValidator(QDoubleValidator())
 
         # save sequence button
+        self.sequenceWindow = None 
         def saveSeqBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(self.tabImportingData,'Save File', self.datadir, 'Comma Separated Values (*.csv)')
-            if fname != '':
-                self.project.saveSequence(fname)
-                self.writeLog('k.saveSequence("{:s}")'.format(fname))
-        self.saveSeqBtn = QPushButton('Save Sequence')
+            if self.project.sequence is None: # we need to create mesh to assign starting resistivity
+                seqCreateFunc()
+            self.sequenceWindow = SequenceHelper(self.project)
+            self.sequenceWindow.show() 
+            
+        self.saveSeqBtn = QPushButton('Export Sequence')
         self.saveSeqBtn.setToolTip('This will save the sequence of the fwd modeling. Output data is already saved in <i>fwd</i> folder in the <i>working directory</i>.')
         self.saveSeqBtn.clicked.connect(saveSeqBtnFunc)
 
@@ -4932,7 +5090,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.errorDump('Sequence is empty, can not run forward model.')
                 return
             forwardOutputStack.setCurrentIndex(0)
-            self.forwardLogText.clear()
+            # self.forwardLogText.clear()
             QApplication.processEvents()
             # apply region for initial model
 
@@ -5007,19 +5165,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vlayout.addWidget(self.pseudo3DplotterIP.interactor)
             self.pseudoFrameIPfwd.setLayout(vlayout)
             self.pseudoFrameIPfwd.setVisible(False)
-
-        self.forwardLogText = QTextEdit()
-        self.forwardLogText.setReadOnly(True)
-        def forwardLogTextFunc(text, end=''):
-            cursor = self.forwardLogText.textCursor()
-            cursor.movePosition(cursor.End)
-            cursor.insertText(text + end)
-            self.forwardLogText.ensureCursorVisible()
-            QApplication.processEvents()
-            if text == 'Forward modelling done.':
-                forwardOutputStack.setCurrentIndex(1) # switch to graph
-                if pvfound and self.project.typ[-1]=='t':
-                    forwardOutputStack.setCurrentIndex(2)
 
         def fwdContourFunc(state):
             if state == Qt.Checked:

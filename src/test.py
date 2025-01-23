@@ -621,14 +621,11 @@ k.createModel() # manually define 3 regions (interactive GUI function)
 k.setStartingRes({0:200, 1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
 
 # creating sequence
-k.createSequence([('dpdp1', 1, 8),
-                  ('dpdp2', 2, 8),
-                  ('wenner_alpha', 1),
-                  ('wenner_beta', 2),
-                  ('wenner_gamma', 3),
-                  ('schlum1', 1, 10),
-                  ('schlum2', 2, 10),
-                  ('multigrad', 1, 10, 2)])
+k.createSequence([('dpdp', 1, 8, 1, 8),
+                  ('wenner', 1, 3),
+                  ('ws', 1, 2, 1, 10),
+                  ('mg', 1, 8, 1, 10, 1, 2)])
+
 k.saveSequence(k.dirname + '/seq.csv')
 k.importSequence(k.dirname + '/seq.csv')
 k.createSequence()
@@ -866,7 +863,7 @@ for i in range(len(zs)):
     seqIdx.append(si)
     
 
-k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)], seqIdx=seqIdx) # create a sequence 
+k.createSequence(params=[('dpdp',1,2,1,8)], seqIdx=seqIdx) # create a sequence 
 k.forward() # do forward model 
 k.saveForwardModelResult(os.path.join(k.dirname, 'out.csv'))
 
