@@ -558,7 +558,11 @@ class Generator():
                     label = self.seq[i,j]
                     string = int(label.split()[0])
                     number = int(label.split()[1])
-                    iseq[i,j] = lookup[string][number] 
+                    # if only one string present no changes needed 
+                    if len(cacheString.keys()) == 1: 
+                        iseq[i,j] = number 
+                    else: 
+                        iseq[i,j] = lookup[string][number] 
     
         else:
             for i in range(self.seq.shape[0]):
@@ -613,19 +617,18 @@ class Generator():
 
         
     ## multichannelise a sequence 
-    def multichannelise(self, maxcha=8): 
+    def multichannelise(self, maxcha=8, aggressive=False): 
         """
         Compress single channel sequence into a more efficient sequence that can 
         leverage modern multichannel instruments. 
     
         Parameters
         ----------
-        elec : pd.DataFrame
-            Electrode datafame 
-        seq : nd array 
-            DESCRIPTION.
         maxcha : int, optional
             Maximum number of channels. The default is 8.
+        agressive: bool, optional
+            Don't preserve polarity of current electrodes to more agressively 
+            pack the measurements. 
     
         Returns
         -------
@@ -643,6 +646,31 @@ class Generator():
         except: 
             self.seq2int()
             array = self.seq-1 
+        
+        if np.max(array) >= elec.shape[0]:
+            # need to account for electrode labels perhaps not being continuous 
+            u = np.unique(self.seq.flatten())
+            lookup = {}
+            for i in range(u.shape[0]):
+                lookup[u[i]] = i 
+            for i in range(self.seq.shape[0]):
+                for j in range(self.seq.shape[1]):
+                    array[i,j] = lookup[self.seq[i,j]]
+                    
+            labels = self.elec.label.values.tolist()
+            l1 = labels[0]
+            s1 = int(l1.split()[0])
+            if len(l1.split()) == 2:
+                for i, label in enumerate(labels):
+                    labels[i] = int(label.split()[1])
+                    string = int(label.split()[0])
+                    if string != s1:
+                        raise Exception('Cannot currently optimise multichannel measurements for sequences with multiple strings!')
+            else:
+                labels = np.asarray(labels, dtype=int)
+                    
+            sortidx = np.argsort(labels)
+            elec = elec[sortidx]
             
         ABmid = (elec[array[:,0]] + elec[array[:,1]]) / 2 # mid points of AB 
         MNmid = (elec[array[:,2]] + elec[array[:,3]]) / 2 # mid points of MN 
@@ -668,21 +696,22 @@ class Generator():
         ndig = len(str(cmax))
         nmeas = array.shape[0]
         cpairidn = [0]*nmeas # nested pair ids 
-        cppn = [0]*nmeas # positive current electrode (nested)
         cpairidu = [0]*nmeas # unested pair ids 
-        cppu = [0]*nmeas # positive current electrode (unnested)
         idtemplate= '{:0>%id}{:0>%id}'%(ndig, ndig)
         for i in range(nmeas):
+            celec = [self.seq[i,0], self.seq[i,1]]
+            if aggressive: 
+                celec = sorted(celec)
+            uid = int(idtemplate.format(celec[0], celec[1]))
             if inested[i]: # dont attempt to string nested measurements together 
-                cpairidn[i] = int(idtemplate.format(self.seq[i,0], self.seq[i,1]))
-                cppn[i] = self.seq[i,1]
+                cpairidn[i] = uid 
             else: 
-                cpairidu[i] = int(idtemplate.format(self.seq[i,0], self.seq[i,1]))
-                cppu[i] = self.seq[i,1]
+                cpairidu[i] = uid 
             
-        # note, want to sort by current electrodes so that the potential electrodes trial the current electrodes 
-        uniquepairsu = np.unique(cpairidu)[np.argsort(cppu)]
-        uniquepairsn = np.unique(cpairidn)[np.argsort(cppn)]
+        # note, want to sort by current electrodes so that the 
+        # potential electrodes trial the current #1 electrodes for unnested measurements 
+        uniquepairsu = np.unique(cpairidu)
+        uniquepairsn = np.unique(cpairidn)
         
         lines = []
         for uid in uniquepairsu: 
@@ -705,6 +734,7 @@ class Generator():
                     lines[-1].append(c2) 
                 if p1 not in lines[-1]: 
                     lines[-1].append(p1)
+                    
                 if len(lines[-1]) > (maxperline):
                     lines.append([])
                     lines[-1].append(c1)
@@ -756,7 +786,7 @@ class Generator():
             
         return lines 
     
-    def conditionSequence(self, plot=False, dump=print):
+    def condition(self, plot=False, dump=print):
         """
         Condition a multichannel sequence to avoid reusing potential electrodes 
         after they have just been used for injecting current. This avoids IP effects. 
@@ -856,7 +886,7 @@ class Generator():
             g.lines = [line for line in self.linesR]
             g.seqR = np.array([])
             g.linesR = [] 
-            self.linesR = g.conditionSequence() 
+            self.linesR = g.condition() 
             
         return condLines
     
@@ -870,8 +900,12 @@ class Generator():
         fnamef = fname 
         fnamer = None 
         if self.seqR.shape[0] > 0 or len(self.linesR) > 0: 
-            fnamef = fname.lower().replace('.csv','_F.csv')
-            fnamer = fname.lower().replace('.csv','_R.csv')
+            if fnamef.endswith('.csv'):
+                fnamef = fname.replace('.csv','_F.csv')
+                fnamer = fname.replace('.csv','_R.csv')
+            else:
+                fnamef = fname.replace('.CSV','_F.CSV')
+                fnamer = fname.replace('.CSV','_R.CSV')
         fnames = [fnamef, fnamer]
         
         if singlechannel:
@@ -974,7 +1008,7 @@ class Generator():
             return 
         
         if condition:
-            self.conditionSequence(dump=dump)
+            self.condition(dump=dump)
             
         dump('Writing to csv...')
         self.write2csv(fname)
