@@ -1122,7 +1122,7 @@ class App(QMainWindow):
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
             elif index == 1:
                 self.ftype = 'Syscal'
-                self.fformat = 'Comma Separated Values (*.csv *.CSV)'
+                self.fformat = 'Comma Separated Values (*.csv *.CSV);; Binary (*.bin *.BIN)'
             elif index == 2:
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
@@ -1138,9 +1138,6 @@ class App(QMainWindow):
             elif index == 6:
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
-            # elif index == 7:
-            #     self.ftype = 'ABEM-Terrameter'
-            #     self.fformat = 'DAT (*.DAT *.dat)'
             elif index == 7:
                 self.ftype = 'Lippmann'
                 self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt *.TXT)'
@@ -4278,11 +4275,27 @@ class App(QMainWindow):
         self.mesh3DCombo.currentIndexChanged.connect(mesh3DComboFunc)
 
         def saveMeshBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(self.tabMesh, 'Save mesh as .vtk, .dat or .node (tetgen) format', self.datadir)
-            if fname != '':
-                self.project.saveMesh(fname)
-                self.writeLog('k.saveMesh("{:s}")'.format(fname))
-                self.infoDump('Mesh saved to {:s}'.format(fname))
+            mfpathout, ftype = QFileDialog.getSaveFileName(
+                self,
+                'Open File',
+                self.datadir,
+                'VTK (*.vtk);;NODE (*.node);;DAT (*.dat) ;; VTU (*.vtu)')
+            ftype = '.'+ftype.split()[0].lower()
+            if mfpathout != '':
+                voxel = False
+                _forceLocal = False
+                self.loadingWidget('Saving mesh file...')
+                if not mfpathout.endswith(ftype):
+                    mfpathout += ftype 
+                if self.exportVoxelMeshCheck.isChecked():
+                    voxel = True
+                if self.exportLocalGridMeshCheck.isChecked():
+                    _forceLocal = True
+                self.project.exportMesh(mfpathout,voxel,_forceLocal)
+                self.writeLog('k.exportMesh("{:s}",{:s},{:s})'.format(mfpathout,str(voxel),str(_forceLocal)))
+                self.loadingWidget(exitflag=True)
+            
+            
         self.saveMeshBtn = QPushButton('Save Mesh')
         self.saveMeshBtn.setToolTip('Save mesh as .vtk, .node (tetgen) or .dat')
         self.saveMeshBtn.clicked.connect(saveMeshBtnFunc)
@@ -6863,25 +6876,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #         self.writeLog('k.exportData("{:s}","{:s}",{:s},{:s})'.format(dataout,ftype, str(includeError),str(includeRecip)))
         #         self.infoDump('Exported pre processed data.')
 
-
-        def saveMeshFunc():
-            mfpathout, _ = QFileDialog.getSaveFileName(
-                self,
-                'Open File',
-                self.datadir,
-                'VTK (*.vtk);;NODE (*.node);;DAT (*.dat) ;; VTU (*.vtu)')
-            if mfpathout != '':
-                voxel = False
-                _forceLocal = False
-                self.loadingWidget('Saving mesh file...')
-                if self.exportVoxelMeshCheck.isChecked():
-                    voxel = True
-                if self.exportLocalGridMeshCheck.isChecked():
-                    _forceLocal = True
-                self.project.exportMesh(mfpathout,voxel,_forceLocal)
-                self.writeLog('k.exportMesh("{:s}",{:s},{:s})'.format(mfpathout,str(voxel),str(_forceLocal)))
-                self.loadingWidget(exitflag=True)
-
         def exportElecBtnFunc():
             fpathout, _ = QFileDialog.getSaveFileName(
                 self,
@@ -7029,7 +7023,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.exportVoxelMeshCheck = QCheckBox('Force Voxel')
         self.exportVoxelMeshCheck.setToolTip('Force outputs to be in a voxel like grid rather than an unstructured mesh')
         self.exportMeshBox.addWidget(self.exportVoxelMeshCheck)
-        self.exportMeshButton.clicked.connect(saveMeshFunc)
+        self.exportMeshButton.clicked.connect(saveMeshBtnFunc) # button functionality already defined 
         nrow += 1
         self.exportGrid.addWidget(self.exportPadderLabel,nrow,gcolumn)
         nrow += 1

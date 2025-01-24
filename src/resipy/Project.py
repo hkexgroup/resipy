@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.6.2' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.6.3' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -43,7 +43,7 @@ from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
 from resipy.saveData import (write2Res2DInv, write2csv, writeSrv)
-from resipy.interpolation import rotGridData, invRotGridData
+from resipy.interpolation import rotGridData, invRotGridData, nearest3d
 
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
@@ -530,8 +530,8 @@ class Project(object): # Project master class instanciated by the GUI
         elec : dataframe
             remote flag added to electrodes
         """
-        remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                    9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+        remote_flags = [-9999999, -999999, -99999,-9999,-999]
+                    #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
         iremote = np.in1d(elec['x'].values, remote_flags)
         iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
         elec['remote'] = iremote
@@ -1710,7 +1710,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.createSurvey(finfo.fpath[i].strip(), ftype=finfo.ftype[i], 
                               debug=debug, estMemory=False, string=finfo.string[i])
             sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
-            print(sidx)
+            # print(sidx)
             _ = sidx.pop(0)
                 
             for j in sidx: 
@@ -3722,7 +3722,33 @@ class Project(object): # Project master class instanciated by the GUI
             
     def refineMesh(self):
         self.mesh = self.mesh.refine()
+        
+    def res0fromPseudo(self):
+        """
+        Generate initial starting model from pseudo section.
 
+        Returns
+        -------
+        res0: array like 
+            Initial resistivity for each cell in the mesh. 
+
+        """
+        if len(self.surveys) == 0:
+            warnings.warn('Cannot set res0 from pseudo section without first loading in data')
+            return 
+        if self.mesh is None:
+            warnings.warn('Cannot set res0 from pseudo section without first creating a mesh')
+            return 
+        px, py, pz = self.surveys[0]._computePseudoDepth(flag3d=True)
+        df = self.surveys[0].df
+        app = df['K'].values*df['resist'].values
+        
+        mx, my, mz = self.mesh.df.X, self.mesh.df.Y, self.mesh.df.Z
+        # xnew,ynew,znew,xknown, yknown, zknown, iknown
+        res0 = nearest3d(mx, my, mz, px, py, pz, app)
+        # self.mesh.df.loc[:,'res0'] = res0 #  perhaps dont assign res0 here? 
+        return res0 
+        
 
     def write2in(self, param={}, err=None):
         """Create configuration file for inversion. Write mesh.dat and res0.dat.
@@ -4335,7 +4361,8 @@ class Project(object): # Project master class instanciated by the GUI
 
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
-               rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None):
+               rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None, 
+               homogeneousStart = True):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.  
 
@@ -4427,6 +4454,13 @@ class Project(object): # Project master class instanciated by the GUI
         # run Oldenburg and Li DOI estimation
         if modelDOI is True:
             sensScaled = self.modelDOI(dump=dump)
+            
+        if homogeneousStart:
+            dump('Assuming homogenous starting model of 100 ohm.m')
+            self.mesh.df.loc[:,'res0'] = 100 
+        else:
+            dump('Looking up starting resistivities from pseudo section')
+            self.mesh.df.loc[:,'res0'] = self.res0fromPseudo() # res0 assigned
 
         # compute modelling error if selected
         if modErr is True and self.fwdErrModel is False: #check no error model exists
@@ -5912,7 +5946,8 @@ class Project(object): # Project master class instanciated by the GUI
             self.createSequence()
             dump('done\n')
         elif isinstance(self.sequence, pd.core.frame.DataFrame):
-            pass
+            if len(self.sequence.columns) != 4: 
+                raise Exception('Sequence should have 4 columns')
         elif isinstance(self.sequence,np.ndarray): # check sequence is a matrix of string etc
             if self.sequence.shape[1] != 4: 
                 raise Exception('Sequence should have 4 columns')
