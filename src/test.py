@@ -317,7 +317,7 @@ plt.close('all')
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv')
 k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
-k.createMesh('trian')
+k.createMesh('trian', surface=np.array([[0, 0, 1], [3, 0, 1]]))
 # external_nodes,surface_flag = k.mesh.externalNodes() # comment as this requires new mesh calc compile 
 k.mesh.computeNeigh()
 rmesh = k.mesh.refine()
