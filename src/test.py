@@ -61,6 +61,9 @@ k.createSurvey(testdir + 'parser/DAS-1_2D_DC.data', ftype='DAS-1') # python 3.9 
 k.createSurvey(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
 k.createSurvey(testdir + 'parser/protocolForward/R2_forward.dat', ftype='ProtocolDC')
 k.createSurvey(testdir + 'parser/protocolForward/cR2_forward.dat', ftype='ProtocolIP')
+k.createSurvey(testdir + 'parser/syscal-bin.csv', ftype='Syscal')
+k.createSurvey(testdir + 'parser/syscal-bin.bin', ftype='Syscal')
+k.createSurvey(testdir + 'parser/syscal-bin.binx', ftype='Syscal')
 
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')

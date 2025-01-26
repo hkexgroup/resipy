@@ -1,0 +1,4 @@
+[2025-01-26 19:25:10.207] file : Close file : Z:\media\jkl\data\work\software\resipy\src\examples\parser\syscal-bin.binx
+[2025-01-26 19:25:12.108] file : Open file : "Z:\media\jkl\data\work\software\resipy\src\examples\parser\syscal-bin.bin"
+[2025-01-26 19:25:12.515] file : Initialise electrodes numbers
+[2025-01-26 19:25:12.516] file : Reject gapfiller and overload

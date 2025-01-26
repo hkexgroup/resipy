@@ -1122,7 +1122,7 @@ class App(QMainWindow):
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
             elif index == 1:
                 self.ftype = 'Syscal'
-                self.fformat = 'Comma Separated Values (*.csv *.CSV);; Binary (*.bin *.BIN)'
+                self.fformat = 'CSV (Comma delimited) or Binary (*.csv *.CSV *.bin *.BIN *.binx *.BINX)'
             elif index == 2:
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
