@@ -381,9 +381,12 @@ class SequenceHelper(QWidget):
     This "window" is a QWidget. If it has no parent, it
     will appear as a free-floating window as we want.
     """
-    def __init__(self, project):
-        self.generator = project.sequenceGenerator
-        self.datadir = project.dirname 
+    def __init__(self, generator, dirname=None):
+        self.generator = generator
+        if dirname is None:
+            dirname = os.getcwd() 
+        self.dirname = dirname 
+        
         super().__init__()
         self.layout = QVBoxLayout()
         self.title = QLabel("<b> Sequence options </b>")
@@ -458,8 +461,7 @@ class SequenceHelper(QWidget):
         self.setLayout(self.layout)
 
         self.setWindowTitle('Export Sequence')
-
-        print('export sequence window launched')
+        self.logTextFunc('Log:')
         
     def logTextFunc(self, text):
         cursor = self.logText.textCursor()
@@ -491,7 +493,8 @@ class SequenceHelper(QWidget):
             self.reccheck.setEnabled(True)
 
     def exportFunc(self):
-        fname, _ = QFileDialog.getSaveFileName(self,'Export File', self.datadir, 'Comma Separated Values (*.csv)')
+        fname, _ = QFileDialog.getSaveFileName(self,'Export File', self.dirname, 'Generic (*.csv)')
+        ftype = 'generic' # todo: allow for more file types 
         integer = self.intcheck.isChecked()
         recip = self.reccheck.isChecked()
         split = self.splcheck.isChecked()
@@ -501,7 +504,7 @@ class SequenceHelper(QWidget):
 
         if fname != '':
             self.generator.exportSequence(
-                fname, integer, 
+                fname, ftype, integer, 
                 recip, split, 
                 multi, cond, maxcha, 
                 self.logTextFunc)
@@ -5038,10 +5041,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.project.elec is None:
                 self.errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
                 return
+            # get the sequenceing row parameters 
             rowgenparams = getSeqGenParamFunc()
-            print(rowgenparams)
+
             if len(rowgenparams) == 0:
-                raise ValueError('You must specify at least one sequence.')
+                self.errorDump('You must specify at least one sequence.')
                 return
             
             def f(text): # function to write generator outputs to log 
@@ -5069,10 +5073,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # save sequence button
         self.sequenceWindow = None 
         def saveSeqBtnFunc():
-            if self.project.sequence is None: # we need to create mesh to assign starting resistivity
-                seqCreateFunc()
-            self.sequenceWindow = SequenceHelper(self.project)
+            seqIdx = self.project._genSeqIdx() # generate sequencing indexes
+            g = SequenceGenerator(self.project.elec, seqIdx)
+            self.sequenceWindow = SequenceHelper(g)
             self.sequenceWindow.show() 
+            def f(text):
+                self.sequenceWindow.logTextFunc(text)
+            # regenerate sequence indepent of forward modelling 
+            rowgenparams = getSeqGenParamFunc()
+            g.generate(rowgenparams,f)
             
         self.saveSeqBtn = QPushButton('Export Sequence')
         self.saveSeqBtn.setToolTip('This will save the sequence of the fwd modeling. Output data is already saved in <i>fwd</i> folder in the <i>working directory</i>.')
@@ -5083,17 +5092,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.project.mesh is None: # we need to create mesh to assign starting resistivity
                 self.errorDump('Please specify a mesh and an initial model first.')
                 return
-
+            
+            # clear the log 
+            self.forwardLogText.clear()
+            
+            # CREATE THE SEQUENCE 
             seqCreateFunc()
 
             if len(self.project.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
                 return
             forwardOutputStack.setCurrentIndex(0)
-            # self.forwardLogText.clear()
             QApplication.processEvents()
-            # apply region for initial model
 
+            # apply region for initial model
             x, phase0, zones, fixed = self.regionTable.getTable()
             regid = np.arange(len(x)) + 1 # region 0 doesn't exist
             pdebug('forwardBtnFunc(): with {:d} regions'.format(len(x)))
@@ -8435,6 +8447,7 @@ if __name__ == '__main__':
     from resipy.r2help import r2help
     from resipy.parsers import geomParser
     from resipy.interpolation import rotGridData
+    from resipy.seqGen import Generator as SequenceGenerator
     splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)
     app.processEvents()

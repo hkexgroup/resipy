@@ -5616,6 +5616,19 @@ class Project(object): # Project master class instanciated by the GUI
             seqIdx.append(np.array(idx))
         return seqIdx
     
+    
+    def _genSeqIdx(self):
+        if '3' in self.typ: 
+            if not self.hasElecString():#then find it automatically 
+                seqIdx = self.detectStrings()
+            else:
+                seqIdx = self._seqIdxFromLabel()#use electrode strings 
+        else:
+            seqIdx = [np.arange(len(self.elec))]
+            
+        return seqIdx
+    
+    
     def createSequence(self, params=[('dpdp',1,8,1,8)], seqIdx=None, dump=print):
         """Creates a forward modelling sequence, see examples below for usage.
 
@@ -5624,11 +5637,11 @@ class Project(object): # Project master class instanciated by the GUI
         params : list of tuple, optional
             Each tuple is the form (<array_name>, param1, param2, ...)
             Types of sequences available are : 	
-                - 'dipole-dipole' (or 'dpdp')
+            - 'dipole-dipole' (or 'dpdp')
             	- 'wenner' (or 'w') 
             	- 'wenner-schlumberger' (or 'schlum', 'ws')
             	- 'multigradient' (or 'mg')
-                - 'cross' (or 'xbh', 'xli')
+            - 'cross' (or 'xbh', 'xli')
             	- 'custom' 
             if 'custom' is chosen, param1 should be a string of file path to a .csv
             file containing a custom sequence with 4 columns (a, b, m, n) containing 
@@ -5664,13 +5677,7 @@ class Project(object): # Project master class instanciated by the GUI
                 warnings.warn(msg.format(p[0])) 
 
         if seqIdx is None: #(not been set, so use electrode strings)
-            if '3' in self.typ: 
-                if not self.hasElecString():#then find it automatically 
-                    seqIdx = self.detectStrings()
-                else:
-                    seqIdx = self._seqIdxFromLabel()#use electrode strings 
-            else:
-                seqIdx = [np.arange(len(self.elec))]
+            seqIdx = self._genSeqIdx()
                 
         self.sequenceGenerator = Generator(self.elec, seqIdx)
         
@@ -5788,7 +5795,7 @@ class Project(object): # Project master class instanciated by the GUI
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
         return seqIdx
 
-    def saveSequence(self, fname='sequence.csv', asis=True, integer = True, 
+    def saveSequence(self, fname='sequence.csv', ftype='generic', integer = True, 
                      reciprocals = True, split = False, multichannel = True,  
                      condition = True, maxcha = 8, dump=print):
         """Save sequence as .csv file. Ex
@@ -5797,10 +5804,8 @@ class Project(object): # Project master class instanciated by the GUI
         ----------
         fname : str, optional
             Path where to save the sequence.
-        asis: bool, optional 
-            Flag to save sequence "asis", short cut around other parameters. If
-            True (default) then the sequence will be saved unmodified. If False, 
-            then the other parameters become activated. 
+        ftype: str, optional 
+            Flag type of command file. Default is 'generic'. 
         integer : bool, optional
             Flag to convert sequence into integers before export. The default is True.
         reciprocals : bool, optional
@@ -5816,16 +5821,10 @@ class Project(object): # Project master class instanciated by the GUI
             Maximum number of active channels of the resistivity instrument (normally
             8 for modern instruments). 
         """
-        if asis: 
-            integer = False 
-            reciprocals = False 
-            split = False 
-            multichannel = False 
-            condition = False 
             
         if self.sequence is not None:
             self.sequenceGenerator.exportSequence(
-                fname, integer, split,
+                fname, ftype, integer, split,
                 reciprocals, multichannel, 
                 condition, maxcha)
             

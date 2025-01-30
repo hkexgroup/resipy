@@ -62,8 +62,10 @@ class Generator():
         return g 
         
     def clear(self):
-        self.seq = np.array([])
-        self.lines = [] 
+        self.seq = np.array([]) 
+        self.seqR = np.array([]) # reciprocal sequence 
+        self.lines = [] # variable to store multichannel lines 
+        self.linesR = [] # reciprocal lines 
         self.runtime = 0 
         
     def ddgen(self, amin=1, amax=5, nmin=1, nmax=8, si=0, e1=None, en=None):
@@ -474,6 +476,14 @@ class Generator():
 
         """
         self.clear()
+        def logtext(p):
+            # little helper function for logging progress 
+            t='('
+            for i in range(len(p)):
+                t+= '%i, '%p[i]
+            t+= ')'
+            return t 
+
         for p in params: 
             config = p[0]
             if config in ['custom', 'custSeq']:
@@ -483,7 +493,7 @@ class Generator():
                 # skip onwards if custom sequence 
                 continue 
             if config in ['cross','xbh', 'xli']: 
-                dump('Generating cross line/hole configs for amax = %i and nmax = %i...'%(p[2], p[4]))
+                dump('Generating cross line/hole: %s'%logtext(p[1:5]))
                 # special case where the sequence index can be ignored as all electrodes need to be considered for cross measurements 
                 if len(p) == 6: 
                     _ = self.xdgen(p[1], p[2], p[3], p[4], p[5]) 
@@ -492,19 +502,19 @@ class Generator():
                 continue 
             for i in range(len(self.seqIdx)):
                 if config in ['dipole-dipole', 'dpdp']:
-                    dump('Generating dp dp configs for amax = %i and nmax = %i...'%(p[2], p[4]))
+                    dump('Generating dipole-dipole: %s'%logtext(p[1:5]))
                     _ = self.ddgen(p[1], p[2], p[3], p[4], i) 
                 elif config in ['wenner', 'w']:
-                    dump('Generating wenner configs for amax = %i...'%(p[2]))
+                    dump('Generating wenner: %s'%logtext(p[1:3]))
                     _ = self.wgen(p[1], p[2], i)
                 elif config in ['wenner-schlumberger', 'schlum', 'ws']: 
-                    dump('Generating wenner-schlum configs for amax = %i and nmax = %i...'%(p[2], p[4]))
+                    dump('Generating wenner-schlum: %s'%logtext(p[1:5]))
                     _ = self.wsgen(p[1], p[2], p[3], p[4], i) 
                 elif config in ['multigradient', 'mg', 'multigrad']:
-                    dump('Generating multi-grad configs for amax = %i, nmax = %i, and mmax = %i...'%(p[2], p[4], p[6]))
+                    dump('Generating multi-grad: %s'%logtext(p[1:7]))
                     _ = self.mggen(p[1], p[2], p[3], p[4], p[5], p[6], i)
                 else:
-                    print('Sorry, config "%s" is not recognised'%config)
+                    dump('Warning, config of type "%s" is not recognised'%config)
                     
         return self.seq.copy() 
          
@@ -934,10 +944,10 @@ class Generator():
             fh = open(fname, 'w')
             nperline = len(lines[0])
             header = 'C1, C2, '
-            i = 1 
+            j = 1 
             while len(header.split(',')) <= nperline: 
-                header += 'P%i, '%i
-                i+=1 
+                header += 'P%i, '%j
+                i+=j 
             
             header += 'ChannelIDs\n'
             fh.write(header)
@@ -956,6 +966,33 @@ class Generator():
                 fh.write('\n')
                 
             fh.close() 
+
+    def write2prime(self, fname):
+        fnamef = fname 
+        fnamer = None 
+        fext = '.' + fname.split('.')[-1]
+        if len(self.linesR) > 0: 
+            fnamef = fname.replace(fext,'_F' + fext)
+            fnamer = fname.replace(fext,'_R' + fext)
+        fnames = [fnamef, fnamer]
+
+        lines2write = [self.lines, self.linesR]
+        for i, lines in enumerate(lines2write):
+            if len(lines) == 0:
+                continue 
+            fname = fnames[i]
+            if fname is None:
+                continue 
+            fh = open(fname, 'w')
+            fh.write('# test 0\n\n')
+            nperline = len(lines[0])
+            
+            for j, line in enumerate(lines): 
+                fh.write('test %i '%(j+1))
+                for n in line: 
+                    fh.write('%i '%n)
+                fh.write('\n')
+            fh.close() 
         
         
     ## export sequence 
@@ -970,7 +1007,7 @@ class Generator():
         ----------
         fname : str
             Export file path 
-        sequence : nd array 
+        ftype : str
             N by 4 array of electrode configurations 
         elec : pd.DataFrame
             Electrode data frame 
@@ -989,8 +1026,24 @@ class Generator():
             8 for modern instruments). 
     
         """
-        if not fname.endswith('.csv'):
-            fname += '.csv'
+        if ftype.lower() == 'asis':
+            fext = '.csv'
+            integer = False 
+            reciprocals = False 
+            split = False 
+            multichannel = False 
+            condition = False 
+        elif ftype.lower() == 'prime':
+            fext = '.txt'
+            maxcha = 7 
+        elif ftype.lower() == 'sting':
+            #todo: expand! 
+            fext = '.csv'
+        else:
+            fext = '.csv'
+
+        if not fname.endswith(fext):
+            fname += fext
             
         if integer or multichannel: 
             # have to convert to integer to get multichannel code working currently 
