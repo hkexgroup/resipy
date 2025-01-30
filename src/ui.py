@@ -408,12 +408,18 @@ class SequenceHelper(QWidget):
         self.intcheck = QCheckBox()
         self.rows[0].addWidget(self.intlabel)
         self.rows[0].addWidget(self.intcheck)
+        t = 'Forces sequence to be converted from string to integer format'
+        self.intlabel.setToolTip(t)
+        self.intcheck.setToolTip(t)
         
         # include reciprocals 
         self.reclabel = QLabel('Include Reciprocals')
         self.reccheck = QCheckBox()
         self.rows[1].addWidget(self.reclabel)
         self.rows[1].addWidget(self.reccheck)
+        t = 'Appends reciprocal measurements to the sequence'
+        self.reclabel.setToolTip(t)
+        self.reccheck.setToolTip(t)
         
         # split reciprocals 
         self.spllabel = QLabel('Split Reciprocals')
@@ -421,6 +427,9 @@ class SequenceHelper(QWidget):
         self.rows[2].addWidget(self.spllabel)
         self.rows[2].addWidget(self.splcheck)
         self.splcheck.clicked.connect(self.checkRecip)
+        t = 'If checked, seperate reciprocal and forward measurements into different files'
+        self.spllabel.setToolTip(t)
+        self.splcheck.setToolTip(t)
         
         # multichannel 
         self.mullabel = QLabel('Multichannelise')
@@ -428,6 +437,9 @@ class SequenceHelper(QWidget):
         self.rows[3].addWidget(self.mullabel)
         self.rows[3].addWidget(self.mulcheck)
         self.mulcheck.clicked.connect(self.checkMult)
+        t = 'Optimise measurements for multichannel acquistion with modern resistivity instruments'
+        self.mullabel.setToolTip(t)
+        self.mulcheck.setToolTip(t)
         
         # condition for ip
         self.conlabel = QLabel('Condition')
@@ -435,6 +447,9 @@ class SequenceHelper(QWidget):
         self.rows[4].addWidget(self.conlabel)
         self.rows[4].addWidget(self.concheck)
         self.concheck.clicked.connect(self.checkCond)
+        t = 'Condition multichannel sequence to minimize electrode polarization effects'
+        self.conlabel.setToolTip(t)
+        self.concheck.setToolTip(t)
         
         # handle maxmimum number of channels 
         self.chalabel = QLabel("Number of Channels")
@@ -443,11 +458,16 @@ class SequenceHelper(QWidget):
         self.chaedit.setText('8')
         self.rows[5].addWidget(self.chalabel)
         self.rows[5].addWidget(self.chaedit)
+        t = 'Number of channels that your instrument can leverage'
+        self.chalabel.setToolTip(t)
+        self.chaedit.setToolTip(t)
         
         # export button 
         self.exportBtn = QPushButton('Export')
         self.exportBtn.clicked.connect(self.exportFunc)
         self.rows[6].addWidget(self.exportBtn)    
+        t = 'Export sequence for various intrument types or for further modelling. Note: See the main "Export" tab if you wish to save the synthetic measurements with the transfer resistances.'
+        self.exportBtn.setToolTip(t)
         
         # log 
         self.logText = QTextEdit()
@@ -4875,7 +4895,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             ('wenner', 'Wenner', ['amin','amax']),
             ('schlum', 'Schlumberger',  ['amin','amax', 'nmin', 'nmax']),
             ('multigrad', 'Multi-Gradient',  ['amin','amax', 'nmin', 'nmax', 'mmin', 'mmax']),
-            ('cross', 'Cross-Dipole',  ['amin','amax', 'nmin', 'nmax']),
+            ('equat-dp', 'Equatorial-Dipole',  ['amin','amax', 'nmin', 'nmax']),
             ('custSeq', 'Custom Sequence', [])
             ]
 
@@ -4989,7 +5009,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            'wenner': '<img height=140 src="%s">' % Wenner,
            'schlum': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
-           'cross':'<img height=140 src="%s">' % XDpDp,
+           'equat-dp':'<img height=140 src="%s">' % XDpDp,
            'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-\n' \
                'It is recommended to use a custom sequence in case of "unconventional surveys"'
             }
@@ -5084,7 +5104,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             g.generate(rowgenparams,f)
             
         self.saveSeqBtn = QPushButton('Export Sequence')
-        self.saveSeqBtn.setToolTip('This will save the sequence of the fwd modeling. Output data is already saved in <i>fwd</i> folder in the <i>working directory</i>.')
+        self.saveSeqBtn.setToolTip('This will save the sequence of the forward modeling for acquisition with an instrument or further analysis. Note: Synthetic measurements will be saved in <i>fwd</i> folder in the <i>working directory</i>, and treated as pre-processed data inside of ResIPy (see Export tab for further options).')
         self.saveSeqBtn.clicked.connect(saveSeqBtnFunc)
 
         # add a forward button
@@ -5158,6 +5178,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.forwardBtn.setAutoDefault(True)
         self.forwardBtn.clicked.connect(forwardBtnFunc)
         self.forwardBtn.setStyleSheet('background-color: green; color:black')
+        self.forwardBtn.setToolTip('Generate Sequence, and compute synthetic measurements.')
 
         self.mwFwdPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)

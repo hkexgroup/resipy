@@ -440,6 +440,7 @@ class Project(object): # Project master class instanciated by the GUI
                       'Estimated RAM for inverse solution (Gb)':0.0,
                       'Convergence of inverse solution':False, 
                       'RMS of inverse solution':np.nan,
+                      'RMS error as percentage estimate':np.nan, 
                       'Number of iterations':0,
                       'Median normalised error':np.nan,
                       'Working Directory':self.dirname}
@@ -4893,6 +4894,7 @@ class Project(object): # Project master class instanciated by the GUI
         if dirname is None:
             dirname = self.dirname
         self.getRMS(dirname)
+        self.computeRMSP(dirname)
         idone = 0
         ifailed = 0
         self.meshResults = [] # make sure we empty the list first
@@ -4991,8 +4993,61 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of iterations'] = iterations 
         self.pinfo['RMS of inverse solution'] = rms 
         return rms 
-        
     
+    
+    def computeRMSP(self, dirname=None):
+        """
+        Compute RMS as a percentage value (estimate), this is to mimic the behaviour of
+        something like ResInv. 
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        rmsp: float 
+            RMS of all surveys as a percentage 
+
+        """
+        if dirname is None:
+            dirname = self.dirname 
+        
+        # need to find all instances of err.dat files 
+        errfiles = []
+        if 'ref' in os.listdir(dirname):
+            fpath = os.path.join(dirname,'ref','f001_err.dat')
+            if os.path.exists(fpath):
+                errfiles.append(fpath)
+        for f in os.listdir(dirname):
+            if f.endswith('err.dat'):
+                fpath = os.path.join(dirname, f)
+                errfiles.append(fpath)
+        
+        iobs = 5 # observation column 
+        ical = 6 # calculated measurement column 
+        if '3' in self.typ: 
+            iobs += 4 
+            ical += 4 
+        
+        errdf = np.genfromtxt(errfiles[0], skip_header=1)
+        _ = errfiles.pop(0)
+        for f in errfiles:
+            _df = np.genfromtxt(f, skip_header=1)
+            errdf = np.vstack([errdf, _df])
+        
+        robs = errdf[:, iobs]
+        rcal = errdf[:, ical]
+        N = len(errdf)
+        
+        rmsp_sq = np.sum((100*((robs-rcal)/robs))**2)/N
+        rmsp = np.sqrt(rmsp_sq)
+        
+        self.pinfo['RMS error as percentage estimate'] = rmsp  
+        return rmsp 
+        
+        
     def computeVol(self, attr='Resistivity(ohm.m)', vmin=None , vmax=None, index=0):
         """Given a 3D dataset, calculates volume based on mesh type.
         Note: The majority of this function's code is also seen in the meshTools' cellArea function as well. But that calculates all the mesh not the mesh results. 
@@ -5526,7 +5581,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         Parameters
         ----------
-        regionValues : dict, optional
+        regionValues : dict, optionals where it left off? I'm assuming it could be forced by importing the baseline data se
             Dictionnary with key being the region number and the value being
             the resistivity in [Ohm.m].
         zoneValues : dict, optional
@@ -5665,7 +5720,7 @@ class Project(object): # Project master class instanciated by the GUI
             'wenner', 'w',
             'wenner-schlumberger', 'schlum', 'ws', 
             'multigradient', 'mg', 
-            'cross','xbh', 'xli',
+            'cross','xbh', 'xli', 'equat-dp', 
             'custom', 'custSeq']
         
         msg = 'Sorry, given config parameter {:s} is not recognised!'
@@ -5821,7 +5876,7 @@ class Project(object): # Project master class instanciated by the GUI
             Maximum number of active channels of the resistivity instrument (normally
             8 for modern instruments). 
         """
-            
+
         if self.sequence is not None:
             self.sequenceGenerator.exportSequence(
                 fname, ftype, integer, split,

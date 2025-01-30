@@ -233,7 +233,7 @@ class Generator():
         return np.array(seq)
     
     
-    def xdgen(self, amin=0, amax=8, nmin=1, nmax=3, discrepancy = 0.5):
+    def xdgen(self, amin=0, amax=8, nmin=1, nmax=3, discrepancy = 0.5, dump=print):
         
         assert isinstance(amin,int)
         assert isinstance(amax,int)
@@ -325,6 +325,10 @@ class Generator():
                                 
         t1 = time.time()
         dt = t1 - t0
+        if len(seq) == 0:
+            t = 'Warning: Could not create any cross (equatorial) dipole measurements'
+            dump(t)
+            return np.array([])
         
         self.runtime += dt 
         if self.seq.shape[0] > 0: 
@@ -479,9 +483,9 @@ class Generator():
         def logtext(p):
             # little helper function for logging progress 
             t='('
-            for i in range(len(p)):
+            for i in range(len(p)-1):
                 t+= '%i, '%p[i]
-            t+= ')'
+            t+= '%i)'%p[-1]
             return t 
 
         for p in params: 
@@ -492,13 +496,13 @@ class Generator():
                 _  = self.fromfile(fname)
                 # skip onwards if custom sequence 
                 continue 
-            if config in ['cross','xbh', 'xli']: 
+            if config in ['cross','xbh', 'xli', 'equat-dp']: 
                 dump('Generating cross line/hole: %s'%logtext(p[1:5]))
                 # special case where the sequence index can be ignored as all electrodes need to be considered for cross measurements 
                 if len(p) == 6: 
-                    _ = self.xdgen(p[1], p[2], p[3], p[4], p[5]) 
+                    _ = self.xdgen(p[1], p[2], p[3], p[4], p[5], dump=dump) 
                 else: 
-                    _ = self.xdgen(p[1], p[2], p[3], p[4]) 
+                    _ = self.xdgen(p[1], p[2], p[3], p[4], dump=dump)  
                 continue 
             for i in range(len(self.seqIdx)):
                 if config in ['dipole-dipole', 'dpdp']:
@@ -996,9 +1000,9 @@ class Generator():
         
         
     ## export sequence 
-    def exportSequence(self, fname, integer = True, reciprocals = True,  
-                       split=True, multichannel = True,  condition = True, 
-                       maxcha = 8, dump=print): 
+    def exportSequence(self, fname, ftype = 'generic', integer = True, 
+                       reciprocals = True,  split=True, multichannel = True,  
+                       condition = True, maxcha = 8, dump=print): 
         """
         Export single channel sequence (ie for forward modelling) into something 
         usable by a resistivity instrument 
@@ -1026,6 +1030,7 @@ class Generator():
             8 for modern instruments). 
     
         """
+
         if ftype.lower() == 'asis':
             fext = '.csv'
             integer = False 
