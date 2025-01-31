@@ -546,6 +546,7 @@ class Generator():
             hasString = True 
         cacheString = {}
         iseq = np.zeros_like(self.seq, dtype=int)
+        template = '{:0>2d}{:0>3d}' 
         
         if hasString: 
             # search through and find unique electrode numbers associated with each string 
@@ -554,29 +555,7 @@ class Generator():
                     label = self.seq[i,j]
                     string = int(label.split()[0])
                     number = int(label.split()[1])
-                    if string in cacheString.keys():
-                        cacheString[string].append(number)
-                    else:
-                        cacheString[string] = [number]
-            # create unique index for each electrode 
-            lookup = {}
-            count = 1 
-            for string in sorted(cacheString.keys()):
-                lookup[string] = {}
-                for n in np.unique(cacheString[string]):
-                    lookup[string][n] = count 
-                    count += 1 
-            # reassign sequence with unique values 
-            for i in range(self.seq.shape[0]):
-                for j in range(4):
-                    label = self.seq[i,j]
-                    string = int(label.split()[0])
-                    number = int(label.split()[1])
-                    # if only one string present no changes needed 
-                    if len(cacheString.keys()) == 1: 
-                        iseq[i,j] = number 
-                    else: 
-                        iseq[i,j] = lookup[string][number] 
+                    iseq[i,j] = int(template.format(string, number))
     
         else:
             for i in range(self.seq.shape[0]):
@@ -655,11 +634,11 @@ class Generator():
         elec = self.elec[['x','y','z']].values 
         ### first determine if measurements are nested ###
         #find mid points of AB 
-        try: 
-            array = self.seq-1 # array for indexing electrodes 
-        except: 
+        hasString = False 
+        if isinstance(self.seq[0,0], str): 
             self.seq2int()
-            array = self.seq-1 
+            
+        array = self.seq-1 
         
         if np.max(array) >= elec.shape[0]:
             # need to account for electrode labels perhaps not being continuous 
@@ -673,13 +652,12 @@ class Generator():
                     
             labels = self.elec.label.values.tolist()
             l1 = labels[0]
-            s1 = int(l1.split()[0])
+            template = '{:0>2d}{:0>3d}' 
             if len(l1.split()) == 2:
                 for i, label in enumerate(labels):
-                    labels[i] = int(label.split()[1])
                     string = int(label.split()[0])
-                    if string != s1:
-                        raise Exception('Cannot currently optimise multichannel measurements for sequences with multiple strings!')
+                    number = int(label.split()[1])
+                    labels[i] = int(template.format(string, number))
             else:
                 labels = np.asarray(labels, dtype=int)
                     

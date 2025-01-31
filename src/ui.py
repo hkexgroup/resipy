@@ -408,7 +408,7 @@ class SequenceHelper(QWidget):
         self.intcheck = QCheckBox()
         self.rows[0].addWidget(self.intlabel)
         self.rows[0].addWidget(self.intcheck)
-        t = 'Forces sequence to be converted from string to integer format'
+        t = 'Forces sequence to be converted from string to integer format. Note that string numbers will be appended to the start of the electrode indexes (so  <b>electrode #1 on string #1</b> will become <b>1001</b>).' 
         self.intlabel.setToolTip(t)
         self.intcheck.setToolTip(t)
         
@@ -437,7 +437,7 @@ class SequenceHelper(QWidget):
         self.rows[3].addWidget(self.mullabel)
         self.rows[3].addWidget(self.mulcheck)
         self.mulcheck.clicked.connect(self.checkMult)
-        t = 'Optimise measurements for multichannel acquistion with modern resistivity instruments'
+        t = 'Optimise measurements for multichannel acquistion with modern resistivity instruments. Requires the sequence to be in integer format.'
         self.mullabel.setToolTip(t)
         self.mulcheck.setToolTip(t)
         

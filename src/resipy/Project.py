@@ -5003,7 +5003,8 @@ class Project(object): # Project master class instanciated by the GUI
         Parameters
         ----------
         dirname : str, optional
-            DESCRIPTION. The default is None.
+            Directory of working inversion. The default is the project working
+            directory. 
 
         Returns
         -------
@@ -5044,7 +5045,7 @@ class Project(object): # Project master class instanciated by the GUI
         rmsp_sq = np.sum((100*((robs-rcal)/robs))**2)/N
         rmsp = np.sqrt(rmsp_sq)
         
-        self.pinfo['RMS error as percentage estimate'] = rmsp  
+        self.pinfo['RMS error as percentage estimate'] = float(rmsp)  
         return rmsp 
         
         
@@ -5863,6 +5864,8 @@ class Project(object): # Project master class instanciated by the GUI
             Flag type of command file. Default is 'generic'. 
         integer : bool, optional
             Flag to convert sequence into integers before export. The default is True.
+            String numbers will be appended to the start of the electrode indexes if 
+            present. 
         reciprocals : bool, optional
             Flag to add reciprocal measurements. The default is True.
         split: bool, optional
