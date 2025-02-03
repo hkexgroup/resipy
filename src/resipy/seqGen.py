@@ -531,7 +531,7 @@ class Generator():
         ----------
         seq : nd array 
             N by 4 matrix of str
-    
+            
         Returns
         -------
         iseq : nd array 
@@ -542,11 +542,21 @@ class Generator():
             return 
         # check for string numbers in the labels 
         hasString = False 
+        hasMoreThan1String = False 
+        stringCache = [] 
         if len(self.seq[0,0].split()) == 2:
             hasString = True 
-        cacheString = {}
+            plabels = self.seq.flatten()
+            for label in plabels: 
+                string = int(label.split()[0])
+                if string not in stringCache: 
+                    stringCache.append(string)
+            if len(stringCache) > 1: 
+                hasMoreThan1String = True 
+                
         iseq = np.zeros_like(self.seq, dtype=int)
         template = '{:0>2d}{:0>3d}' 
+        stringCache = []
         
         if hasString: 
             # search through and find unique electrode numbers associated with each string 
@@ -555,8 +565,10 @@ class Generator():
                     label = self.seq[i,j]
                     string = int(label.split()[0])
                     number = int(label.split()[1])
-                    iseq[i,j] = int(template.format(string, number))
-    
+                    if hasMoreThan1String:
+                        iseq[i,j] = int(template.format(string, number))
+                    else:
+                        iseq[i,j] = number 
         else:
             for i in range(self.seq.shape[0]):
                 for j in range(4):
@@ -950,6 +962,20 @@ class Generator():
             fh.close() 
 
     def write2prime(self, fname):
+        """
+        Write to PRIME/RESIMGR command file. Note, limited to a maximum 
+        of about 900 lines.
+
+        Parameters
+        ----------
+        fname : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
         fnamef = fname 
         fnamer = None 
         fext = '.' + fname.split('.')[-1]
@@ -957,24 +983,35 @@ class Generator():
             fnamef = fname.replace(fext,'_F' + fext)
             fnamer = fname.replace(fext,'_R' + fext)
         fnames = [fnamef, fnamer]
-
         lines2write = [self.lines, self.linesR]
+        # nperline = len(self.lines[0])
+        
         for i, lines in enumerate(lines2write):
             if len(lines) == 0:
                 continue 
-            fname = fnames[i]
             if fname is None:
                 continue 
+            cf = 1 # count number of files written 
+            fname = fnames[i].replace(fext, '_p{:0>2d}'.format(cf)+fext)
+            cl = 1 # count number of lines written 
             fh = open(fname, 'w')
             fh.write('# test 0\n\n')
-            nperline = len(lines[0])
-            
-            for j, line in enumerate(lines): 
-                fh.write('test %i '%(j+1))
+            for _, line in enumerate(lines): 
+                fh.write('test %i '%cl)
                 for n in line: 
                     fh.write('%i '%n)
                 fh.write('\n')
-            fh.close() 
+                cl+=1
+                if cl>=900:
+                    fh.close() # close the file
+                    cf += 1
+                    fname = fnames[i].replace(fext, '_p{:0>2d}'.format(cf)+fext)
+                    fh = open(fname, 'w') # make a new file 
+                    fh.write('# test 0\n\n')
+                    cl = 1 # reset count to 1 
+                    
+            if not fh.closed: 
+                fh.close() 
         
         
     ## export sequence 
