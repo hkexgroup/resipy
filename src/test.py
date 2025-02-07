@@ -521,11 +521,16 @@ k.showPseudoInvErrorIP()
 # k.showInvError()
 
 
-# same with one elec buried
+# same with some elec buried
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
 k.elec.loc[10, 'buried'] = True
+k.elec.loc[11, 'buried'] = True
+k.elec.loc[10, 'z'] = -0.5
+k.elec.loc[11, 'z'] = -0.5
 k.showPseudo()
+k.createMesh('trian')
+k.createMesh('quad')
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['ip-2d-topo'] = time.time() - t0

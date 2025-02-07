@@ -5286,9 +5286,9 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True,
     elec_y: array like 
         Electrode Y coordinates (or Z coordinates in the case of borehole surveys)
     r: float
-        Raduis of control points. Sets the minimum distance from the electrodes. 
+        Radius of control points. Sets the minimum distance from the electrodes. 
     min_r: float, optional 
-        Raduis in which multiple control points cannot exist, prevents over tuning
+        Radius in which multiple control points cannot exist, prevents over tuning
         of mesh refinement near the electrodes. Set at the desired characteristic
         length. Defaults to the same as 'r'. 
     check_quadrant: bool, optional 
@@ -5297,7 +5297,7 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True,
     cfactor: float, int, optional
         Characteristic length multiplication factor for near electrode field. 
     nfactor: float, int, optional 
-        Nuemon region characteristic length factor. Helps enlarge points inserted 
+        Neuman region characteristic length factor. Helps enlarge points inserted 
         via Voroni calculations further away from the electrodes. Default is 10. 
     
     Returns:
@@ -5350,7 +5350,7 @@ def halfspaceControlPoints(elec_x, elec_y, r, min_r=None, check_quadrant=True,
                     ptsize.append(min_r*cfactor)
                     
         # do some veroni points further away from electrodes 
-        # but only keep those points which are further away inbetween electrode lines 
+        # but only keep those points which are further away in between electrode lines 
         vor = Voronoi(points)
         verts = vor.vertices.copy() 
         # check points are not close too electrodes 
@@ -5523,16 +5523,18 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     if bu_flag: 
         bux = np.array(elec_x)[np.array(bur_idx)]
         buz = np.array(elec_z)[np.array(bur_idx)]
-        # control points in x z coordinates 
-        cpx, cpz, cpl = halfspaceControlPoints(bux, buz, 
-                                               cl, cl*1.5, cl_factor)
-        if geom_input is None: 
-            geom_input = {'refine':[cpx,cpz,cpl]} 
-        elif 'refine' in geom_input.keys():
-            geom_input['refine'][0] = list(geom_input['refine'][0]) + cpx.tolist()
-            geom_input['refine'][1] = list(geom_input['refine'][1]) + cpz.tolist()
-        else:
-            geom_input['refine'] = [cpx,cpz,cpl]        
+        # if all buried electrodes are on a line, that won't work
+        if len(np.unique(bux)) > 2 and len(np.unique(buz)) > 2:
+            # control points in x z coordinates 
+            cpx, cpz, cpl = halfspaceControlPoints(bux, buz, 
+                                                   cl, cl*1.5, cl_factor)
+            if geom_input is None: 
+                geom_input = {'refine':[cpx,cpz,cpl]} 
+            elif 'refine' in geom_input.keys():
+                geom_input['refine'][0] = list(geom_input['refine'][0]) + cpx.tolist()
+                geom_input['refine'][1] = list(geom_input['refine'][1]) + cpz.tolist()
+            else:
+                geom_input['refine'] = [cpx,cpz,cpl]        
             
     if model_err and not whole_space: 
         # if attempting to model forward modelling errors, normalise topography
