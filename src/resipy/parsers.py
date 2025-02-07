@@ -953,12 +953,13 @@ def syscalBinxRawParser(fname):
                 'nb_associated_result': 'uint'
             }
             datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-            tdic2 = dict(zip(['id_associated_result{:d}'.format(i)
-                              for i in range(datadic['nb_associated_result'])],
-                             ['uint64']*datadic['nb_associated_result']))
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
+            if datadic['nb_associated_result'] > 0:
+                tdic.update(tdic2)
+                tdic2 = dict(zip(['id_associated_result{:d}'.format(i)
+                                  for i in range(datadic['nb_associated_result'])],
+                                 ['uint64']*datadic['nb_associated_result']))
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
             
         if datadic['data_version'] >= 11 and datadic['data_version'] < 15:
             tdic2 = dict(zip(['mppx_device_value{:d}'.format(d)
@@ -1074,7 +1075,6 @@ def syscalBinxParser(fname):
     return dfelec, df
 
 # elec, df = syscalBinxParser('examples/parser/syscal-bin.binx')
-
 
 #%%
 def syscalBinRawParser(fname):
