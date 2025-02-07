@@ -606,419 +606,418 @@ def syscalBinxRawParser(fname):
         if ddic['NbFilesIvz'] > 0:
             raise ValueError('Binary file can only contain ONE survey, use "split in files"')
         ddic.update(fread(fh, {'Number_data': 'uint'})[0])
-        
+
         # reading data file
         # only implemented for data_version == 15 for now
         # on the first record, we will build a dictionnary of values
         # to be parsed and then use it to parse the rest of the records
         # this avoid multiple f.read() and for loops for a large number of records
+        # actually the binx format allow for records of different length (e.g. recomputed values)
+        # meaning we need to do at least a for loop per record
         data = []
-        datadic = {}  # first record
-        tdic = {  # dictionnary of key-type used to parse a record
-            'data_version': 'int',
-            'data_time': 'double',
-            'data_time_i': 'double',
-            'overload': 'int',
-            'nb_cren': 'int',
-            'ps': 'double',
-            'vp': 'double',
-            'in': 'double',
-            'mpp': 'double',
-            'mppx1': 'double',
-            'mppx2': 'double',
-            'mppx3': 'double',
-            'mppx4': 'double',
-            'mppx5': 'double',
-            'mppx6': 'double',
-            'mppx7': 'double',
-            'mppx8': 'double',
-            'mppx9': 'double',
-            'mppx10': 'double',
-            'mppx11': 'double',
-            'mppx12': 'double',
-            'mppx13': 'double',
-            'mppx14': 'double',
-            'mppx15': 'double',
-            'mppx16': 'double',
-            'mppx17': 'double',
-            'mppx18': 'double',
-            'mppx19': 'double',
-            'mppx20': 'double',
-            'coef_k': 'double',
-            'rho': 'double',
-            'et_rho': 'double',
-            'et_mpp': 'double',
-            'rs_check': 'double',
-            'tx_vab': 'float',
-            'tx_bat': 'float',
-            'tx_temperature': 'float',
-            'rx_bat': 'float',
-            'rx_temperature': 'float'
-        }
-        tdic.update(dict(zip(['tab_raw{:d}'.format(d) for d in range(800)], ['int']*800)))
-        tdic.update({
-            'size_measure_file_name': 'uint',
-        })
-        datadic.update(fread(fh, tdic)[0])
-        # for string of characters (unchanged for all records), we store them as a new type
-        typedic['size_measure_file_name'] = str(datadic['size_measure_file_name']) + 's'
-        tdic2 = {
-            'measure_file_name': 'size_measure_file_name',
-            'in_regulated_tx': 'float',
-        }
-        if datadic['data_version'] < 3:
-            tdic2.update({'vab_max_tx': 'int'})
-        else:
-            tdic2.update({'vab_max_tx': 'double'})
-        tdic2.update({
-            'el_array': 'short',
-            'cren_min': 'int',
-            'cren_max': 'int',
-            'cren_et_rho': 'double',
-            'cren_et_mpp': 'double',
-            'time': 'int',
-            'vdly': 'int',
-            'mdly': 'int',
-        })
-        tdic2.update(dict(zip(['tm{:d}'.format(d) for d in range(20)], ['int']*20)))
-        tdic2.update({
-            'compute_filter': 'uint8',
-            'trig_synchro': 'uint',
-            'sampling': 'uint',
-            'vmn_request': 'uint8',
-            'vab_request': 'uint8',
-            'type_of_tx_regulation': 'uint8',
-            'type_of_tx_rx': 'uint8',
-            'gain_auto': 'bool',
-            'time_set': 'uint8',
-            'time_mode': 'uint8',
-            'type_of_switch': 'uint8',
-            'start_synchro': 'uint8',
-            'gmt_offset_x4': 'uint',
-            'et_mpp_unit': 'uint8',
-            'size_sequence_file_name': 'uint'
-        })
-        datadic.update(fread(fh, tdic2)[0])
-        tdic.update(tdic2)
-        typedic['size_sequence_file_name'] = str(datadic['size_sequence_file_name']) + 's'
-        tdic2 = {
-            'sequence_file_name': 'size_sequence_file_name',
-            'type_of_sequence': 'int',
-            'nb_channel': 'int',
-            'trig_synchro_channel': 'int',
-            'nb_channel_max': 'int',
-            'quadripole_measured': 'int',
-            'first_quadripole_number': 'int',
-            'last_quadripole_number': 'int',
-            'number_of_electrode': 'int',
-            'first_electrode_number': 'int',
-            'last_electrode_number': 'int',
-            'spacing': 'double',
-            'v_channel': 'int',
-            'i_channel': 'int',
-            'gapfiller': 'bool',
-            'input_range': 'uint8',
-            'gain_index': 'uint8',
-            'gain': 'double',
-            'offset': 'double',
-        }
-        # TGeo
-        tgeodic = {
-            'x': 'double',
-            'y': 'double',
-            'z': 'double',
-            'depth': 'double',
-        }
-        tgeospecdic = {
-            'node_unused': 'uint',
-            'geo_type': 'short',
-            'utm_grid_char': 'uint',
-            'utm_grid_num': 'uint',
-            'num_elect': 'uint',
+        for i in range(ddic['Number_data']):
+            datadic = {}  # first record
+            tdic = {  # dictionnary of key-type used to parse a record
+                'data_version': 'int',
+                'data_time': 'double',
+                'data_time_i': 'double',
+                'overload': 'int',
+                'nb_cren': 'int',
+                'ps': 'double',
+                'vp': 'double',
+                'in': 'double',
+                'mpp': 'double',
+                'mppx1': 'double',
+                'mppx2': 'double',
+                'mppx3': 'double',
+                'mppx4': 'double',
+                'mppx5': 'double',
+                'mppx6': 'double',
+                'mppx7': 'double',
+                'mppx8': 'double',
+                'mppx9': 'double',
+                'mppx10': 'double',
+                'mppx11': 'double',
+                'mppx12': 'double',
+                'mppx13': 'double',
+                'mppx14': 'double',
+                'mppx15': 'double',
+                'mppx16': 'double',
+                'mppx17': 'double',
+                'mppx18': 'double',
+                'mppx19': 'double',
+                'mppx20': 'double',
+                'coef_k': 'double',
+                'rho': 'double',
+                'et_rho': 'double',
+                'et_mpp': 'double',
+                'rs_check': 'double',
+                'tx_vab': 'float',
+                'tx_bat': 'float',
+                'tx_temperature': 'float',
+                'rx_bat': 'float',
+                'rx_temperature': 'float'
             }
-        if datadic['data_version'] >= 5:
-            tgeospecdic.update({'south_hemisphere': 'bool'})
-        tgeodic.update(tgeospecdic)
-        for role in ['a','b','m','n']:
-            dic = dict(zip([a + '_' + role for a in tgeodic], tgeodic.values()))
-            tdic2.update(dic)  
-        #TGridGeo
-        tgridgeodic = {
-            'x': 'double',
-            'y': 'double',
-            'z': 'double',
-            'orientation': 'double',
-        }
-        tgridgeodic.update(tgeospecdic)
-        tgridgeodic.update({
-            'local_x': 'double',
-            'local_y': 'double',
-        })
-        tdic2.update(tgridgeodic)
-        tdic2.update({
-            'alarm': 'bool',
-            'type_of_remote': 'uint8',
-            'shut_down_rs': 'bool',
-            'com0_on': 'bool',
-            'com1_on': 'bool',
-            'rs485_on': 'bool',
-            'wifi_on': 'bool',
-            'gps_on': 'bool',
-            'last_data_stored': 'bool',
-            'start_running': 'bool',
-            'ignore': 'bool',
-            'latitude': 'double',
-            'longitude': 'double',
-            'more_measure': 'short',
-            'index_path_iab': 'int',
-            'index_path_vmn': 'int',
-            'index_path_ivz': 'int',
-        })
-        datadic.update(fread(fh, tdic2)[0])
-        tdic.update(tdic2)
-        if datadic['data_version'] == 1:
-            typedic['file_iab'] = '28s',
-            typedic['file_vmn'] = '28s',
+            tdic.update(dict(zip(['tab_raw{:d}'.format(d) for d in range(800)], ['int']*800)))
+            tdic.update({
+                'size_measure_file_name': 'uint',
+            })
+            datadic.update(fread(fh, tdic)[0])
+            # for string of characters (unchanged for all records), we store them as a new type
+            typedic['size_measure_file_name'] = str(datadic['size_measure_file_name']) + 's'
             tdic2 = {
-                'file_iab': 'file_iab',
-                'file_vmn': 'file_vmn'
+                'measure_file_name': 'size_measure_file_name',
+                'in_regulated_tx': 'float',
             }
+            if datadic['data_version'] < 3:
+                tdic2.update({'vab_max_tx': 'int'})
+            else:
+                tdic2.update({'vab_max_tx': 'double'})
+            tdic2.update({
+                'el_array': 'short',
+                'cren_min': 'int',
+                'cren_max': 'int',
+                'cren_et_rho': 'double',
+                'cren_et_mpp': 'double',
+                'time': 'int',
+                'vdly': 'int',
+                'mdly': 'int',
+            })
+            tdic2.update(dict(zip(['tm{:d}'.format(d) for d in range(20)], ['int']*20)))
+            tdic2.update({
+                'compute_filter': 'uint8',
+                'trig_synchro': 'uint',
+                'sampling': 'uint',
+                'vmn_request': 'uint8',
+                'vab_request': 'uint8',
+                'type_of_tx_regulation': 'uint8',
+                'type_of_tx_rx': 'uint8',
+                'gain_auto': 'bool',
+                'time_set': 'uint8',
+                'time_mode': 'uint8',
+                'type_of_switch': 'uint8',
+                'start_synchro': 'uint8',
+                'gmt_offset_x4': 'uint',
+                'et_mpp_unit': 'uint8',
+                'size_sequence_file_name': 'uint'
+            })
             datadic.update(fread(fh, tdic2)[0])
             tdic.update(tdic2)
-        else:
+            typedic['size_sequence_file_name'] = str(datadic['size_sequence_file_name']) + 's'
             tdic2 = {
-                'size_file_iab': 'uint'
+                'sequence_file_name': 'size_sequence_file_name',
+                'type_of_sequence': 'int',
+                'nb_channel': 'int',
+                'trig_synchro_channel': 'int',
+                'nb_channel_max': 'int',
+                'quadripole_measured': 'int',
+                'first_quadripole_number': 'int',
+                'last_quadripole_number': 'int',
+                'number_of_electrode': 'int',
+                'first_electrode_number': 'int',
+                'last_electrode_number': 'int',
+                'spacing': 'double',
+                'v_channel': 'int',
+                'i_channel': 'int',
+                'gapfiller': 'bool',
+                'input_range': 'uint8',
+                'gain_index': 'uint8',
+                'gain': 'double',
+                'offset': 'double',
             }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-            typedic['size_file_iab'] = str(datadic['size_file_iab']) + 's'
-            tdic2 = {
-                'file_iab': 'size_file_iab',
-                'size_file_vmn': 'uint'
+            # TGeo
+            tgeodic = {
+                'x': 'double',
+                'y': 'double',
+                'z': 'double',
+                'depth': 'double',
             }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-            typedic['size_file_vmn'] = str(datadic['size_file_vmn']) + 's'
-            tdic2 = {'file_vmn': 'size_file_vmn'}
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        tdic2 = {
-            'cole_tau': 'double',
-            'cole_m': 'double',
-            'cole_rms': 'double',
-            'pps_occure': 'bool'
-        }
-        datadic.update(fread(fh, tdic2)[0])
-        tdic.update(tdic2)
-        if datadic['data_version'] < 9:
-            tdic2 = {
-                'mul_spacing_a': 'int',
-                'mul_spacing_b': 'int',
-                'mul_spacing_m': 'int',
-                'mul_spacing_n': 'int',
-                'start_level_a': 'int',
-                'start_level_b': 'int',
-                'start_level_m': 'int',
-                'start_level_n': 'int',
-                'nb_level_a': 'int',
-                'nb_level_b': 'int',
-                'nb_level_m': 'int',
-                'nb_level_n': 'int',
+            tgeospecdic = {
+                'node_unused': 'uint',
+                'geo_type': 'short',
+                'utm_grid_char': 'uint',
+                'utm_grid_num': 'uint',
+                'num_elect': 'uint',
+                }
+            if datadic['data_version'] >= 5:
+                tgeospecdic.update({'south_hemisphere': 'bool'})
+            tgeodic.update(tgeospecdic)
+            for role in ['a','b','m','n']:
+                dic = dict(zip([a + '_' + role for a in tgeodic], tgeodic.values()))
+                tdic2.update(dic)  
+            #TGridGeo
+            tgridgeodic = {
+                'x': 'double',
+                'y': 'double',
+                'z': 'double',
+                'orientation': 'double',
             }
+            tgridgeodic.update(tgeospecdic)
+            tgridgeodic.update({
+                'local_x': 'double',
+                'local_y': 'double',
+            })
+            tdic2.update(tgridgeodic)
+            tdic2.update({
+                'alarm': 'bool',
+                'type_of_remote': 'uint8',
+                'shut_down_rs': 'bool',
+                'com0_on': 'bool',
+                'com1_on': 'bool',
+                'rs485_on': 'bool',
+                'wifi_on': 'bool',
+                'gps_on': 'bool',
+                'last_data_stored': 'bool',
+                'start_running': 'bool',
+                'ignore': 'bool',
+                'latitude': 'double',
+                'longitude': 'double',
+                'more_measure': 'short',
+                'index_path_iab': 'int',
+                'index_path_vmn': 'int',
+                'index_path_ivz': 'int',
+            })
             datadic.update(fread(fh, tdic2)[0])
             tdic.update(tdic2)
-        tdic2 = {
-            'nb_quadripole': 'int',
-            'nb_remote_quadripole': 'int',
-            'nb_gapfiller': 'int',
-            'nb_injection_min': 'int',
-            'nb_skipped_quadripole': 'int',
-            'nb_skipped_electrode': 'int',
-        }
-        datadic.update(fread(fh, tdic2)[0])
-        tdic.update(tdic2)
-        if datadic['data_version'] >= 3:
-            tdic2 = {
-                'injection_number': 'int'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        tdic2 = {
-            'wait_rs_check': 'uint8',
-            'store_rs_check': 'uint',
-            'save_rs_check': 'uint',
-            'battery_ext': 'bool',
-            'rdy_keybrd': 'bool',
-            'fw_file_write_open': 'bool',
-            'ask_tx_in': 'uint',
-            'monitoring': 'uint',
-            'switch_error': 'uint',
-            'script_cmd_index': 'uint',
-            'tx_calibration': 'uint',
-            'trig_offset': 'int',
-            'user_serial_number': 'short',
-            'seek_header_remote_electrode': 'int',
-            'seek_header_electrode': 'int',
-            'seek_header_quadripole': 'int',
-            'pointer_seq_function': 'int',
-        }
-        datadic.update(fread(fh, tdic2)[0])
-        tdic.update(tdic2)
-        if datadic['data_version'] >= 3:
-            tdic2 = {
-                'ab_used': 'bool',
-                'mn_used': 'bool',
-                'store_gps_in_file': 'bool',
-                'save_bad_block': 'bool',
-                'switch_terra_on': 'bool',
-                'copy_or_move_on_usb': 'uint',
-                'multi_seq_view_all_sys': 'bool',
-                'shut_down_save_authorized': 'bool',
-                'flag_write_no_status': 'bool',
-                'pps_detected': 'bool',
-                'number_of_syscal': 'uint',
-                'syscal_number': 'uint',
-                'multi_tx': 'uint',
-                'type_of_sync_multi_seq': 'uint8',
-                'switch_first_electrode_number': 'short',
-                'switch_last_electrode_number': 'short',
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 3 and datadic['data_version'] < 6:
-            tdic2 = {'tx_status': 'int'}
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 4:
-            tdic2 = {
-                'water_depth': 'float',
-                'spacing_10_cm': 'ushort',
-                'offset_sounder_cm': 'ushort',
-                'delay_debore_acquisition': 'ushort',
-                'water_resistivity': 'float',
-                'continuous_survey': 'uint8',
-                'continuous_survey_gps': 'uint8',
-                'fieldview': 'uint8',
-                'continuous_survey_marker': 'uint8',
-                'fieldview_running': 'uint8',
-                'tx_battery_extern': 'bool'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 6:
-            tdic2 = {
-                'stat_reg_v': 'uint8',
-                'stat_reg_i': 'uint8',
-                'stat_reg_p': 'uint8',
-                'emergency': 'bool',
-                'over_current': 'bool',
-                'open_line': 'bool',
-                'over_heat': 'bool',
-                'low_bat': 'bool'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 7:
-            tdic2 = {
-                'rx_version': 'int'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 8:
-            tdic2 = {
-                'serial_number': 'int',
-                'serial_number_i': 'int',
-                'user_serial_number_i': 'short'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 10:
-            tdic2 = {
-                'latitude_i': 'double',
-                'longtidue_i': 'double',
-                'tx_version': 'int',
-                'result_id': 'uint64'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 14:
-            tdic2 = {
-                'polarization_compute_type': 'uint8'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 11:
-            tdic2 = {
-                'computation_type': 'uint8',
-                'nb_associated_result': 'uint'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            if datadic['nb_associated_result'] > 0:
+            if datadic['data_version'] == 1:
+                typedic['file_iab'] = '28s',
+                typedic['file_vmn'] = '28s',
+                tdic2 = {
+                    'file_iab': 'file_iab',
+                    'file_vmn': 'file_vmn'
+                }
+                datadic.update(fread(fh, tdic2)[0])
                 tdic.update(tdic2)
-                tdic2 = dict(zip(['id_associated_result{:d}'.format(i)
-                                  for i in range(datadic['nb_associated_result'])],
-                                 ['uint64']*datadic['nb_associated_result']))
+            else:
+                tdic2 = {
+                    'size_file_iab': 'uint'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+                typedic['size_file_iab'] = str(datadic['size_file_iab']) + 's'
+                tdic2 = {
+                    'file_iab': 'size_file_iab',
+                    'size_file_vmn': 'uint'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+                typedic['size_file_vmn'] = str(datadic['size_file_vmn']) + 's'
+                tdic2 = {'file_vmn': 'size_file_vmn'}
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            tdic2 = {
+                'cole_tau': 'double',
+                'cole_m': 'double',
+                'cole_rms': 'double',
+                'pps_occure': 'bool'
+            }
+            datadic.update(fread(fh, tdic2)[0])
+            tdic.update(tdic2)
+            if datadic['data_version'] < 9:
+                tdic2 = {
+                    'mul_spacing_a': 'int',
+                    'mul_spacing_b': 'int',
+                    'mul_spacing_m': 'int',
+                    'mul_spacing_n': 'int',
+                    'start_level_a': 'int',
+                    'start_level_b': 'int',
+                    'start_level_m': 'int',
+                    'start_level_n': 'int',
+                    'nb_level_a': 'int',
+                    'nb_level_b': 'int',
+                    'nb_level_m': 'int',
+                    'nb_level_n': 'int',
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            tdic2 = {
+                'nb_quadripole': 'int',
+                'nb_remote_quadripole': 'int',
+                'nb_gapfiller': 'int',
+                'nb_injection_min': 'int',
+                'nb_skipped_quadripole': 'int',
+                'nb_skipped_electrode': 'int',
+            }
+            datadic.update(fread(fh, tdic2)[0])
+            tdic.update(tdic2)
+            if datadic['data_version'] >= 3:
+                tdic2 = {
+                    'injection_number': 'int'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            tdic2 = {
+                'wait_rs_check': 'uint8',
+                'store_rs_check': 'uint',
+                'save_rs_check': 'uint',
+                'battery_ext': 'bool',
+                'rdy_keybrd': 'bool',
+                'fw_file_write_open': 'bool',
+                'ask_tx_in': 'uint',
+                'monitoring': 'uint',
+                'switch_error': 'uint',
+                'script_cmd_index': 'uint',
+                'tx_calibration': 'uint',
+                'trig_offset': 'int',
+                'user_serial_number': 'short',
+                'seek_header_remote_electrode': 'int',
+                'seek_header_electrode': 'int',
+                'seek_header_quadripole': 'int',
+                'pointer_seq_function': 'int',
+            }
+            datadic.update(fread(fh, tdic2)[0])
+            tdic.update(tdic2)
+            if datadic['data_version'] >= 3:
+                tdic2 = {
+                    'ab_used': 'bool',
+                    'mn_used': 'bool',
+                    'store_gps_in_file': 'bool',
+                    'save_bad_block': 'bool',
+                    'switch_terra_on': 'bool',
+                    'copy_or_move_on_usb': 'uint',
+                    'multi_seq_view_all_sys': 'bool',
+                    'shut_down_save_authorized': 'bool',
+                    'flag_write_no_status': 'bool',
+                    'pps_detected': 'bool',
+                    'number_of_syscal': 'uint',
+                    'syscal_number': 'uint',
+                    'multi_tx': 'uint',
+                    'type_of_sync_multi_seq': 'uint8',
+                    'switch_first_electrode_number': 'short',
+                    'switch_last_electrode_number': 'short',
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 3 and datadic['data_version'] < 6:
+                tdic2 = {'tx_status': 'int'}
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 4:
+                tdic2 = {
+                    'water_depth': 'float',
+                    'spacing_10_cm': 'ushort',
+                    'offset_sounder_cm': 'ushort',
+                    'delay_debore_acquisition': 'ushort',
+                    'water_resistivity': 'float',
+                    'continuous_survey': 'uint8',
+                    'continuous_survey_gps': 'uint8',
+                    'fieldview': 'uint8',
+                    'continuous_survey_marker': 'uint8',
+                    'fieldview_running': 'uint8',
+                    'tx_battery_extern': 'bool'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 6:
+                tdic2 = {
+                    'stat_reg_v': 'uint8',
+                    'stat_reg_i': 'uint8',
+                    'stat_reg_p': 'uint8',
+                    'emergency': 'bool',
+                    'over_current': 'bool',
+                    'open_line': 'bool',
+                    'over_heat': 'bool',
+                    'low_bat': 'bool'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 7:
+                tdic2 = {
+                    'rx_version': 'int'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 8:
+                tdic2 = {
+                    'serial_number': 'int',
+                    'serial_number_i': 'int',
+                    'user_serial_number_i': 'short'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 10:
+                tdic2 = {
+                    'latitude_i': 'double',
+                    'longitude_i': 'double',
+                    'tx_version': 'int',
+                    'result_id': 'uint64'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 14:
+                tdic2 = {
+                    'polarization_compute_type': 'uint8'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 11:
+                tdic2 = {
+                    'computation_type': 'uint8',
+                    'nb_associated_result': 'uint'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                if datadic['nb_associated_result'] > 0:
+                    tdic.update(tdic2)
+                    tdic2 = dict(zip(['id_associated_result{:d}'.format(i)
+                                      for i in range(datadic['nb_associated_result'])],
+                                     ['uint64']*datadic['nb_associated_result']))
+                    datadic.update(fread(fh, tdic2)[0])
+                    tdic.update(tdic2)
+                
+            if datadic['data_version'] >= 11 and datadic['data_version'] < 15:
+                tdic2 = dict(zip(['mppx_device_value{:d}'.format(d)
+                                 for d in range(20)], ['double']*20))
+                tdic2.update(dict(zip(['mppx_recomputed_value{:d}'.format(d)
+                                 for d in range(20)], ['double']*20)))
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 12 and datadic['data_version'] < 15:
+                tdic2 = {
+                    'device_up': 'double',
+                    'batch_up': 'double'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 15:
+                tdic2 = {
+                    'nb_recompute_value': 'uint',
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+                tdic2 = {}
+                for i in range(datadic['nb_recompute_value']):
+                    dic = {
+                        'result_computation_type{:d}'.format(i): 'uint8',
+                        'polarization_compute_type{:d}'.format(i): 'uint8', 
+                    }
+                    dic.update(dict(zip(['mppx{:d}-{:d}'.format(d, i)
+                                        for d in range(20)], ['double']*20)))
+                    dic.update({'vp{:d}'.format(i): 'double'})
+                    tdic2.update(dic)
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] >= 13 and datadic['data_version'] != 14:
+                tdic2 = {
+                    'grid_geo_filled': 'bool'
+                }
+                datadic.update(fread(fh, tdic2)[0])
+                tdic.update(tdic2)
+            if datadic['data_version'] == 14:
+                typedic['unused'] = '9s'
+                tdic2 = {
+                    'unused': 'unused'
+                }
                 datadic.update(fread(fh, tdic2)[0])
                 tdic.update(tdic2)
             
-        if datadic['data_version'] >= 11 and datadic['data_version'] < 15:
-            tdic2 = dict(zip(['mppx_device_value{:d}'.format(d)
-                             for d in range(20)], ['double']*20))
-            tdic2.update(dict(zip(['mppx_recomputed_value{:d}'.format(d)
-                             for d in range(20)], ['double']*20)))
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 12 and datadic['data_version'] < 15:
-            tdic2 = {
-                'device_up': 'double',
-                'batch_up': 'double'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 15:
-            tdic2 = {
-                'nb_recompute_value': 'uint',
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-            tdic2 = {}
-            for i in range(datadic['nb_recompute_value']):
-                dic = {
-                    'result_computation_type{:d}'.format(i): 'uint8',
-                    'polarization_compute_type{:d}'.format(i): 'uint8', 
-                }
-                dic.update(dict(zip(['mppx{:d}-{:d}'.format(d, i)
-                                    for d in range(20)], ['double']*20)))
-                dic.update({'vp': 'double'})
-                tdic2.update(dic)
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] >= 13 and datadic['data_version'] != 14:
-            tdic2 = {
-                'grid_geo_filled': 'bool'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        if datadic['data_version'] == 14:
-            typedic['unused'] = '8s'
-            tdic2 = {
-                'unused': 'unused'
-            }
-            datadic.update(fread(fh, tdic2)[0])
-            tdic.update(tdic2)
-        
-        #print(datadic, len(datadic), len(tdic))
-            
-        # append first data and merge all tdic
-        # we reasonably assume that the data_version and filename size
-        # won't change between records
-        data.append(datadic)
-        
-        # print(fread(fh, {'data_version': 'int'}))  # debug: check we are aligned on next row
-        data += fread(fh, tdic, repeat=ddic['Number_data']-1)
-    
-    return pd.DataFrame(data)
+            # print(datadic, len(datadic), len(tdic))
+                
+            # append first data and merge all tdic
+            # we reasonably assume that the data_version and filename size
+            # won't change between records
+            data.append(datadic)
 
+    return pd.DataFrame(data)
 # df = syscalBinxRawParser('examples/parser/syscal-bin.binx')
 
 def syscalBinxParser(fname):
@@ -1458,7 +1457,7 @@ def syscalBinParser2(fname):
 # elec, df = syscalParser('examples/dc-2d/syscal.csv')
 # elec, df = syscalParser('examples/dc-2d-pole-dipole/syscal.csv')
 # elec, df = syscalParser('examples/parser/syscal-bin.csv')
-# %timeit elec, df = syscalParser('examples/parser/syscal-bin.bin')
+# elec, df = syscalParser('examples/parser/syscal-bin.bin')
 # elec, df = syscalParser('examples/parser/syscal-bin.binx')
 
 #%%
