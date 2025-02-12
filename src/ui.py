@@ -373,7 +373,165 @@ class MatplotlibWidget(QWidget):
         self.axis.clear()
         self.figure.clear()
         self.canvas.draw()
+        
+        
+#%% export sequence helper 
+class SequenceHelper(QWidget):
+    """
+    This "window" is a QWidget. If it has no parent, it
+    will appear as a free-floating window as we want.
+    """
+    def __init__(self, generator, dirname=None):
+        self.generator = generator
+        if dirname is None:
+            dirname = os.getcwd() 
+        self.dirname = dirname 
+        
+        super().__init__()
+        self.layout = QVBoxLayout()
+        self.title = QLabel("<b> Sequence options </b>")
+        self.layout.addWidget(self.title)
+        
+        self.rows = [
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            QHBoxLayout(),
+            ]
 
+        # integer handling 
+        self.intlabel = QLabel('Force integer')
+        self.intcheck = QCheckBox()
+        self.rows[0].addWidget(self.intlabel)
+        self.rows[0].addWidget(self.intcheck)
+        t = 'Forces sequence to be converted from string to integer format. Note that string numbers will be appended to the start of the electrode indexes (so  <b>electrode #1 on string #1</b> will become <b>1001</b>).' 
+        self.intlabel.setToolTip(t)
+        self.intcheck.setToolTip(t)
+        
+        # include reciprocals 
+        self.reclabel = QLabel('Include Reciprocals')
+        self.reccheck = QCheckBox()
+        self.rows[1].addWidget(self.reclabel)
+        self.rows[1].addWidget(self.reccheck)
+        t = 'Appends reciprocal measurements to the sequence'
+        self.reclabel.setToolTip(t)
+        self.reccheck.setToolTip(t)
+        
+        # split reciprocals 
+        self.spllabel = QLabel('Split Reciprocals')
+        self.splcheck = QCheckBox()
+        self.rows[2].addWidget(self.spllabel)
+        self.rows[2].addWidget(self.splcheck)
+        self.splcheck.clicked.connect(self.checkRecip)
+        t = 'If checked, seperate reciprocal and forward measurements into different files'
+        self.spllabel.setToolTip(t)
+        self.splcheck.setToolTip(t)
+        
+        # multichannel 
+        self.mullabel = QLabel('Multichannelise')
+        self.mulcheck = QCheckBox() 
+        self.rows[3].addWidget(self.mullabel)
+        self.rows[3].addWidget(self.mulcheck)
+        self.mulcheck.clicked.connect(self.checkMult)
+        t = 'Optimise measurements for multichannel acquistion with modern resistivity instruments. Requires the sequence to be in integer format.'
+        self.mullabel.setToolTip(t)
+        self.mulcheck.setToolTip(t)
+        
+        # condition for ip
+        self.conlabel = QLabel('Condition')
+        self.concheck = QCheckBox()
+        self.rows[4].addWidget(self.conlabel)
+        self.rows[4].addWidget(self.concheck)
+        self.concheck.clicked.connect(self.checkCond)
+        t = 'Condition multichannel sequence to minimize electrode polarization effects'
+        self.conlabel.setToolTip(t)
+        self.concheck.setToolTip(t)
+        
+        # handle maxmimum number of channels 
+        self.chalabel = QLabel("Number of Channels")
+        self.chaedit = QLineEdit()
+        self.chaedit.setValidator(QIntValidator())
+        self.chaedit.setText('8')
+        self.rows[5].addWidget(self.chalabel)
+        self.rows[5].addWidget(self.chaedit)
+        t = 'Number of channels that your instrument can leverage'
+        self.chalabel.setToolTip(t)
+        self.chaedit.setToolTip(t)
+        
+        # export button 
+        self.exportBtn = QPushButton('Export')
+        self.exportBtn.clicked.connect(self.exportFunc)
+        self.rows[6].addWidget(self.exportBtn)    
+        t = 'Export sequence for various intrument types or for further modelling. Note: See the main "Export" tab if you wish to save the synthetic measurements with the transfer resistances.'
+        self.exportBtn.setToolTip(t)
+        
+        # log 
+        self.logText = QTextEdit()
+        self.logText.setReadOnly(True)
+        self.rows[7].addWidget(self.logText)    
+    
+        # add rows 
+        for row in self.rows: 
+            self.layout.addLayout(row)
+        
+        self.setLayout(self.layout)
+
+        self.setWindowTitle('Export Sequence')
+        self.logTextFunc('Log:')
+        
+    def logTextFunc(self, text):
+        cursor = self.logText.textCursor()
+        cursor.movePosition(cursor.End)
+        cursor.insertText(text+'\n')
+        self.logText.ensureCursorVisible()
+        QApplication.processEvents()
+        
+    def checkMult(self): 
+        if self.mulcheck.isChecked():
+            self.intcheck.setChecked(True)
+            self.intcheck.setEnabled(False)
+        else:
+            self.intcheck.setEnabled(True)
+        
+    def checkCond(self):
+        if self.concheck.isChecked(): 
+            self.mulcheck.setChecked(True)
+            self.mulcheck.setEnabled(False)
+        else:
+            self.mulcheck.setEnabled(True)
+        self.checkMult()
+        
+    def checkRecip(self):
+        if self.splcheck.isChecked():
+            self.reccheck.setChecked(True)
+            self.reccheck.setEnabled(False)
+        else:
+            self.reccheck.setEnabled(True)
+
+    def exportFunc(self):
+        fname, _ = QFileDialog.getSaveFileName(self,'Export File', self.dirname, 'Generic (*.csv)')
+        ftype = 'generic' # todo: allow for more file types 
+        integer = self.intcheck.isChecked()
+        recip = self.reccheck.isChecked()
+        split = self.splcheck.isChecked()
+        multi = self.mulcheck.isChecked()
+        cond = self.concheck.isChecked()
+        maxcha = int(self.chaedit.text())
+
+        if fname != '':
+            self.generator.exportSequence(
+                fname, ftype, integer, 
+                recip, split, 
+                multi, cond, maxcha, 
+                self.logTextFunc)
+        
+        time.sleep(1)
+        self.hide()
+        self = None 
 
 #%% Main class
 class App(QMainWindow):
@@ -4732,11 +4890,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.seqLabel.setAlignment(Qt.AlignTop)
 
         # alternative design
-        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
-                   ('wenner', 'Wenner', ['a']),
-                   ('schlum1', 'Schlumberger', ['a','m']),
-                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
-                   ('custSeq', 'Custom Sequence', [])]
+        configs = [
+            ('dpdp', 'Dipole-Dipole', ['amin','amax', 'nmin', 'nmax']),
+            ('wenner', 'Wenner', ['amin','amax']),
+            ('schlum', 'Schlumberger',  ['amin','amax', 'nmin', 'nmax']),
+            ('multigrad', 'Multi-Gradient',  ['amin','amax', 'nmin', 'nmax', 'mmin', 'mmax']),
+            ('equat-dp', 'Equatorial-Dipole',  ['amin','amax', 'nmin', 'nmax']),
+            ('custSeq', 'Custom Sequence', [])
+            ]
 
 
         class RowOpt(QHBoxLayout):
@@ -4746,28 +4907,31 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.rmBtn = None
                 self.labels = []
                 self.fields = []
-                self.seq = 'dpdp1'
+                self.seq = 'dpdp'
                 self.iseq = 0
                 self.importBtn = None
                 self.fname = ''
                 self.parent = parent
-#                self.createRow() # this create floating windows
-#                self.showArg()
 
             def createRow(self):
                 self.combo = QComboBox()
-                for row in seqData:
+                for row in configs:
                     self.combo.addItem(row[1])
                 self.combo.activated.connect(self.comboFunc)
                 self.addWidget(self.combo)
-                for a, b in zip(['a','n','m'], ['1','8','']):
-                    lab = QLabel(a + '=')
-                    field = QLineEdit(b)
+
+                for param in configs[3][-1]: # config has the most possible parameters 
+                    lab = QLabel(param + '=')
+                    if 'max' in param:
+                        field = QLineEdit('8')
+                    else:
+                        field = QLineEdit('1')
                     field.setValidator(QIntValidator())
                     self.labels.append(lab)
                     self.fields.append(field)
                     self.addWidget(lab)
                     self.addWidget(field)
+                    
                 self.importBtn = QPushButton('Import Custom Sequence')
                 self.importBtn.clicked.connect(self.importFile)
                 self.importBtn.setVisible(False)
@@ -4783,25 +4947,23 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.importBtn.setText(os.path.basename(fname))
 
             def comboFunc(self, i):
-                self.seq = seqData[i][0]
+                self.seq = configs[i][0]
                 showArray(self.seq) # display help aside
                 self.iseq = i
                 self.showArg()
 
             def showArg(self):
-                n = len(seqData[self.iseq][2])
-                if self.iseq == 4: # custom sequence
+                n = len(configs[self.iseq][2])
+                if self.seq == 'custSeq': # custom sequence
                     self.importBtn.setVisible(True)
                 else:
                     self.importBtn.setVisible(False)
-                for i in range(3):
-                    val = False
-                    if i < n:
-                        val = True
-                    self.labels[i].setVisible(val)
-                    self.fields[i].setVisible(val)
-                if self.seq == 'multigrad':
-                    self.labels[-1].setText('s=')
+                for i in range(6):
+                    b = False 
+                    if i < n: 
+                        b = True 
+                    self.labels[i].setVisible(b)
+                    self.fields[i].setVisible(b)
 
             def remove(self):
                 if self.seq == 'custSeq':
@@ -4815,18 +4977,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.importBtn.deleteLater()
                 self.deleteLater()
 
-
-            def getData(self):
+            def getGenParam(self):
+                n = len(configs[self.iseq][2])
+                name = configs[self.iseq][0]
+                genparam = [name]
                 if self.seq == 'custSeq':
-                    return (self.seq, self.fname)
-                else:
-                    n = len(seqData[self.iseq][2])
-                    vals = []
+                    genparam = [name, self.fname] 
+                else: 
                     for i, field in enumerate(self.fields):
-                        if i < n:
-                            val = int(field.text()) if field.text() != '' else -9999
-                            vals.append(val)
-                    return (self.seq, *vals)
+                        if i >= n:
+                            continue 
+                        val = int(field.text()) if field.text() != '' else 0
+                        genparam.append(val)
+                return genparam
 
 
         self.seqRowLayout = QVBoxLayout()
@@ -4840,11 +5003,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         Wenner = resource_path('image/wenner.png')
         Schlum = resource_path('image/schlum.png')
         Gradient = resource_path('image/gradient.png')
+        XDpDp = resource_path('image/cross-dpdp.png')
 
-        seqHelp = {'dpdp1' : '<img height=140 src="%s">' % DpDp,
+        seqHelp = {'dpdp' : '<img height=140 src="%s">' % DpDp,
            'wenner': '<img height=140 src="%s">' % Wenner,
-           'schlum1': '<img height=140 src="%s">' % Schlum,
+           'schlum': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
+           'equat-dp':'<img height=140 src="%s">' % XDpDp,
            'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-\n' \
                'It is recommended to use a custom sequence in case of "unconventional surveys"'
             }
@@ -4856,7 +5021,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.arrayLabel.setText('Sequence help not found.')
             else:
                 self.arrayLabel.setText(seqHelp[arg])
-        showArray('dpdp1') # default
+        showArray('dpdp') # default
 
         def addRowBtnFunc():
             a = RowOpt(parent=self)
@@ -4868,33 +5033,47 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.addRowBtn.adjustSize()
         self.addRowBtn.clicked.connect(addRowBtnFunc)
 
-        def getDataBtnFunc():
-            vals = []
+        def getSeqGenParamFunc():
+            rowgenparams = []
             for seqRow in seqRows:
                 try: # because we 'deleteLater() the object it causes error
                     # would be better to check if the object exists
-                    val = seqRow.getData()
-                    ok = True
-                    for j, a in enumerate(val):
-                        if (j != 0) & (a == -9999):
-                            ok = False
-                    if ok is True:
-                        vals.append(val)
+                    rowgenparams.append(seqRow.getGenParam())
                 except:
-                    pass
-            return vals
+                    print('couldnt get row param')
+            return rowgenparams
+        
+        self.forwardLogText = QTextEdit()
+        self.forwardLogText.setReadOnly(True)
+        def forwardLogTextFunc(text, end=''):
+            cursor = self.forwardLogText.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertText(text + end)
+            self.forwardLogText.ensureCursorVisible()
+            QApplication.processEvents()
+            if text == 'Forward modelling done.':
+                forwardOutputStack.setCurrentIndex(1) # switch to graph
+                if pvfound and self.project.typ[-1]=='t':
+                    forwardOutputStack.setCurrentIndex(2)
 
 
         def seqCreateFunc():
             if self.project.elec is None:
                 self.errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
                 return
-            params = getDataBtnFunc()
-            if len(params) == 0:
-                raise ValueError('You must specify at least one sequence.')
+            # get the sequenceing row parameters 
+            rowgenparams = getSeqGenParamFunc()
+
+            if len(rowgenparams) == 0:
+                self.errorDump('You must specify at least one sequence.')
                 return
-            self.seqIdx = self.project.createSequence(params=params)
-            self.writeLog('k.createSequence(params={:s})'.format(str(params)))
+            
+            def f(text): # function to write generator outputs to log 
+                forwardLogTextFunc(text, '\n')
+                
+            self.seqIdx = self.project.createSequence(params=rowgenparams, dump=f)
+            # time.sleep(1.0)
+            self.writeLog('k.createSequence(params={:s})'.format(str(rowgenparams)))
             self.seqOutputLabel.setText('{:d} quadrupoles in total'.format(len(self.project.sequence)))
 
         self.seqOutputLabel = QLabel('')
@@ -4912,13 +5091,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.noiseEditIP.setValidator(QDoubleValidator())
 
         # save sequence button
+        self.sequenceWindow = None 
         def saveSeqBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(self.tabImportingData,'Save File', self.datadir, 'Comma Separated Values (*.csv)')
-            if fname != '':
-                self.project.saveSequence(fname)
-                self.writeLog('k.saveSequence("{:s}")'.format(fname))
-        self.saveSeqBtn = QPushButton('Save Sequence')
-        self.saveSeqBtn.setToolTip('This will save the sequence of the fwd modeling. Output data is already saved in <i>fwd</i> folder in the <i>working directory</i>.')
+            seqIdx = self.project._genSeqIdx() # generate sequencing indexes
+            g = SequenceGenerator(self.project.elec, seqIdx)
+            self.sequenceWindow = SequenceHelper(g)
+            self.sequenceWindow.show() 
+            def f(text):
+                self.sequenceWindow.logTextFunc(text)
+            # regenerate sequence indepent of forward modelling 
+            rowgenparams = getSeqGenParamFunc()
+            g.generate(rowgenparams,f)
+            
+        self.saveSeqBtn = QPushButton('Export Sequence')
+        self.saveSeqBtn.setToolTip('This will save the sequence of the forward modeling for acquisition with an instrument or further analysis. Note: Synthetic measurements will be saved in <i>fwd</i> folder in the <i>working directory</i>, and treated as pre-processed data inside of ResIPy (see Export tab for further options).')
         self.saveSeqBtn.clicked.connect(saveSeqBtnFunc)
 
         # add a forward button
@@ -4926,19 +5112,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.project.mesh is None: # we need to create mesh to assign starting resistivity
                 self.errorDump('Please specify a mesh and an initial model first.')
                 return
-            # try:
+            
+            # clear the log 
+            self.forwardLogText.clear()
+            
+            # CREATE THE SEQUENCE 
             seqCreateFunc()
-            # except:
-                # self.errorDump('Error in sequence generation! Use a custom sequence instead.')
-                # return
+
             if len(self.project.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
                 return
             forwardOutputStack.setCurrentIndex(0)
-            self.forwardLogText.clear()
             QApplication.processEvents()
-            # apply region for initial model
 
+            # apply region for initial model
             x, phase0, zones, fixed = self.regionTable.getTable()
             regid = np.arange(len(x)) + 1 # region 0 doesn't exist
             pdebug('forwardBtnFunc(): with {:d} regions'.format(len(x)))
@@ -4991,6 +5178,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.forwardBtn.setAutoDefault(True)
         self.forwardBtn.clicked.connect(forwardBtnFunc)
         self.forwardBtn.setStyleSheet('background-color: green; color:black')
+        self.forwardBtn.setToolTip('Generate Sequence, and compute synthetic measurements.')
 
         self.mwFwdPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -5010,19 +5198,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vlayout.addWidget(self.pseudo3DplotterIP.interactor)
             self.pseudoFrameIPfwd.setLayout(vlayout)
             self.pseudoFrameIPfwd.setVisible(False)
-
-        self.forwardLogText = QTextEdit()
-        self.forwardLogText.setReadOnly(True)
-        def forwardLogTextFunc(text, end=''):
-            cursor = self.forwardLogText.textCursor()
-            cursor.movePosition(cursor.End)
-            cursor.insertText(text + end)
-            self.forwardLogText.ensureCursorVisible()
-            QApplication.processEvents()
-            if text == 'Forward modelling done.':
-                forwardOutputStack.setCurrentIndex(1) # switch to graph
-                if pvfound and self.project.typ[-1]=='t':
-                    forwardOutputStack.setCurrentIndex(2)
 
         def fwdContourFunc(state):
             if state == Qt.Checked:
@@ -8293,6 +8468,7 @@ if __name__ == '__main__':
     from resipy.r2help import r2help
     from resipy.parsers import geomParser
     from resipy.interpolation import rotGridData
+    from resipy.seqGen import Generator as SequenceGenerator
     splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)
     app.processEvents()

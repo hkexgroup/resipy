@@ -41,6 +41,7 @@ import resipy.meshTools as mt
 #from resipy.meshTools import cropSurface
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
+from resipy.seqGen import Generator
 from resipy.SelectPoints import SelectPoints
 from resipy.saveData import (write2Res2DInv, write2csv, writeSrv)
 from resipy.interpolation import rotGridData, invRotGridData, nearest3d
@@ -286,7 +287,7 @@ def donothing(x):
     pass
 sysinfo = systemCheck(dump=donothing)
 
-#%% useful functions for directory management 
+#%% useful function for directory management 
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):
@@ -299,10 +300,19 @@ class cd:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
+#%% other helper functions 
 # distance matrix function for 2D (numpy based from https://stackoverflow.com/questions/22720864/efficiently-calculating-a-euclidean-distance-matrix-using-numpy)
 def cdist(a):
     z = np.array([complex(x[0], x[1]) for x in a])
     return np.abs(z[...,np.newaxis]-z)
+
+def addCustSeq(fname): # add custom sequence 
+    seq = pd.read_csv(fname, header=0)
+    if seq.shape[1] != 4:
+        raise ValueError('The file should be a CSV file with headers with exactly 4 columns '
+                         '(a, b, m, n) with electrode numbers.')
+    else:
+        return seq.values
 
 #%% geometrical functions 
 def bearing(dx,dy):
@@ -430,6 +440,7 @@ class Project(object): # Project master class instanciated by the GUI
                       'Estimated RAM for inverse solution (Gb)':0.0,
                       'Convergence of inverse solution':False, 
                       'RMS of inverse solution':np.nan,
+                      'RMS error as percentage estimate':np.nan, 
                       'Number of iterations':0,
                       'Median normalised error':np.nan,
                       'Working Directory':self.dirname}
@@ -729,6 +740,7 @@ class Project(object): # Project master class instanciated by the GUI
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             for s in self.surveys:
+                s.setSeqIds()
                 s.computeK() # recalculate K 
                 
         self.pinfo['Number of electrodes'] = len(self.elec)
@@ -4882,6 +4894,7 @@ class Project(object): # Project master class instanciated by the GUI
         if dirname is None:
             dirname = self.dirname
         self.getRMS(dirname)
+        self.computeRMSP(dirname)
         idone = 0
         ifailed = 0
         self.meshResults = [] # make sure we empty the list first
@@ -4980,8 +4993,62 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of iterations'] = iterations 
         self.pinfo['RMS of inverse solution'] = rms 
         return rms 
-        
     
+    
+    def computeRMSP(self, dirname=None):
+        """
+        Compute RMS as a percentage value (estimate), this is to mimic the behaviour of
+        something like ResInv. 
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            Directory of working inversion. The default is the project working
+            directory. 
+
+        Returns
+        -------
+        rmsp: float 
+            RMS of all surveys as a percentage 
+
+        """
+        if dirname is None:
+            dirname = self.dirname 
+        
+        # need to find all instances of err.dat files 
+        errfiles = []
+        if 'ref' in os.listdir(dirname):
+            fpath = os.path.join(dirname,'ref','f001_err.dat')
+            if os.path.exists(fpath):
+                errfiles.append(fpath)
+        for f in os.listdir(dirname):
+            if f.endswith('err.dat'):
+                fpath = os.path.join(dirname, f)
+                errfiles.append(fpath)
+        
+        iobs = 5 # observation column 
+        ical = 6 # calculated measurement column 
+        if '3' in self.typ: 
+            iobs += 4 
+            ical += 4 
+        
+        errdf = np.genfromtxt(errfiles[0], skip_header=1)
+        _ = errfiles.pop(0)
+        for f in errfiles:
+            _df = np.genfromtxt(f, skip_header=1)
+            errdf = np.vstack([errdf, _df])
+        
+        robs = errdf[:, iobs]
+        rcal = errdf[:, ical]
+        N = len(errdf)
+        
+        rmsp_sq = np.sum((100*((robs-rcal)/robs))**2)/N
+        rmsp = np.sqrt(rmsp_sq)
+        
+        self.pinfo['RMS error as percentage estimate'] = float(rmsp)  
+        return rmsp 
+        
+        
     def computeVol(self, attr='Resistivity(ohm.m)', vmin=None , vmax=None, index=0):
         """Given a 3D dataset, calculates volume based on mesh type.
         Note: The majority of this function's code is also seen in the meshTools' cellArea function as well. But that calculates all the mesh not the mesh results. 
@@ -5510,13 +5577,12 @@ class Project(object): # Project master class instanciated by the GUI
         self.createMesh(typ='trian', geom_input=geom_input, **kwargs)
 
 
-
     def setStartingRes(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
         """Assign starting resitivity values.
 
         Parameters
         ----------
-        regionValues : dict, optional
+        regionValues : dict, optionals where it left off? I'm assuming it could be forced by importing the baseline data se
             Dictionnary with key being the region number and the value being
             the resistivity in [Ohm.m].
         zoneValues : dict, optional
@@ -5605,8 +5671,79 @@ class Project(object): # Project master class instanciated by the GUI
                 idx[j]=lidx[j][0]
             seqIdx.append(np.array(idx))
         return seqIdx
+    
+    
+    def _genSeqIdx(self):
+        if '3' in self.typ: 
+            if not self.hasElecString():#then find it automatically 
+                seqIdx = self.detectStrings()
+            else:
+                seqIdx = self._seqIdxFromLabel()#use electrode strings 
+        else:
+            seqIdx = [np.arange(len(self.elec))]
+            
+        return seqIdx
+    
+    
+    def createSequence(self, params=[('dpdp',1,8,1,8)], seqIdx=None, dump=print):
+        """Creates a forward modelling sequence, see examples below for usage.
+
+        Parameters
+        ----------
+        params : list of tuple, optional
+            Each tuple is the form (<array_name>, param1, param2, ...)
+            Types of sequences available are : 	
+            - 'dipole-dipole' (or 'dpdp')
+            	- 'wenner' (or 'w') 
+            	- 'wenner-schlumberger' (or 'schlum', 'ws')
+            	- 'multigradient' (or 'mg')
+            - 'cross' (or 'xbh', 'xli')
+            	- 'custom' 
+            if 'custom' is chosen, param1 should be a string of file path to a .csv
+            file containing a custom sequence with 4 columns (a, b, m, n) containing 
+            forward model sequence.
+        seqIdx: list of array like, optional
+            Each entry in list contains electrode indices (not label and string)
+            for a given electrode string which is to be sequenced. The advantage
+            of a list means that sequences can be of different lengths. 
         
-    def createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
+        Examples
+        --------
+        >>> k = Project()
+        >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
+        >>> k.createMesh(typ='trian')
+        >>> k.createSequence([('dpdp', 1, 8, 1, 8), ('wenner', 1, 4), ('ws', 1, 8, 1, 8)]) # dipole-dipole sequence
+        >>> k.createSequence([('custom', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
+        >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
+        """
+        avialconfig = [
+            'dipole-dipole', 'dpdp', 
+            'wenner', 'w',
+            'wenner-schlumberger', 'schlum', 'ws', 
+            'multigradient', 'mg', 
+            'cross','xbh', 'xli', 'equat-dp', 
+            'custom', 'custSeq']
+        
+        msg = 'Sorry, given config parameter {:s} is not recognised!'
+        msg += 'Avialable configs are = \n'
+        for config in avialconfig:
+            msg += '\t%s\n'%config 
+        for p in params: 
+            if p[0] not in avialconfig: 
+                warnings.warn(msg.format(p[0])) 
+
+        if seqIdx is None: #(not been set, so use electrode strings)
+            seqIdx = self._genSeqIdx()
+                
+        self.sequenceGenerator = Generator(self.elec, seqIdx)
+        
+        sequence = self.sequenceGenerator.generate(params, dump=dump)
+            
+        self.sequence = sequence
+        print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
+        return seqIdx
+        
+    def _createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
                        *kwargs):
         """Creates a forward modelling sequence, see examples below for usage.
 
@@ -5634,13 +5771,6 @@ class Project(object): # Project master class instanciated by the GUI
         >>> k.createSequence([('custSeq', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
         >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
-        def addCustSeq(fname): # add custom sequence 
-            seq = pd.read_csv(fname, header=0)
-            if seq.shape[1] != 4:
-                raise ValueError('The file should be a CSV file with headers with exactly 4 columns '
-                                 '(a, b, m, n) with electrode numbers.')
-            else:
-                return seq.values
         
         fdico = {'dpdp1': dpdp1, # dict referencing the seqeunce gen functions 
               'dpdp2': dpdp2,
@@ -5720,24 +5850,41 @@ class Project(object): # Project master class instanciated by the GUI
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
         return seqIdx
-    
-    def createSequenceXBH(self):
-        """Custom scheme for boreholes (not yet developed)
-        """
-        pass
 
-
-    def saveSequence(self, fname=''):
-        """Save sequence as .csv file.
+    def saveSequence(self, fname='sequence.csv', ftype='generic', integer = True, 
+                     reciprocals = True, split = False, multichannel = True,  
+                     condition = True, maxcha = 8, dump=print):
+        """Save sequence as .csv file. Ex
 
         Parameters
         ----------
         fname : str, optional
             Path where to save the sequence.
+        ftype: str, optional 
+            Flag type of command file. Default is 'generic'. 
+        integer : bool, optional
+            Flag to convert sequence into integers before export. The default is True.
+            String numbers will be appended to the start of the electrode indexes if 
+            present. 
+        reciprocals : bool, optional
+            Flag to add reciprocal measurements. The default is True.
+        split: bool, optional
+            Flag to split reciprocal measurements into seperate files, default 
+            is False. 
+        multichannel : bool, optional
+            Flag to convert measurements to a multichannel. The default is True.
+        condition : bool, optional
+            Flag to condition measurements for avoiding IP effects. The default is True.
+        maxcha: int, optional 
+            Maximum number of active channels of the resistivity instrument (normally
+            8 for modern instruments). 
         """
+
         if self.sequence is not None:
-            df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            df.to_csv(fname, index=False)
+            self.sequenceGenerator.exportSequence(
+                fname, ftype, integer, split,
+                reciprocals, multichannel, 
+                condition, maxcha)
             
 
     def importElec(self, fname=''):
@@ -7167,7 +7314,7 @@ class Project(object): # Project master class instanciated by the GUI
         fh.write('def end_cue(self): pass\n')
         fh.close()
 
-    def exportMeshResults(self, dirname=None, ftype='.vtk', voxel=False, 
+    def exportMeshResults(self, dirname=None, ftype='.vtu', voxel=False, 
                           _forceLocal=False):
         """Save mesh files of inversion results to a specified directory. If 
         results are in a local grid, they will be converted back into thier 

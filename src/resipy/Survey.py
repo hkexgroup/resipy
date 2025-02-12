@@ -454,63 +454,8 @@ class Survey(object):
         if len(self.df['a'].values[0].split()) <= 1:
             return False 
         return True 
+        
     
-    # def setSeqIds_(self):
-    #     """
-    #     Convert electrode labels to indexable integers, sets the class wide 
-    #     parameter 'sequence' (old code)
-    #     """
-    #     def labeltoint(s):
-    #         # returns electrode line and number (in that order)
-    #         t = s.split()
-    #         l = int(t[0])
-    #         n = int(t[1])
-    #         return l,n 
-
-    #     ndata = self.df.shape[0]
-    #     nelec = self.elec.shape[0]
-    #     if ndata == 0:
-    #         self.sequence = None 
-    #         self.isequence = None 
-    #         return 
-        
-    #     if self.hasDataString(): 
-    #         an = np.zeros((ndata, 4),dtype=int) # array of electrode numbers 
-    #         al = np.zeros((ndata, 4),dtype=int) # array of electrode lines 
-    #         aa = np.zeros((ndata, 4),dtype=int) # array of additonal numbers 
-    #         cache = {}
-    #         for a,char in enumerate(['a','b','m','n']):
-    #             for i in range(ndata):
-    #                 l,n = labeltoint(self.df[char].values[i])
-    #                 if l not in cache.keys():
-    #                     cache[l] = 0 
-    #                 if n > cache[l]:
-    #                     cache[l] = n 
-    #                 an[i,a] = n         
-    #                 al[i,a] = l 
-    #         c = 0 
-    #         keys = np.unique(list(cache.keys()))
-    #         for i in range(1,len(keys)):
-    #             line = keys[i]
-    #             c += cache[keys[i-1]]
-    #             idx = al == line 
-    #             aa[idx] = c 
-                
-    #         self.sequence = an + aa 
-
-    #     else:
-    #         self.sequence = np.zeros((ndata,4),dtype=int)
-    #         for a,char in enumerate(['a','b','m','n']):
-    #             for i in range(ndata):
-    #                 self.sequence[i,a] = int(self.df[char].values[i])
-
-    #     # print(nelec, len(np.unique(self.sequence.flatten())))
-    #     print(self.elec)
-        
-    #     # now need a sequence which is ordered normally with no gaps 
-    #     # its used for indexing the electrode dataframe  
-    #     self.isequence = fixSequence(self.sequence, nelec) 
-        
     def setSeqIds(self): 
         """Convert electrode labels to indexable integers, sets the class wide 
         parameter 'isequence'
@@ -520,18 +465,20 @@ class Survey(object):
         if ndata == 0:
             self.isequence = None 
             return 
+        
+        if self.hasDataString() != self.hasElecString(): 
+            return 
 
         lookup = {}
         for i,label in enumerate(self.elec.label): 
             lookup[label] = i + 1 
-            
+
         self.isequence = np.zeros((ndata,4),dtype=int)
         for i in range(ndata):
             for j,char in enumerate(['a','b','m','n']):
                 self.isequence[i,j] = lookup[self.df[char].values[i]]
         
 
-    
     def convertLocalGrid(self):
         """Converts UTM grid to local grid for mesh stability"""
         electemp = self.elec.copy()
@@ -1579,6 +1526,7 @@ class Survey(object):
         R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
         a1 = np.exp(coefs[0])
         a2 = coefs[1]
+        print(a1,a2)
 
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):

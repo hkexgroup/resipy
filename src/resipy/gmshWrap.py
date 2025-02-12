@@ -1800,7 +1800,7 @@ def halfspace3d(elec_x, elec_y, elec_z = None,
     fh.write('cl=%f;//electrode characteristic length\n'%float(cl))
     fh.write('cl_factor=%f;//Fine region characteristic factor\n'%float(cl_factor))
     fh.write('cln_factor=%f;//Neumann characteristic factor\n'%float(cln_factor))
-    fh.write('//Create a wholespace which approximates an infinite halfspace\n')
+    fh.write('//Create a hemisphere which approximates an infinite halfspace\n')
     
     template = 'Sphere(1) = {%f, %f, %f, %f, -Pi/2, 0, Pi*2};//create a sphere\n' 
     no_pts+=2 # seems adding a sphere adds in 2 points 
