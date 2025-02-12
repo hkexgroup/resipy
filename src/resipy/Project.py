@@ -7314,7 +7314,7 @@ class Project(object): # Project master class instanciated by the GUI
         fh.write('def end_cue(self): pass\n')
         fh.close()
 
-    def exportMeshResults(self, dirname=None, ftype='.vtk', voxel=False, 
+    def exportMeshResults(self, dirname=None, ftype='.vtu', voxel=False, 
                           _forceLocal=False):
         """Save mesh files of inversion results to a specified directory. If 
         results are in a local grid, they will be converted back into thier 

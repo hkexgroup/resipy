@@ -1274,6 +1274,8 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     -------
     nsizeA : int
         Number of connected nodes + number of nodes
+    Nconnec: nd array
+        Node connection matrix. 
 
     Note
     -----
