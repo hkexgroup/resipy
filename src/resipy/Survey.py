@@ -524,7 +524,7 @@ class Survey(object):
         return ie 
         
 
-    def filterDefault(self,recompute_recip=True):
+    def filterDefault(self, recompute_recip=True):
         """Remove NaN, Inf and duplicates values in the data frame.
         """
         if self.debug:
@@ -539,7 +539,7 @@ class Survey(object):
         iout = np.isnan(resist) | np.isinf(resist)
         if np.sum(iout) > 0 and self.debug:
             dump('Survey.filterDefault: Number of Inf or NaN : {:d}\n'.format(np.sum(iout)))
-            self.filterData(~iout)
+        self.filterData(~iout)
         
         # remove duplicates
         shapeBefore = self.df.shape[0]
@@ -556,7 +556,7 @@ class Survey(object):
         ie = ie1 | ie2 | ie3 | ie4
         if np.sum(ie) > 0 and self.debug:
             dump('Survey.filterDefault: {:d} measurements with A or B == M or N\n'.format(np.sum(ie)))
-            self.filterData(~ie)
+        self.filterData(~ie)
         
         # remove repeated readings like ABMN, BAMN, ABNM
         df = self.df[['a', 'b', 'm', 'n']].copy()
@@ -1523,10 +1523,9 @@ class Survey(object):
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
-        R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
+        R2 = self.R_sqr(np.log(bins[:,1]), np.log(R_error_predict))
         a1 = np.exp(coefs[0])
         a2 = coefs[1]
-        print(a1,a2)
 
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):
