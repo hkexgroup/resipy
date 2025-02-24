@@ -1,8 +1,8 @@
 numpy<2.0.0
-matplotlib
+matplotlib<3.10.0
 pandas
 scipy
 requests
 psutil
-pyvista==0.42.3
+pyvista==0.44.2
 chardet

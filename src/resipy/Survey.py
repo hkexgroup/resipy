@@ -540,67 +540,72 @@ class Survey(object):
         if np.sum(iout) > 0 and self.debug:
             dump('Survey.filterDefault: Number of Inf or NaN : {:d}\n'.format(np.sum(iout)))
         self.filterData(~iout)
-        
-        # remove duplicates
+
+        # average duplicates
+        # let's first sort quadrupoles as ABMN to check 
+        # for duplicates like BAMN, ABNM, BAMN
         shapeBefore = self.df.shape[0]
-        self.df = self.df.drop_duplicates(subset=['a','b','m','n'], keep = 'first')
+        ab = self.df[['a', 'b']].values
+        mn = self.df[['m', 'n']].values
+        ab_sorted = np.sort(ab, axis=1)
+        mn_sorted = np.sort(mn, axis=1)
+        iab = (ab == ab_sorted).all(axis=1)
+        imn = (mn == mn_sorted).all(axis=1)
+        # changing sign in case we have BAMN or ABNM
+        i2change = np.ones(len(iab))
+        i2change[(iab & ~imn) | (~iab & imn)] = -1
+        self.df.loc[:, ['a', 'b']] = ab_sorted
+        self.df.loc[:, ['m', 'n']] = mn_sorted
+        self.df.loc[:, 'resist'] = self.df['resist'] * i2change
+        
+        # averaging resist, taking first of all other columns
+        cols = [col for col in self.df.columns if col not in ['a', 'b', 'm', 'n']]
+        aggdic = dict(zip(cols, ['first']*len(cols)))
+        aggdic['resist'] = 'mean'
+        self.df = self.df.groupby(['a', 'b', 'm', 'n']).agg(aggdic).reset_index()
         ndup = shapeBefore - self.df.shape[0]
         if ndup > 0 and self.debug:
-            dump('Survey.filterDefault: {:d} duplicates removed.\n'.format(ndup))
+            dump('Survey.filterDefault: {:d} duplicates averaged.\n'.format(ndup))
         
-        # remove quadrupoles were A or B are also potential electrodes
-        ie1 = self.df['a'].values == self.df['m'].values
-        ie2 = self.df['a'].values == self.df['n'].values
-        ie3 = self.df['b'].values == self.df['m'].values
-        ie4 = self.df['b'].values == self.df['n'].values
-        ie = ie1 | ie2 | ie3 | ie4
-        if np.sum(ie) > 0 and self.debug:
-            dump('Survey.filterDefault: {:d} measurements with A or B == M or N\n'.format(np.sum(ie)))
-        self.filterData(~ie)
+        # # remove duplicates
+        # shapeBefore = self.df.shape[0]
+        # self.df = self.df.drop_duplicates(subset=['a','b','m','n'], keep = 'first')
+        # ndup = shapeBefore - self.df.shape[0]
+        # if ndup > 0 and self.debug:
+        #     dump('Survey.filterDefault: {:d} duplicates removed.\n'.format(ndup))
         
-        # remove repeated readings like ABMN, BAMN, ABNM
-        df = self.df[['a', 'b', 'm', 'n']].copy()
-        df[['a', 'b']] = np.sort(df[['a', 'b']].values, axis=1)
-        df[['m', 'n']] = np.sort(df[['m', 'n']].values, axis=1)
-        ie = df.duplicated(subset=['a', 'b', 'm', 'n'])
-        if np.sum(ie) > 0 and self.debug:
-            dump('Survey.filterDefault: {:d} duplicates ABMN, BAMN or ABNM removed\n'.format(np.sum(ie)))
-        self.filterData(~ie)
+        # # remove quadrupoles were A or B are also potential electrodes
+        # ie1 = self.df['a'].values == self.df['m'].values
+        # ie2 = self.df['a'].values == self.df['n'].values
+        # ie3 = self.df['b'].values == self.df['m'].values
+        # ie4 = self.df['b'].values == self.df['n'].values
+        # ie = ie1 | ie2 | ie3 | ie4
+        # if np.sum(ie) > 0 and self.debug:
+        #     dump('Survey.filterDefault: {:d} measurements with A or B == M or N\n'.format(np.sum(ie)))
+        # self.filterData(~ie)
+        
+        # # remove repeated readings like ABMN, BAMN, ABNM
+        # df = self.df[['a', 'b', 'm', 'n']].copy()
+        # df[['a', 'b']] = np.sort(df[['a', 'b']].values, axis=1)
+        # df[['m', 'n']] = np.sort(df[['m', 'n']].values, axis=1)
+        # ie = df.duplicated(subset=['a', 'b', 'm', 'n'])
+        # if np.sum(ie) > 0 and self.debug:
+        #     dump('Survey.filterDefault: {:d} duplicates ABMN, BAMN or ABNM removed\n'.format(np.sum(ie)))
+        # self.filterData(~ie)
 
         # we need to redo the reciprocal analysis if we've removed duplicates and ...
-        if ndup > 0 or np.sum(ie) > 0:
+        if ndup > 0:
             self.setSeqIds()
             if recompute_recip: 
                 if self.debug:
                     dump('Recomputing reciprocals becuase duplicated measurements detected')
                 self.computeReciprocal()
         
-        # remove dummy for 2D case
-#        if self.elec[:,1].sum() == 0: # it's a 2D case
-#            self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
-        
         # create a backup of the clean dataframe
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
         self.isequenceReset = self.isequence.copy()
         
-        ''' the following piece of code is not useful anymore. The default
-        behavior is to keep all measurements except NaN, duplicates, Inf and
-        dummy (2D only) and compute error model on the subset which has
-        reciprocal then apply the error model to all the quadrupoles
-        '''
-        
-#        # remove measurement without reciprocal
-#        if self.keepAll is False:
-#            print('ah ah let us make some order here !')
-#            irecip = self.df['irecip'].values
-#            self.filterData(irecip != 0) # non reciprocal (some are dummy)
-#            if self.elec[:,1].sum() == 0: # it's a 2D case
-#                self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
-#            if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
-#                self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
-#            self.dfReset = self.df.copy()
-          
         
     def addData(self, fname, ftype='Syscal', parser=None, string=0):
         """Add data to the actual survey (for instance the reciprocal if they
