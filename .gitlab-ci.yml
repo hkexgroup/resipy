@@ -1,9 +1,9 @@
-image: python:3.10-bookworm
+image: python:3.12-bookworm
 
 test:
   script:
   - apt-get update
-  - apt-get install --assume-yes wine
+  - apt-get install --assume-yes wine libgl1-mesa-glx xvfb
   - pip install -r requirements.txt
   - pip install coverage
   - cd src
