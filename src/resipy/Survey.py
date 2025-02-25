@@ -3254,7 +3254,7 @@ class Survey(object):
         self.df['resError'] = error + np.array(self.df['resError'])
         
         
-    def estimateError(self, a_wgt=0.01, b_wgt=0.02):
+    def estimateError(self, a_wgt=0.001, b_wgt=0.02):
         """Estimate reciprocal error data for data with no reciprocals, following
         the same routine present in R2. This allows for the additional inclusion
         of modelling errors. 

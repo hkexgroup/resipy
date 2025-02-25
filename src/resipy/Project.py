@@ -3780,7 +3780,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.param['b_wgt'] = 0
         elif (typ == 'R2') or (typ == 'R3t'): # DC case
             if 'a_wgt' not in self.param:
-                self.param['a_wgt'] = 0.01
+                self.param['a_wgt'] = 0.001
             if 'b_wgt' not in self.param:
                 self.param['b_wgt'] = 0.02
         elif (typ == 'cR2') | (typ == 'cR3t'): # IP case
@@ -3811,7 +3811,7 @@ class Project(object): # Project master class instanciated by the GUI
                 param['b_wgt'] = 0
             else: # default DC case as timelapse not supported for IP yet
                 if 'a_wgt' not in param:#this allows previously assigned values to be
-                    param['a_wgt'] = 0.01 # written to the reference.in config file
+                    param['a_wgt'] = 0.001 # written to the reference.in config file
                 if 'b_wgt' not in param:
                     param['b_wgt'] = 0.02
             param['reg_mode'] = 0 # set by default in ui.py too
@@ -4374,7 +4374,7 @@ class Project(object): # Project master class instanciated by the GUI
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None, 
-               homogeneousStart = True):
+               homogeneousStart = False):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.  
 
@@ -4419,6 +4419,10 @@ class Project(object): # Project master class instanciated by the GUI
         errIPCol : str, optioanl
             If no reciprocal data, a user supplied column can be read as IP
             error.
+        homogeneousStart : bool, optional 
+            Flag to start the inversion using a homogenous model. Default is 
+            False, in which case the starting resistivities will be estimated
+            from the psuedo section values. 
         """
         if dump is None:
             def dump(x):
@@ -4485,6 +4489,16 @@ class Project(object): # Project master class instanciated by the GUI
             errTot = True
         else:
             errTot = False
+            
+        # catch case where errTot requested but no reciprocal error model is present 
+        if errTot: 
+            s = self.surveys[0]
+            if np.sum(np.isnan(s.df['resError'])) == len(s.df): 
+                if 'a_wgt' in self.param.keys(): 
+                    if self.param['a_wgt'] > 0: 
+                        self.estimateError(
+                            a_wgt = self.param['a_wgt'], 
+                            b_wgt = self.param['b_wgt'])
 
         # write configuration file
         dump('Writing .in file and protocol.dat... ')
@@ -6270,7 +6284,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.param = param
         
 
-    def estimateError(self, a_wgt=0.01, b_wgt=0.02):
+    def estimateError(self, a_wgt=0.001, b_wgt=0.02):
         """Estimate reciprocal error data for data with no reciprocals for each
         survey, using the same routine present in R2. This allows for the 
         additional inclusion of modelling errors. It could be used when the user
@@ -8196,7 +8210,7 @@ def parallelRm(invdir): # :pragma: no cover
         self.createModelErrorMesh(typ=typ, buried=buried, surface=surface, cl_factor=cl_factor,
                                   cl=cl, dump=dump, res0=res0, show_output=show_output, doi=doi, **kwargs)
 
-    def estError(self, a_wgt=0.01, b_wgt=0.02): # pragma: no cover
+    def estError(self, a_wgt=0.001, b_wgt=0.02): # pragma: no cover
         warnings.warn('This function is deprecated, use estimateError() instead.',
                       DeprecationWarning)
         self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)

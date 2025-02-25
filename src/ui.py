@@ -3580,7 +3580,7 @@ class App(QMainWindow):
 
             # if an error model is fitted we need to set a_wgt and b_wgt to 0
             if index == 0:
-                self.a_wgt.setText('0.01')
+                self.a_wgt.setText('0.001')
                 a_wgtFunc()
                 self.b_wgt.setText('0.02')
                 b_wgtFunc()
@@ -5734,7 +5734,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.a_wgtLabel.linkActivated.connect(showHelp)
         self.a_wgt = QLineEdit()
         self.a_wgt.setValidator(QDoubleValidator())
-        self.a_wgt.setText('0.01')
+        self.a_wgt.setText('0.001')
         self.a_wgt.editingFinished.connect(a_wgtFunc)
         invForm.addRow(self.a_wgtLabel, self.a_wgt)
 
@@ -8064,7 +8064,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.error_mod.setCurrentIndex(1)
         self.alpha_aniso.setText('1.0')
         self.min_error.setText('0.01')
-        self.a_wgt.setText('0.01')
+        self.a_wgt.setText('0.001')
         self.b_wgt.setText('0.02')
         self.rho_min.setText('-10e10')
         self.rho_max.setText('10e10')

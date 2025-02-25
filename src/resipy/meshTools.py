@@ -5751,20 +5751,19 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         surf_z = []
         
     rem_elec_idx = []
+    surf_elec_x = []
+    surf_elec_y = []
+    surf_elec_z = []
+    bur_elec_x = []
+    bur_elec_y = []
+    bur_elec_z = []
+    surf_elec_idx = []
+    bur_elec_idx = []
     if elec_type is not None and whole_space==False:
         if not isinstance(elec_type,list):
             raise TypeError("'elec_type' argument should be of type 'list', got type %s"%str(type(elec_type)))
         elif len(elec_type) != len(elec_x):
             raise ValueError("mismatch in elec_type vector and elec_x vector lengths")
-        surf_elec_x = []
-        surf_elec_y = []
-        surf_elec_z = []
-        bur_elec_x = []
-        bur_elec_y = []
-        bur_elec_z = []
-        surf_elec_idx = []
-        bur_elec_idx = []
-        
         if elec_z is None:
             elec_z = np.zeros_like(elec_x)
         for i, key in enumerate(elec_type):
@@ -5810,6 +5809,14 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             bur_elec_z = elec_z[bur_elec_idx] 
 
         elec_z[surf_elec_idx] = 0
+        
+    elif elec_type is not None and whole_space==True:
+        if elec_z is None:
+            elec_z = np.zeros_like(elec_x)
+        for i, key in enumerate(elec_type):
+            bur_elec_x.append(elec_x[i])
+            bur_elec_y.append(elec_y[i])
+            bur_elec_z.append(elec_z[i])
         
     elif not whole_space:
         surf_elec_x = elec_x 
@@ -5914,9 +5921,9 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to wholespace problem
     elif whole_space:
         tree = cKDTree(np.c_[elec_x,elec_y,elec_z]) 
-        cpx = [0]*len(bur_elec_x)
-        cpy = [0]*len(bur_elec_x)
-        cpz = [0]*len(bur_elec_x)
+        cpx = np.zeros(len(bur_elec_x), dtype = float)
+        cpy = np.zeros(len(bur_elec_x), dtype = float)
+        cpz = np.zeros(len(bur_elec_x), dtype = float)
         # setup some code to get control points spiraling round the electrodes 
         r = cl*1.0
         choicex = [r, 0, -r, 0]
