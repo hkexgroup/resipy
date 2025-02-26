@@ -18,7 +18,7 @@ import resipy.meshTools as mt
 from resipy import Project, Survey
 from resipy.Project import apiPath
 import pyvista as pv  # pyvista will be rendered as with 'pv.Plotter(off_screen=True)'
-pv.start_xvfb()  # virtual frame buffer when running without x server
+# pv.start_xvfb()  # virtual frame buffer when running without x server
 
 tstart = time.time()
 timings = {}

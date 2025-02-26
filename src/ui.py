@@ -4167,12 +4167,6 @@ class App(QMainWindow):
             self.cropMeshToElecCheck.setEnabled(True)
             self.cropMeshToElecCheck.stateChanged.connect(replotMesh3D)
 
-            # if pvfound:
-            #     self.mesh3Dplotter.clear() # clear all actors
-            #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-            # else:
-            #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
-            
             # plot the mesh in 3D 
             replotMesh3D()
 
@@ -4282,12 +4276,6 @@ class App(QMainWindow):
 
             # display the mesh
             replotMesh3D()
-            
-            # if pvfound:
-            #     self.mesh3Dplotter.clear() # clear all actors
-            #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-            # else:
-            #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
             
             self.writeLog('k.showMesh()')
             self.meshOutputStack.setCurrentIndex(2)
@@ -4404,12 +4392,6 @@ class App(QMainWindow):
 
             # display the mesh
             replotMesh3D()
-            
-            # if pvfound:
-            #     self.mesh3Dplotter.clear() # clear all actors
-            #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-            # else:
-            #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
             
             self.writeLog('k.showMesh()')
             self.meshOutputStack.setCurrentIndex(2)
@@ -4540,17 +4522,6 @@ class App(QMainWindow):
                     self.writeLog('k.importMesh("{:s}")'.format(fname))
                     print('mesh imported ... now displaying ... ')
                     replotMesh3D()
-                    # if pvfound:
-                    #     self.mesh3Dplotter.clear() # clear all actors
-                    #     if len(np.unique(self.project.mesh.df['region'])) == 1:
-                    #         color_map = 'Greys'
-                    #         color_bar = False
-                    #     else:
-                    #         color_map = 'Spectral'
-                    #         color_bar = True
-                    #     self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, color_bar=color_bar)
-                    # else:
-                    #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
                     self.writeLog('k.showMesh()')
                     self.meshOutputStack.setCurrentIndex(2)
                     self.regionTable.nrow = 0
@@ -5920,11 +5891,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if any(self.project.mesh.df['param'] == 0):
                 if (self.project.typ == 'R3t') | (self.typ == 'cR3t'):
                     replotMesh3D()
-                    # if pvfound:
-                    #     self.mesh3Dplotter.clear() # clear all actors
-                    #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-                    # else:
-                    #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
                 else:
                     replotMesh() # 2D only
 
@@ -7847,24 +7813,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.tabs.setTabEnabled(4,val)
             self.tabs.setTabEnabled(5,val)
             # self.tabs.setTabEnabled(6,val)
-            # try:
             if self.m3DRadio.isChecked():
                 self.mwManualFiltering.hide()
                 if pvfound:
                     self.pseudoFrame4Filter.show()
-                # if len(self.project.surveys) > 0 and all(self.project.surveys[0].df['irecip'].values == 0):
-                #     self.tabs.setTabEnabled(1, False)
-                #     self.tabPreProcessing.setTabEnabled(0, False)
-                # else:
-                #     self.tabs.setTabEnabled(1, True)
-                # if self.ipCheck.checkState() == Qt.Checked:
-                #     self.tabs.setTabEnabled(1, True)
             else:
                 self.mwManualFiltering.show()
                 if pvfound:
                     self.pseudoFrame4Filter.hide()
-            # except:
-            #     pass
 
         else:
             self.tabs.setTabEnabled(2,val)
