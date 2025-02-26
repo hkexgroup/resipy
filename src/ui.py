@@ -1479,8 +1479,8 @@ class App(QMainWindow):
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
                     self.importDataRecipBtn.setText(os.path.basename(fnameRecip))
-                    self.project.addData(fname=fnameRecip, ftype=self.ftype, parser=self.parser)
-                    self.writeLog('k.addData(fname={:s}, ftype="{:s}", parser={:s})'.format(
+                    self.project.addData(0, fname=fnameRecip, ftype=self.ftype, parser=self.parser)
+                    self.writeLog('k.addData(0, fname={:s}, ftype="{:s}", parser={:s})'.format(
                         fnameRecip, self.ftype, str(self.parser)))
                     if all(self.project.surveys[0].df['irecip'].values == 0) is False:
                         self.recipOrNoRecipShow(recipPresence = True)
