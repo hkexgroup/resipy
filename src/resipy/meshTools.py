@@ -5725,15 +5725,17 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             if 'flank_fac' not in kwargs.keys():
                 kwargs['flank_fac'] = 10 
                 
-                
+    coplaner = False  
     if all(np.array(elec_y)==elec_y[0]) and surface_refinement is None:
         # cant use triangulation methods if there is no surface refinement and 
         # there is no depth in the Y axis 
         interp_method = 'nearest'
+        coplaner = True 
     elif all(np.array(elec_x)==elec_x[0]) and surface_refinement is None:
         # cant use triangulation methods if there is no surface refinement and 
         # there is no depth in the X axis 
         interp_method = 'nearest'
+        coplaner = True 
         
     if whole_space: # if whole space problem ignore interpolation 
         interp_method = None 
@@ -5981,7 +5983,7 @@ def tetraMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             # print('Tightly packed electrodes detected! Changing control point constraints')
             check_quadrant = False 
             
-        if len(surf_elec_x)>0: 
+        if len(surf_elec_x)>0 and not coplaner: 
             # round 0 -> control points in x y coordinates surrounding the electrodes 
             _cpx, _cpy, _cpl = halfspaceControlPoints(surf_elec_x, surf_elec_y, 
                                                       cps, cl, check_quadrant, 

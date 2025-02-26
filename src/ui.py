@@ -895,6 +895,7 @@ class App(QMainWindow):
                 self.select3DRegionBtn.setVisible(False)
                 self.add3DRegionBtn.setVisible(False)
                 self.fin3DRegionBtn.setVisible(False)
+                self.cropMeshToElecCheck.setVisible(False)
 
                 # inversion settings
                 show3DOptions(False)
@@ -973,6 +974,7 @@ class App(QMainWindow):
                 self.select3DRegionBtn.setVisible(True)
                 self.add3DRegionBtn.setVisible(True)
                 self.fin3DRegionBtn.setVisible(True)
+                self.cropMeshToElecCheck.setVisible(True)
 
                 # inversion settings
                 show3DOptions(True)
@@ -1127,13 +1129,13 @@ class App(QMainWindow):
                 self.elecLabelTextP2 = '<br><b>IMPORTANT:</b> Labels <b>Must</b> be defined in <b><font color="red">"Line Number [space] Electrode Number"</font></b> format.'
                 self.designModelBtn.setEnabled(False)
                 self.importCustomMeshBtn2.setEnabled(False)
+                self.cropMeshToElecCheck.setVisible(False)
                 self.resetMeshBtn.hide()
                 self.instructionLabel.hide()
                 self.meshAspectBtn.hide()
                 self.meshSubLayout.setStretch(0,100)
                 self.meshSubLayout.setStretch(1,0)
                 self.meshOutputStack.setCurrentIndex(2)
-
             else:
                 self.lineSpacing.setVisible(False)
                 self.lineSpacingLabel.setVisible(False)
@@ -1155,6 +1157,7 @@ class App(QMainWindow):
                 self.elecLabelTextP2 = ''
                 self.designModelBtn.setEnabled(True)
                 self.importCustomMeshBtn2.setEnabled(True)
+                self.cropMeshToElecCheck.setVisible(True)
                 self.resetMeshBtn.show()
                 self.instructionLabel.show()
                 self.meshAspectBtn.show()
@@ -3822,7 +3825,41 @@ class App(QMainWindow):
                 self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
                 self.mwMesh.canvas.setFocus() # set focus on the canvas
                 self.meshOutputStack.setCurrentIndex(1)
+                
+                
+        def replotMesh3D(): 
+            if self.project.mesh is None: 
+                return 
+            if not '3' in self.project.typ:
+                raise Exception('meshReplot3D called for a 2D mesh.')
+                return 
+            self.cropMeshToElecCheck.setEnabled(False)
+            node = self.project.mesh.node
+            if self.cropMeshToElecCheck.isChecked():
+                xlim = None 
+                ylim = None 
+                zlim = self.project.zlim
+            else:
+                xlim = [np.min(node[:,0])-1, np.max(node[:,0])+1]
+                ylim = [np.min(node[:,1])-1, np.max(node[:,1])+1]
+                zlim = [np.min(node[:,2])-1, np.max(node[:,2])+1]
+                
+            color_map = 'Greys'
+            color_bar = False
+            if 'region' in self.project.mesh.df.columns: 
+                if len(np.unique(self.project.mesh.df['region'])) > 1:
+                    color_map = 'Spectral'
+                    color_bar = True
 
+            if pvfound:
+                self.mesh3Dplotter.clear() # clear all actors
+                self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, 
+                                      color_bar=color_bar, xlim=xlim, 
+                                      ylim=ylim, zlim=zlim)
+            else:
+                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+                
+            self.cropMeshToElecCheck.setEnabled(True)
 
         # design 2D features before meshing them, for instance for known
         # region of given resistivity. Note that the region must not overlap
@@ -3850,7 +3887,6 @@ class App(QMainWindow):
 
         self.designModelBtn = QPushButton('Design Model before meshing')
         self.designModelBtn.clicked.connect(designModel)
-
 
 
         # ------------ QUAD MESH -----------------
@@ -4126,12 +4162,20 @@ class App(QMainWindow):
             # may want to truncate mesh by default in this case
             self.cropBelowFmd.setChecked(True)
             self.notCropping.setChecked(False)
+            self.cropMeshToElecCheck.stateChanged.disconnect()
+            self.cropMeshToElecCheck.setChecked(True)
+            self.cropMeshToElecCheck.setEnabled(True)
+            self.cropMeshToElecCheck.stateChanged.connect(replotMesh3D)
 
-            if pvfound:
-                self.mesh3Dplotter.clear() # clear all actors
-                self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-            else:
-                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            # if pvfound:
+            #     self.mesh3Dplotter.clear() # clear all actors
+            #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+            # else:
+            #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            
+            # plot the mesh in 3D 
+            replotMesh3D()
+
             self.writeLog('k.showMesh()')
             self.meshOutputStack.setCurrentIndex(2)
             if self.project.param['reqMemory'] <= 0: # RAM requirement
@@ -4229,15 +4273,22 @@ class App(QMainWindow):
                           'refine={:d})'.format(cl, str(origin), str(dimension), refine))
 
             # may want to not truncate mesh by default in this case
+            self.cropMeshToElecCheck.stateChanged.disconnect()
             self.cropBelowFmd.setChecked(False)
             self.notCropping.setChecked(True)
+            self.cropMeshToElecCheck.setChecked(False)
+            self.cropMeshToElecCheck.setEnabled(True)
+            self.cropMeshToElecCheck.stateChanged.connect(replotMesh3D)
 
             # display the mesh
-            if pvfound:
-                self.mesh3Dplotter.clear() # clear all actors
-                self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-            else:
-                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            replotMesh3D()
+            
+            # if pvfound:
+            #     self.mesh3Dplotter.clear() # clear all actors
+            #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+            # else:
+            #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            
             self.writeLog('k.showMesh()')
             self.meshOutputStack.setCurrentIndex(2)
             if self.project.param['reqMemory'] <= 0: # RAM requirement
@@ -4344,15 +4395,22 @@ class App(QMainWindow):
                           ', refine={:d})'.format(cl, cl_factor, str(zlim), refine))
 
             # may want to not truncate mesh by default in this case
+            self.cropMeshToElecCheck.stateChanged.disconnect()
             self.cropBelowFmd.setChecked(False)
             self.notCropping.setChecked(True)
+            self.cropMeshToElecCheck.setChecked(False)
+            self.cropMeshToElecCheck.setEnabled(True)
+            self.cropMeshToElecCheck.stateChanged.connect(replotMesh3D)
 
             # display the mesh
-            if pvfound:
-                self.mesh3Dplotter.clear() # clear all actors
-                self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-            else:
-                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            replotMesh3D()
+            
+            # if pvfound:
+            #     self.mesh3Dplotter.clear() # clear all actors
+            #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+            # else:
+            #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            
             self.writeLog('k.showMesh()')
             self.meshOutputStack.setCurrentIndex(2)
             if self.project.param['reqMemory'] <= 0: # RAM requirement
@@ -4455,8 +4513,14 @@ class App(QMainWindow):
             
             
         self.saveMeshBtn = QPushButton('Save Mesh')
-        self.saveMeshBtn.setToolTip('Save mesh as .vtk, .node (tetgen) or .dat')
+        self.saveMeshBtn.setToolTip('Save mesh as .vtk, .vtu, .node (tetgen) or .dat')
         self.saveMeshBtn.clicked.connect(saveMeshBtnFunc)
+        
+        self.cropMeshToElecCheck = QCheckBox("Crop")
+        self.cropMeshToElecCheck.setToolTip('Crop mesh to the approximate position of the electrodes')
+        self.cropMeshToElecCheck.setChecked(True)
+        self.cropMeshToElecCheck.setVisible(False) 
+        self.cropMeshToElecCheck.stateChanged.connect(replotMesh3D)
 
         self.importCustomMeshLabel = QLabel('Import .msh or .vtk or .dat files.<br>'
                                             'The electrodes will be snapped to the closest node.')
@@ -4475,17 +4539,18 @@ class App(QMainWindow):
                     self.project.importMesh(fname)
                     self.writeLog('k.importMesh("{:s}")'.format(fname))
                     print('mesh imported ... now displaying ... ')
-                    if pvfound:
-                        self.mesh3Dplotter.clear() # clear all actors
-                        if len(np.unique(self.project.mesh.df['region'])) == 1:
-                            color_map = 'Greys'
-                            color_bar = False
-                        else:
-                            color_map = 'Spectral'
-                            color_bar = True
-                        self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, color_bar=color_bar)
-                    else:
-                        self.mwMesh3D.plot(self.project.showMesh, threed=True)
+                    replotMesh3D()
+                    # if pvfound:
+                    #     self.mesh3Dplotter.clear() # clear all actors
+                    #     if len(np.unique(self.project.mesh.df['region'])) == 1:
+                    #         color_map = 'Greys'
+                    #         color_bar = False
+                    #     else:
+                    #         color_map = 'Spectral'
+                    #         color_bar = True
+                    #     self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, color_bar=color_bar)
+                    # else:
+                    #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
                     self.writeLog('k.showMesh()')
                     self.meshOutputStack.setCurrentIndex(2)
                     self.regionTable.nrow = 0
@@ -4493,6 +4558,7 @@ class App(QMainWindow):
                     # may want to truncate mesh by default in this case
                     self.cropBelowFmd.setChecked(True)
                     self.notCropping.setChecked(False)
+                    self.cropMeshToElecCheck.setChecked(True)
                     for i in range(len(np.unique(self.project.mesh.df['region']))):
                         self.regionTable.addRow()
                         ie = self.project.mesh.df['region'] == i+1
@@ -4538,6 +4604,7 @@ class App(QMainWindow):
                         self.regionTable.setItem(i, 2, QTableWidgetItem(str(row['zones'].values[0])))
                         if row['param'].values[0] == 0:
                             self.regionTable.cellWidget(i,3).findChildren(QCheckBox)[0].setChecked(True)
+                    self.cropMeshToElecCheck.setChecked(True)
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
         self.importCustomMeshBtn2 = QPushButton('Import Custom Mesh')
@@ -4556,6 +4623,8 @@ class App(QMainWindow):
         self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
 
         def select3DRegionBtnFunc():
+            self.cropMeshToElecCheck.setChecked(True)
+            self.cropMeshToElecCheck.setEnabled(False)
             self.mesh3Dplotter.clear() # clear all actors
             self.clip = self.project.mesh.pick3Dbox(ax=self.mesh3Dplotter, darkMode=eval(resipySettings.param['dark'])) #extracts the surface and plots transparent boxed mesh
             self.select3DRegionBtn.setDisabled(True) # so button can't be clicked again
@@ -4581,6 +4650,7 @@ class App(QMainWindow):
             self.select3DRegionBtn.setDisabled(False) #enable select region mode button again
             self.add3DRegionBtn.setDisabled(True)
             self.fin3DRegionBtn.setDisabled(True)
+            self.cropMeshToElecCheck.setEnabled(True)
         self.fin3DRegionBtn = QPushButton('(3) Exit mode')
         self.fin3DRegionBtn.clicked.connect(fin3DRegionBtnFunc)
         self.fin3DRegionBtn.setVisible(False)
@@ -4591,6 +4661,8 @@ class App(QMainWindow):
             self.mwMesh.clear()
             self.project.mesh = None
             self.project.geom_input = {}
+            self.cropMeshToElecCheck.setChecked(True)
+            self.cropMeshToElecCheck.setEnabled(False)
         self.resetMeshBtn = QPushButton('Reset Mesh')
         self.resetMeshBtn.setStyleSheet("color: red")
         self.resetMeshBtn.setFixedWidth(150)
@@ -4838,6 +4910,7 @@ class App(QMainWindow):
         self.instructionLayout.addWidget(self.add3DRegionBtn, 7)
         self.instructionLayout.addWidget(self.fin3DRegionBtn, 7)
         self.instructionLayout.addWidget(self.saveMeshBtn)
+        self.instructionLayout.addWidget(self.cropMeshToElecCheck)
         self.meshLayout.addLayout(self.instructionLayout)
 
         # for RAM issue
@@ -5846,11 +5919,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
             # in the mesh tab
             if any(self.project.mesh.df['param'] == 0):
                 if (self.project.typ == 'R3t') | (self.typ == 'cR3t'):
-                    if pvfound:
-                        self.mesh3Dplotter.clear() # clear all actors
-                        self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-                    else:
-                        self.mwMesh3D.plot(self.project.showMesh, threed=True)
+                    replotMesh3D()
+                    # if pvfound:
+                    #     self.mesh3Dplotter.clear() # clear all actors
+                    #     self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                    # else:
+                    #     self.mwMesh3D.plot(self.project.showMesh, threed=True)
                 else:
                     replotMesh() # 2D only
 
