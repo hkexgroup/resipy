@@ -556,6 +556,7 @@ class Survey(object):
         i2change[(iab & ~imn) | (~iab & imn)] = -1
         self.df.loc[:, ['ia', 'ib']] = ab_sorted
         self.df.loc[:, ['im', 'in']] = mn_sorted
+        self.df.loc[:, 'i2change'] = i2change
         self.df.loc[:, 'iresist'] = self.df['resist']*i2change
         self.df['initial_index'] = np.arange(self.df.shape[0])
         
@@ -566,7 +567,7 @@ class Survey(object):
         self.df = self.df.groupby(['ia', 'ib', 'im', 'in']).agg(aggdic).reset_index(drop=True)
         self.df = self.df.sort_values('initial_index').reset_index(drop=True)
         self.setSeqIds() # the groupby disturb the order of the sequence
-        self.df['resist'] = np.sign(self.df['resist']) * self.df['iresist']
+        self.df['resist'] = self.df['iresist'] * self.df['i2change']
         self.df = self.df.drop(['initial_index', 'iresist'], axis=1)
         ndup = shapeBefore - self.df.shape[0]
         if ndup > 0 and self.debug:
