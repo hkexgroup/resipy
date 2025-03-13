@@ -545,8 +545,8 @@ class Survey(object):
         # let's first sort quadrupoles as ABMN to check 
         # for duplicates like BAMN, ABNM, BAMN
         shapeBefore = self.df.shape[0]
-        ab = self.df[['a', 'b']].values
-        mn = self.df[['m', 'n']].values
+        ab = self.isequence[:, :2] - 1
+        mn = self.isequence[:, 2:] - 1
         ab_sorted = np.sort(ab, axis=1)
         mn_sorted = np.sort(mn, axis=1)
         iab = (ab == ab_sorted).all(axis=1)
@@ -554,15 +554,20 @@ class Survey(object):
         # changing sign in case we have BAMN or ABNM
         i2change = np.ones(len(iab))
         i2change[(iab & ~imn) | (~iab & imn)] = -1
-        self.df.loc[:, ['a', 'b']] = ab_sorted
-        self.df.loc[:, ['m', 'n']] = mn_sorted
-        self.df.loc[:, 'resist'] = self.df['resist'] * i2change
+        self.df.loc[:, ['ia', 'ib']] = ab_sorted
+        self.df.loc[:, ['im', 'in']] = mn_sorted
+        self.df.loc[:, 'iresist'] = self.df['resist']*i2change
+        self.df['initial_index'] = np.arange(self.df.shape[0])
         
         # averaging resist, taking first of all other columns
-        cols = [col for col in self.df.columns if col not in ['a', 'b', 'm', 'n']]
+        cols = [col for col in self.df.columns if col not in ['ia', 'ib', 'im', 'in']]
         aggdic = dict(zip(cols, ['first']*len(cols)))
-        aggdic['resist'] = 'mean'
-        self.df = self.df.groupby(['a', 'b', 'm', 'n']).agg(aggdic).reset_index()
+        aggdic['iresist'] = 'mean'
+        self.df = self.df.groupby(['ia', 'ib', 'im', 'in']).agg(aggdic).reset_index(drop=True)
+        self.df = self.df.sort_values('initial_index').reset_index(drop=True)
+        self.setSeqIds() # the groupby disturb the order of the sequence
+        self.df['resist'] = np.sign(self.df['resist']) * self.df['iresist']
+        self.df = self.df.drop(['initial_index', 'iresist'], axis=1)
         ndup = shapeBefore - self.df.shape[0]
         if ndup > 0 and self.debug:
             dump('Survey.filterDefault: {:d} duplicates averaged.\n'.format(ndup))
@@ -592,14 +597,6 @@ class Survey(object):
         # if np.sum(ie) > 0 and self.debug:
         #     dump('Survey.filterDefault: {:d} duplicates ABMN, BAMN or ABNM removed\n'.format(np.sum(ie)))
         # self.filterData(~ie)
-
-        # we need to redo the reciprocal analysis if we've removed duplicates and ...
-        if ndup > 0:
-            self.setSeqIds()
-            if recompute_recip: 
-                if self.debug:
-                    dump('Recomputing reciprocals becuase duplicated measurements detected')
-                self.computeReciprocal()
         
         # create a backup of the clean dataframe
         self.dfReset = self.df.copy()
@@ -678,7 +675,7 @@ class Survey(object):
         self.setSeqIds() # need to recompute sequence 
             
         self.dfOrigin = self.df.copy()
-        self.filterDefault(False) # we assume the user input reciprocal data not another
+        self.filterDefault()
         self.computeReciprocal()
         
         # backing up data
