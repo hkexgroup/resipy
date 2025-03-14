@@ -3517,11 +3517,15 @@ def electraParser(fname):
             skiprows=data_header_line,
             sep="\t",
             header=[0, 1],
+            on_bad_lines='skip'
         )
 
-        print(data)
-
         data.columns = data.columns.droplevel(1)
+
+        if 'Status' in data.columns:
+            notEnabled = data['Status'] != 'E'
+            data = data[~notEnabled]
+
         data.drop(data.filter(regex="Unname"), axis=1, inplace=True)
 
         data_header_map = {
@@ -3535,8 +3539,22 @@ def electraParser(fname):
             "rhoa": "app"
         }
         data = data.rename(columns=data_header_map)
+
+        data_type_map = {
+            "a": "Int64",
+            "b": "Int64",
+            "m": "Int64",
+            "n": "Int64",
+            "i": "float64",
+            "vp": "float64",
+            "app": "float64",
+        }
+        data = data.astype(data_type_map)
+
         data['resist'] = data['vp'] / data['i']
+
         data['ip'] = np.nan
+
         data = data[['a', 'b', 'm', 'n', 'i', 'vp', 'resist', 'app', 'ip']]
 
         return elec, data
