@@ -1379,8 +1379,8 @@ def syscalBinRawParser(fname):
             datadic = fread(fh, tdic)[0]
     
         # added warning
-        if ddic['TypeOfSyscal'] not in [8, 9, 3, 11, 4, 5]:
-            raise ValueError('Type of Syscal not supported yet') # exit function here 
+        if ddic['TypeOfSyscal'] not in [2, 8, 9, 3, 11, 4, 5]:
+            raise ValueError('Type of Syscal not supported yet ({:d})'.format(ddic['TypeOfSyscal'])) # exit function here 
         
         # read the rest of the records
         data = [datadic]
@@ -1402,7 +1402,10 @@ def syscalBinParser2(fname):
     # additional computed columns
     df['resist'] = df['vp']/df['in']
     df['magErr'] = df['e']
-    df['cR'] = df['RsChk']*1000
+    if 'RsChk' in df.columns:
+        df['cR'] = df['RsChk']*1000
+    else:
+        df['cR'] = np.nan
     df['Rho'] = df['rho']
     if df['m'].eq(0).sum() == 0:
         df['ip'] = np.nan
@@ -1414,6 +1417,9 @@ def syscalBinParser2(fname):
     
     # create string index based on xyz of elec (for later faster replace())
     for role in ['A', 'B', 'M', 'N']:
+        for col in ['x', 'y', 'z']:
+            if col + role not in df.columns:
+                df[col + role] = 0.0  # old binary format assumed surface line
         df['idx' + role] = df[['x' + role,'y' + role,'z' + role]].apply(
             lambda row: '_'.join(row.values.astype(str)), axis=1)
     
@@ -1459,7 +1465,6 @@ def syscalBinParser2(fname):
 # elec, df = syscalParser('examples/parser/syscal-bin.csv')
 # elec, df = syscalParser('examples/parser/syscal-bin.bin')
 # elec, df = syscalParser('examples/parser/syscal-bin.binx')
-
 #%%
 def protocolParserLME(fname): # pragma: no cover
 # read LME predicted errors passed back from R, only add LME predictions to df
