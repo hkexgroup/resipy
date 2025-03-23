@@ -994,6 +994,14 @@ class Project(object): # Project master class instanciated by the GUI
             this_string.append(ni) # save
             allocated[ni] = True
             dist[ni] = -1
+            
+            if (dxdy[di,0] == 0) and (dxdy[di,1] == 0): # fail safe. 
+                # cant determine bearing direction in this case, therefore just 
+                # assume all electrodes lie on one string
+                this_string = [i+1 for i in range(len(x))]
+                string.append(this_string)
+                break
+            
             #work out staring direction 
             theta = bearing(dxdy[di,0],dxdy[di,1])
             # ax.plot([x[si],x[ni]],[y[si],y[ni]],c=color)

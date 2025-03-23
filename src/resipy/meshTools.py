@@ -2669,8 +2669,8 @@ class Mesh:
         if zlim is None: 
             if self.fmd is not None and self.elec is not None:
                 zlim = [max(self.elec[:,2])-self.fmd, max(self.elec[:,2])]
-            
-
+            else:
+                zlim = [min(self.node[:,2]), max(self.node[:,2])]
                 
         # if 'elm_id' not in self.df.keys():
         self.df['elm_id'] = np.arange(1,self.numel+1,1)
