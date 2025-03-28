@@ -160,6 +160,34 @@ def getMacOSVersion():
             return True
         else:
             return False
+
+def whichWineMac():
+    """wine terminal prompt can be 'wine' or 'wine64'. 
+        Here we determine which one it is."""
+    def wineFunc(winetxt):
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath == []:
+            global wPath
+            try:
+                Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                wPath = '/usr/local/bin/'
+            except:
+                Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+                wPath = '/opt/homebrew/bin/'
+    try:
+        winetxt = 'wine'
+        wineFunc(winetxt)
+        return winetxt
+    except:
+        try:
+            winetxt = 'wine64'
+            wineFunc(winetxt)
+            return winetxt
+        except:
+            return None
         
 def systemCheck(dump=print):
     """Performs a simple diagnostic of the system, no input commands needed. System
@@ -233,33 +261,40 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
         dump('Wine Version = Native Windows (N/A)')
                 
     elif OpSys=='Darwin':
-        try: 
-            winetxt = 'wine'
-            if getMacOSVersion():
-                winetxt = 'wine64' 
-            winePath = []
-            wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
-            else:
-                global wPath
-                try:
-                    is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
-                    wPath = '/usr/local/bin/'
-                except:
-                    is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
-                    wPath = '/opt/homebrew/bin/'
-            wineVersion = []
-            for stdout_line in iter(is_wine.stdout.readline, ""):
-                wineVersion.append(stdout_line)
-            wine_version = stdout_line.split()[0].split('-')[1]
-            dump("Wine version = "+wine_version)
-        except:
+        if whichWineMac() is None:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True
             wineCheck = False
+        else:
+            dump("Wine is installed")
+        
+        # try: 
+        #     winetxt = 'wine'
+        #     if getMacOSVersion(): # looks like new wine-stable is no longer wine64 and is just wine
+        #         winetxt = 'wine64' 
+        #     winePath = []
+        #     wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        #     for stdout_line in iter(wine_path.stdout.readline, ''):
+        #         winePath.append(stdout_line)
+        #     if winePath != []:
+        #         is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+        #     else:
+        #         global wPath
+        #         try:
+        #             is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+        #             wPath = '/usr/local/bin/'
+        #         except:
+        #             is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+        #             wPath = '/opt/homebrew/bin/'
+        #     wineVersion = []
+        #     for stdout_line in iter(is_wine.stdout.readline, ""):
+        #         wineVersion.append(stdout_line)
+        #     wine_version = stdout_line.split()[0].split('-')[1]
+        #     dump("Wine version = "+wine_version)
+        # except:
+        #     warnings.warn("Wine is not installed!", Warning)
+        #     msg_flag = True
+        #     wineCheck = False
         
     else:
         print(OpSys)
@@ -2363,9 +2398,10 @@ class Project(object): # Project master class instanciated by the GUI
             if OS == 'Windows':
                 cmd = [exePath]
             elif OS == 'Darwin':
-                winetxt = 'wine'
-                if getMacOSVersion():
-                    winetxt = 'wine64'
+                # winetxt = 'wine'
+                # if getMacOSVersion():
+                #     winetxt = 'wine64'
+                winetxt = whichWineMac()
                 winePath = []
                 wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)
                 for stdout_line in iter(wine_path.stdout.readline, ''):
@@ -4084,9 +4120,10 @@ class Project(object): # Project master class instanciated by the GUI
             if OS == 'Windows':
                 cmd = [exePath]
             elif OS == 'Darwin':
-                winetxt = 'wine'
-                if getMacOSVersion():
-                    winetxt = 'wine64'
+                # winetxt = 'wine'
+                # if getMacOSVersion():
+                #     winetxt = 'wine64'
+                winetxt = whichWineMac()
                 winePath = []
                 wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
                 for stdout_line in iter(wine_path.stdout.readline, ''):
@@ -4233,9 +4270,10 @@ class Project(object): # Project master class instanciated by the GUI
         if OS == 'Windows':
             cmd = ['powershell', '-Command', '&', '"'+exePath+'"']
         elif OS == 'Darwin':
-            winetxt = 'wine'
-            if getMacOSVersion():
-                winetxt = 'wine64'
+            # winetxt = 'wine'
+            # if getMacOSVersion():
+            #     winetxt = 'wine64'
+            winetxt = whichWineMac()
             winePath = []
             wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):

@@ -195,6 +195,34 @@ def getMacOSVersion():
             return True
         else:
             return False
+
+def whichWineMac():
+    """wine terminal prompt can be 'wine' or 'wine64'. 
+        Here we determine which one it is."""
+    def wineFunc(winetxt):
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath == []:
+            global wPath
+            try:
+                Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                wPath = '/usr/local/bin/'
+            except:
+                Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+                wPath = '/opt/homebrew/bin/'
+    try:
+        winetxt = 'wine'
+        wineFunc(winetxt)
+        return winetxt
+    except:
+        try:
+            winetxt = 'wine64'
+            wineFunc(winetxt)
+            return winetxt
+        except:
+            return None
         
 #%% create mesh object
 class Mesh:
@@ -5122,9 +5150,10 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         cmd_line = [os.path.join(ewd,'gmsh.exe'), file_name+'.geo', opt, 'nt %i'%ncores]
         
     elif platform.system() == 'Darwin': # its a macOS 
-        winetxt = 'wine'
-        if getMacOSVersion():
-            winetxt = 'wine64'
+        # winetxt = 'wine'
+        # if getMacOSVersion():
+        #     winetxt = 'wine64'
+        winetxt = whichWineMac()
         winePath = []
         wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
         for stdout_line in iter(wine_path.stdout.readline, ''):
