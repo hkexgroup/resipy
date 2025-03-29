@@ -199,30 +199,35 @@ def getMacOSVersion():
 def whichWineMac():
     """wine terminal prompt can be 'wine' or 'wine64'. 
         Here we determine which one it is."""
-    def wineFunc(winetxt):
-        winePath = []
-        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-        for stdout_line in iter(wine_path.stdout.readline, ''):
-            winePath.append(stdout_line)
-        if winePath == []:
-            global wPath
-            try:
-                Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
-                wPath = '/usr/local/bin/'
-            except:
-                Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
-                wPath = '/opt/homebrew/bin/'
-    try:
-        winetxt = 'wine'
-        wineFunc(winetxt)
-        return winetxt
-    except:
+    
+    def globalCheck(winetxt):
+        global wPath
         try:
-            winetxt = 'wine64'
-            wineFunc(winetxt)
-            return winetxt
+            Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+            wPath = '/usr/local/bin/'
         except:
-            return None
+            Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+            wPath = '/opt/homebrew/bin/'
+            
+    try: # do we have wine?
+        process = Popen(['wine', '--version'], stdout=PIPE, shell=False, universal_newlines=True)
+        process.communicate()
+        if process.returncode == 0:
+            return 'wine'
+        else:
+            globalCheck('wine')
+    except:
+        pass
+    
+    try: # do we have wine64?
+        process = Popen(["wine64", "--version"], stdout=PIPE, shell=False, universal_newlines=True)
+        process.communicate()
+        if process.returncode == 0:
+            return 'wine64'
+        else:
+            globalCheck('wine64')
+    except:
+        return None
         
 #%% create mesh object
 class Mesh:
