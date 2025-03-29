@@ -151,7 +151,7 @@ def getSysStat():
     ram_total = ram.total*9.31e-10
     return cpu_speed, cpu_usage, ram_avail, ram_usage, ram_total 
 
-def getMacOSVersion():
+def getMacOSVersion(): # this is obsolete now
     OpSys=platform.system()    
     if OpSys=='Darwin':
         versionList = platform.mac_ver()[0].split('.')
@@ -162,37 +162,38 @@ def getMacOSVersion():
             return False
 
 def whichWineMac():
-    """wine terminal prompt can be 'wine' or 'wine64'. 
-        Here we determine which one it is."""
+    """
+    Checks if 'wine' or 'wine64' should be used on macOS.
+
+    Returns:
+        str: The appropriate wine executable ('wine' or 'wine64'), or None if neither is found.
+    """
+
+    wine_paths = ['/usr/local/bin/wine', '/opt/homebrew/bin/wine', '/usr/bin/wine'] # common wine paths
+    wine64_paths = ['/usr/local/bin/wine64', '/opt/homebrew/bin/wine64', '/usr/bin/wine64'] # common wine64 paths
     
-    def globalCheck(winetxt):
-        global wPath
-        try:
-            Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
-            wPath = '/usr/local/bin/'
-        except:
-            Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
-            wPath = '/opt/homebrew/bin/'
-            
-    try: # do we have wine?
-        process = Popen(['wine', '--version'], stdout=PIPE, shell=False, universal_newlines=True)
-        process.communicate()
-        if process.returncode == 0:
-            return 'wine'
-        else:
-            globalCheck('wine')
-    except:
-        pass
-    
-    try: # do we have wine64?
-        process = Popen(["wine64", "--version"], stdout=PIPE, shell=False, universal_newlines=True)
-        process.communicate()
-        if process.returncode == 0:
-            return 'wine64'
-        else:
-            globalCheck('wine64')
-    except:
-        return None
+    global wPath
+    for path in wine_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine is working
+                subprocess.run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine'
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine either timed out, was not found, or had an OS error.
+
+    for path in wine64_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine64 is working
+                subprocess.run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine64'
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine64 either timed out, was not found, or had an OS error.
+
+    return None
         
 def systemCheck(dump=print):
     """Performs a simple diagnostic of the system, no input commands needed. System
@@ -273,7 +274,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
         else:
             dump("Wine is installed")
         
-        # try: 
+        # try: # old method
         #     winetxt = 'wine'
         #     if getMacOSVersion(): # looks like new wine-stable is no longer wine64 and is just wine
         #         winetxt = 'wine64' 
@@ -2414,7 +2415,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = [wPath + winetxt, exePath]
+                    cmd = [wPath, exePath]
             else:
                 #if platform.machine() == 'aarch64':
                 #    cmd = [exePath.replace('.exe', '_aarch64')]
@@ -4136,7 +4137,8 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = [wPath + winetxt, exePath]
+                    cmd = [wPath, exePath]
+            
             else:  # linux here
                 # check if running on raspberrypi
                 #if platform.machine() == 'aarch64':
@@ -4286,7 +4288,7 @@ class Project(object): # Project master class instanciated by the GUI
             if winePath != []:
                 cmd = ['%s' % (winePath[0].strip('\n')), exePath]
             else:
-                cmd = [wPath + winetxt, exePath]
+                cmd = [wPath, exePath]
         else:
             # check if running on raspberrypi
             if platform.machine == 'aarch64':

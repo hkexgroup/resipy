@@ -12,8 +12,8 @@ Dependencies:
     python3 standard libaries
 """
 #import standard python packages
-import os, platform, warnings, psutil, struct, base64, time, ntpath 
-from subprocess import PIPE, Popen
+import os, platform, warnings, psutil, struct, base64, time, ntpath, shutil
+from subprocess import PIPE, Popen, run, TimeoutExpired
 import tempfile
 import xml.etree.ElementTree as ET
 import numpy as np
@@ -186,7 +186,7 @@ def findminmax(a, pad=20):
     return [mina, maxa]
 
 #%% check mac version for wine
-def getMacOSVersion():
+def getMacOSVersion(): # this is obsolete now
     OpSys=platform.system()    
     if OpSys=='Darwin':
         versionList = platform.mac_ver()[0].split('.')
@@ -197,37 +197,38 @@ def getMacOSVersion():
             return False
 
 def whichWineMac():
-    """wine terminal prompt can be 'wine' or 'wine64'. 
-        Here we determine which one it is."""
+    """
+    Checks if 'wine' or 'wine64' should be used on macOS.
+
+    Returns:
+        str: The appropriate wine executable ('wine' or 'wine64'), or None if neither is found.
+    """    
+
+    wine_paths = ['/usr/local/bin/wine', '/opt/homebrew/bin/wine', '/usr/bin/wine'] # common wine paths
+    wine64_paths = ['/usr/local/bin/wine64', '/opt/homebrew/bin/wine64', '/usr/bin/wine64'] # common wine64 paths
     
-    def globalCheck(winetxt):
-        global wPath
-        try:
-            Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
-            wPath = '/usr/local/bin/'
-        except:
-            Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
-            wPath = '/opt/homebrew/bin/'
-            
-    try: # do we have wine?
-        process = Popen(['wine', '--version'], stdout=PIPE, shell=False, universal_newlines=True)
-        process.communicate()
-        if process.returncode == 0:
-            return 'wine'
-        else:
-            globalCheck('wine')
-    except:
-        pass
-    
-    try: # do we have wine64?
-        process = Popen(["wine64", "--version"], stdout=PIPE, shell=False, universal_newlines=True)
-        process.communicate()
-        if process.returncode == 0:
-            return 'wine64'
-        else:
-            globalCheck('wine64')
-    except:
-        return None
+    global wPath
+    for path in wine_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine is working
+                run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine'
+            except (TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine either timed out, was not found, or had an OS error.
+
+    for path in wine64_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine64 is working
+                run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine64'
+            except (TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine64 either timed out, was not found, or had an OS error.
+
+    return None
         
 #%% create mesh object
 class Mesh:
@@ -5166,14 +5167,8 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         if winePath != []:
             cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
         else:
-            try:
-                is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
-                wPath = '/usr/local/bin/'
-            except:
-                is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
-                wPath = '/opt/homebrew/bin/'
-            cmd_line = [wPath + winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
-    
+            cmd_line = [wPath, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]   
+        
     elif platform.system() == 'Linux':
         #if platform.machine() == 'aarch64':
         #    cmd_line = [ewd + '/gmsh_aarch64', file_name + '.geo', opt,'-nt','%i'%ncores]
