@@ -3808,6 +3808,7 @@ class Project(object): # Project master class instanciated by the GUI
         mx, my, mz = self.mesh.df.X, self.mesh.df.Y, self.mesh.df.Z
         # xnew,ynew,znew,xknown, yknown, zknown, iknown
         res0 = nearest3d(mx, my, mz, px, py, pz, app)
+        res0[res0 < 0] = 1.0 # cap minimum resistivity value 
         # self.mesh.df.loc[:,'res0'] = res0 #  perhaps dont assign res0 here? 
         return res0 
         
@@ -4427,7 +4428,7 @@ class Project(object): # Project master class instanciated by the GUI
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None, 
-               homogeneousStart = False):
+               pseudoStart = True):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.  
 
@@ -4472,9 +4473,9 @@ class Project(object): # Project master class instanciated by the GUI
         errIPCol : str, optioanl
             If no reciprocal data, a user supplied column can be read as IP
             error.
-        homogeneousStart : bool, optional 
-            Flag to start the inversion using a homogenous model. Default is 
-            False, in which case the starting resistivities will be estimated
+        pseudoStart : bool, optional 
+            Flag to start the inversion using using resisitivities from the pseudo section.
+            Default is True, in which case the starting resistivities will be estimated
             from the psuedo section values. 
         """
         if dump is None:
@@ -4524,10 +4525,7 @@ class Project(object): # Project master class instanciated by the GUI
         if modelDOI is True:
             sensScaled = self.modelDOI(dump=dump)
             
-        if homogeneousStart:
-            dump('Assuming homogenous starting model of 100 ohm.m')
-            self.mesh.df.loc[:,'res0'] = 100 
-        else:
+        if pseudoStart: 
             dump('Looking up starting resistivities from pseudo section')
             self.mesh.df.loc[:,'res0'] = self.res0fromPseudo() # res0 assigned
 

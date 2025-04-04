@@ -938,10 +938,9 @@ class Generator():
             fh = open(fname, 'w')
             nperline = len(lines[0])
             header = 'C1, C2, '
-            j = 1 
             while len(header.split(',')) <= nperline: 
-                header += 'P%i, '%j
-                i+=j 
+                header += 'P%i, '%i
+                i+=1 
             
             header += 'ChannelIDs\n'
             fh.write(header)

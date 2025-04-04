@@ -4630,6 +4630,115 @@ def vtuImport(file_path,order_nodes=True):
     return mesh
 
 
+def vtsImport(file_path,order_nodes=True):
+    """Vtk importer for newer format (not fully validated)
+    """
+    if os.path.getsize(file_path)==0: # So that people dont ask me why you cant read in an empty file, throw up this error. 
+        raise ImportError("Provided mesh file is empty!")
+        
+    # get vtu file information (not robust yet)
+    root = ET.parse(file_path)
+    for child in root.iter('VTKFile'):
+        byte_order = child.attrib['byte_order']
+        vtk_type = child.attrib['type']
+    
+    if vtk_type != 'StructuredGrid':
+        raise Exception('vts file of unrecognised grid type, only structed grids allowed')
+
+    # function to convert acsii data contained in an xml element array to python list 
+    def child2Array(child):
+        if 'format' not in child.attrib.keys():
+            raise Exception('Cannot find format identifier in vtu file')
+        fmt = child.attrib['format']
+        if fmt not in ['ascii','binary']: 
+            raise Exception('Vtu data array not of ASCII  or Binary type, aborting...')
+            
+        typ = float
+        bcode = '<d' # byte decoding code 
+        if byte_order == 'BigEndian':
+            bcode = '>d'
+        pad = 1 # padding 
+        if 'int' in child.attrib['type'].lower():
+            typ = int
+            bcode = bcode.replace('b','q') # change code to long int 
+            if 'uint8' in child.attrib['type'].lower():
+                bcode = bcode.replace('q','B') # change code to unsigned char 
+                pad = 8 
+            
+        t = child.text.strip() # get raw text 
+        if fmt == 'ascii': 
+            t = t.replace('\n','')
+            a = [typ(x) for x in t.split()]
+        else:
+            b64 = bytes(t, encoding='ascii') # convert to ascii with base64 binary 
+            b = base64.decodebytes(b64)
+            a = [u[0] for u in struct.iter_unpack(bcode,b)]
+            a = a[pad:]
+        return a 
+
+    cellType = [12]
+
+    # get the number of cells and points 
+    for child in root.iter('Piece'):
+        extents = child.attrib['Extent'].split()
+        numnpx = int(extents[1])+1
+        numnpy = int(extents[3])+1
+        numnpz = int(extents[5])+1
+        numnp = numnpx * numnpy * numnpz
+        numel = int(extents[1])*int(extents[3])*int(extents[5])
+        
+    # get point data 
+    ptdf = pd.DataFrame()
+    for child in root.iter('PointData'):
+        for subchild in child.findall('DataArray'):
+            a = child2Array(subchild)
+            ptdf[subchild.attrib['Name']]=a
+            
+    # get cell data 
+    df = pd.DataFrame()
+    for child in root.iter('CellData'):
+        for subchild in child.findall('DataArray'):
+            a = child2Array(subchild)
+            df[subchild.attrib['Name']]=a
+            
+    # get node coordinates 
+    for child in root.iter('Points'):
+        for subchild in child.findall('DataArray'):
+            if not subchild.attrib['Name'] == 'Points':
+                continue 
+            ncomp = int(subchild.attrib['NumberOfComponents'])
+            assert ncomp == 3 
+            shape = (numnp,ncomp)
+            node = np.array(child2Array(subchild)).reshape(shape)
+            
+    # get connectivity matrix properties 
+    connection = np.zeros((numel, 8), dtype=int) 
+    
+    for i in range(numel):
+        connection[i, 0] = i
+        connection[i, 1] = i + 1 
+        connection[i, 4] = i + numnpx 
+        connection[i, 5] = i + numnpx + 1 
+        connection[i, 3] = i + (numnpy * numnpx)
+        connection[i, 2] = i + (numnpy * numnpx) + 1 
+        connection[i, 6] = i + (numnpy * numnpx) + numnpx
+        connection[i, 7] = i + (numnpy * numnpx) + numnpx + 1  
+                
+    mesh = Mesh(node[:,0],#x coordinates of nodes 
+                node[:,1],#y coordinates of nodes
+                node[:,2],#z coordinates of nodes 
+                connection,#nodes of element vertices
+                cellType,#according to vtk format
+                file_path,
+                False) 
+    
+    #add attributes / cell parameters 
+    mesh.df = df 
+    mesh.ptdf = ptdf 
+
+    return mesh
+
+
 #%% import mesh from native .dat format
 def dat_import(file_path='mesh.dat', order_nodes=True):
     """ Import R2/cR2/R3t/cR3t .dat kind of mesh. 
@@ -6839,6 +6948,8 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
         mesh = vtk_import(file_path, order_nodes=order_nodes)
     elif ext == '.vtu':
         mesh = vtuImport(file_path, order_nodes=order_nodes)
+    elif ext == '.vts':
+        mesh = vtsImport(file_path, order_nodes=False)
     elif ext == '.msh':
         mesh_dict = gw.mshParse(file_path, debug=False)
 
