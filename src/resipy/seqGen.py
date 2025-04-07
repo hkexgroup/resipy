@@ -896,6 +896,15 @@ class Generator():
     
     ## write to file 
     def write2csv(self, fname, singlechannel = False):
+        """
+        Write commands to generic csv type file 
+
+        Parameters
+        ----------
+        fname : str
+            Name / path of output file 
+
+        """
         
         #check for csv ext
         if not fname.lower().endswith('.csv'):
@@ -942,20 +951,11 @@ class Generator():
                 header += 'P%i, '%i
                 i+=1 
             
-            header += 'ChannelIDs\n'
             fh.write(header)
             
             for line in lines: 
-                channels = '' 
-                count = 0 
                 for n in line: 
                     fh.write('%i, '%n)
-                    if n > 0: 
-                        count += 1
-                for i in range(count-3):
-                    channels += '%i'%(i+1)
-                
-                fh.write(channels)
                 fh.write('\n')
                 
             fh.close() 
@@ -967,12 +967,8 @@ class Generator():
 
         Parameters
         ----------
-        fname : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
+        fname : str
+            Name / path of output file 
 
         """
         fnamef = fname 
@@ -994,8 +990,9 @@ class Generator():
             fname = fnames[i].replace(fext, '_p{:0>2d}'.format(cf)+fext)
             cl = 1 # count number of lines written 
             fh = open(fname, 'w')
+            fh.write('### insert headers here ###\n\n')
             fh.write('# test 0\n\n')
-            for _, line in enumerate(lines): 
+            for j, line in enumerate(lines): 
                 fh.write('test %i '%cl)
                 for n in line: 
                     fh.write('%i '%n)
@@ -1011,8 +1008,137 @@ class Generator():
                     
             if not fh.closed: 
                 fh.close() 
+                
+    def write2sting(self, fname):
+        """
+        Write to Sting command file. 
+        Parameters
+        ----------
+        fname : str
+            Name / path of output file 
+
+        """
+        fnamef = fname 
+        fnamer = None 
+        fext = '.' + fname.split('.')[-1]
+        if len(self.linesR) > 0: 
+            fnamef = fname.replace(fext,'_F' + fext)
+            fnamer = fname.replace(fext,'_R' + fext)
+        fnames = [fnamef, fnamer]
+        lines2write = [self.lines, self.linesR]
+        # nperline = len(self.lines[0])
         
+        lines2write = [self.lines, self.linesR]
+        for i, lines in enumerate(lines2write):
+            if len(lines) == 0:
+                continue 
+            fname = fnames[i]
+            if fname is None:
+                continue 
+            fh = open(fname, 'w')
+            # write out header information 
+            fh.write(";Automatically created command file from ResIPy\n") 
+            fh.write(":header\n") 
+            typeid = "F"
+            progid = "CUSTOM(%i)F"%len(lines)
+            if i == 1: 
+                typeid = "R"
+                progid = "CUSTOM(%i)R"%len(lines)
+            fh.write("progID=%s\n"%progid) 
+            fh.write("type=%s\n"%typeid)
+            fh.write("arraytype=3\n") 
+            fh.write("Binf=0\n")
+            fh.write("Ninf=0\n")
+            fh.write("MUX=1\n") 
+            fh.write("\n")
+            
+            # write out electrode geometry 
+            fh.write(":geometry\n")
+            nelec = len(self.elec)
+            for i in range(nelec):
+                fh.write("{:d},{:f},{:f},{:f}\n".format(
+                    i+1, 
+                    self.elec.x[i], 
+                    self.elec.y[i], 
+                    self.elec.z[i]))
+            fh.write("\n")    
+            
+            # write out command sequence 
+            nperline = len(lines[0])
+            fh.write(":commands\n") 
+            header = ';A,B,'
+            while len(header.split(',')) <= nperline: 
+                header += 'P%i,'%i
+                i+=1 
+            header += 'channels\n'
+            fh.write(header)
+            for line in lines: 
+                channels = '' 
+                count = 0 
+                for n in line: 
+                    fh.write('%i, '%n)
+                    if n > 0: 
+                        count += 1
+                for i in range(count-3):
+                    channels += '%i'%(i+1)
+                
+                fh.write(channels)
+                fh.write('\n')
+            fh.close() 
+            
+    def write2syscal(self, fname):
+        """
+        Write to Syscal type command file. 
+        Parameters
+        ----------
+        fname : str
+            Name / path of output file 
+
+        """
+        fnamef = fname 
+        fnamer = None 
+        fext = '.' + fname.split('.')[-1]
+        if len(self.linesR) > 0: 
+            fnamef = fname.replace(fext,'_F' + fext)
+            fnamer = fname.replace(fext,'_R' + fext)
+        fnames = [fnamef, fnamer]
+        lines2write = [self.lines, self.linesR]
+        # nperline = len(self.lines[0])
         
+        lines2write = [self.lines, self.linesR]
+        for i, lines in enumerate(lines2write):
+            if len(lines) == 0:
+                continue 
+            fname = fnames[i]
+            if fname is None:
+                continue 
+            fh = open(fname, 'w')
+            # write out electrode geometry 
+            fh.write("#\tX\tY\tZ\n")
+            nelec = len(self.elec)
+            for i in range(nelec):
+                fh.write("{:d}\t{:f}\t{:f}\t{:f}\n".format(
+                    i+1, 
+                    self.elec.x[i], 
+                    self.elec.y[i], 
+                    self.elec.z[i]))
+            fh.write("\n")    
+            
+            # write out command sequence 
+            fh.write("#\tA\tB\tM\tN\n")
+            c = 1 
+            for line in lines: 
+                a = line[0]
+                b = line[1]
+                for j in range(2, len(line)-1): 
+                    m = line[j] 
+                    n = line[j+1]
+                    if m == 0 or n == 0: 
+                        continue 
+                    fh.write("{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n".format(c, a, b, m, n))
+                    c += 1 
+            fh.close() 
+            
     ## export sequence 
     def exportSequence(self, fname, ftype = 'generic', integer = True, 
                        reciprocals = True,  split=True, multichannel = True,  
@@ -1052,12 +1178,14 @@ class Generator():
             split = False 
             multichannel = False 
             condition = False 
-        elif ftype.lower() == 'prime':
+        elif ftype.lower() == 'prime': 
             fext = '.txt'
             maxcha = 7 
+        elif ftype.lower() == 'syscal':
+            fext = '.txt'
         elif ftype.lower() == 'sting':
             #todo: expand! 
-            fext = '.csv'
+            fext = '.cmd' 
         else:
             fext = '.csv'
 
@@ -1075,14 +1203,22 @@ class Generator():
         if multichannel or condition: 
             self.multichannelise(maxcha)
         else: 
-            dump('Writing to csv...')
+            dump("Warning: only .csv format available for singlechannel measurements!")
+            dump("writing to file...")
             self.write2csv(fname, True)
             return 
         
         if condition:
             self.condition(dump=dump)
             
-        dump('Writing to csv...')
-        self.write2csv(fname)
+        dump('Writing to file...')
+        if ftype.lower() == 'prime':
+            self.write2prime(fname)
+        elif ftype.lower() == 'sting':
+            self.write2sting(fname)
+        elif ftype.lower() == 'syscal':
+            self.write2syscal(fname)
+        else:
+            self.write2csv(fname)
         return 
     

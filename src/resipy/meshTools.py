@@ -4721,8 +4721,8 @@ def vtsImport(file_path,order_nodes=True):
         connection[i, 5] = i + numnpx + 1 
         connection[i, 3] = i + (numnpy * numnpx)
         connection[i, 2] = i + (numnpy * numnpx) + 1 
-        connection[i, 6] = i + (numnpy * numnpx) + numnpx
-        connection[i, 7] = i + (numnpy * numnpx) + numnpx + 1  
+        connection[i, 7] = i + (numnpy * numnpx) + numnpx
+        connection[i, 6] = i + (numnpy * numnpx) + numnpx + 1  
                 
     mesh = Mesh(node[:,0],#x coordinates of nodes 
                 node[:,1],#y coordinates of nodes

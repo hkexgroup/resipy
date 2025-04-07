@@ -513,8 +513,15 @@ class SequenceHelper(QWidget):
             self.reccheck.setEnabled(True)
 
     def exportFunc(self):
-        fname, _ = QFileDialog.getSaveFileName(self,'Export File', self.dirname, 'Generic (*.csv)')
-        ftype = 'generic' # todo: allow for more file types 
+        fname, ftypeinfo = QFileDialog.getSaveFileName(
+            self,'Export File', 
+            self.dirname, 
+            "Generic (*.csv);;PRIME template (*.txt);; Syscal (*.txt);;Sting (*.cmd)")
+        avialTypes = ["prime", "sting", "syscal", "generic"] # todo: allow for more file types 
+        for t in avialTypes:
+            if t in ftypeinfo.lower(): 
+                ftype = t 
+                break 
         integer = self.intcheck.isChecked()
         recip = self.reccheck.isChecked()
         split = self.splcheck.isChecked()
