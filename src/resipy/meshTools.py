@@ -4710,19 +4710,42 @@ def vtsImport(file_path,order_nodes=True):
             assert ncomp == 3 
             shape = (numnp,ncomp)
             node = np.array(child2Array(subchild)).reshape(shape)
-            
+             
     # get connectivity matrix properties 
     connection = np.zeros((numel, 8), dtype=int) 
-    
-    for i in range(numel):
-        connection[i, 0] = i
-        connection[i, 1] = i + 1 
-        connection[i, 4] = i + numnpx 
-        connection[i, 5] = i + numnpx + 1 
-        connection[i, 3] = i + (numnpy * numnpx)
-        connection[i, 2] = i + (numnpy * numnpx) + 1 
-        connection[i, 7] = i + (numnpy * numnpx) + numnpx
-        connection[i, 6] = i + (numnpy * numnpx) + numnpx + 1  
+    xcounter = 1
+    ycounter = 1
+    zcounter = 1
+    i = 0 
+    j = 0 
+    while i < numnp: 
+        #note: the nodes are sorted by x, y, then z. 
+        if xcounter == numnpx: 
+            ycounter += 1
+            xcounter = 1
+            i += 1 # jump to next x row 
+        
+        if ycounter == numnpy:
+            zcounter += 1 
+            ycounter = 1
+            xcounter = 1
+            i += numnpx # jump to next y row 
+            
+        if zcounter == numnpz:
+            # reached top or bottom of mesh, so break here 
+            break 
+        
+        connection[j, 0] = i
+        connection[j, 1] = i + 1
+        connection[j, 4] = i + numnpx 
+        connection[j, 5] = i + numnpx + 1 
+        connection[j, 3] = i + (numnpy * numnpx)
+        connection[j, 2] = i + (numnpy * numnpx) + 1 
+        connection[j, 7] = i + (numnpy * numnpx) + numnpx
+        connection[j, 6] = i + (numnpy * numnpx) + numnpx + 1  
+        j += 1 
+        i += 1 
+        xcounter += 1 
                 
     mesh = Mesh(node[:,0],#x coordinates of nodes 
                 node[:,1],#y coordinates of nodes
