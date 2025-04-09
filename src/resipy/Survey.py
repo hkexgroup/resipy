@@ -302,7 +302,7 @@ class Survey(object):
 
             # assign dataframe and check the types of a,b,m,n (all labels must be string)
             self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
-            self.df.reset_index(inplace=True) 
+            self.df.reset_index(inplace=True, drop=True) 
 
             # add error measured to the error columns (so they can be used if no error model are fitted)
             if 'magErr' in self.df.columns:
@@ -671,7 +671,7 @@ class Survey(object):
             data.reset_index(drop=True, inplace=True)
             appendString(_elec, data, string)
             self.elec = pd.concat([self.elec,_elec]).reset_index(drop = True) 
-            
+        
         self.df = pd.concat([self.df, data]).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
         self.setSeqIds() # need to recompute sequence 
             
