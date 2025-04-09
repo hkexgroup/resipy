@@ -86,6 +86,7 @@ r2help = {
             "Note that this is not the DOI based on the Oldenburg and Li method.</p>",
 'txSign' : "<p>Check if the polarity of provided transfer resistanses is correct in each survey and if not, automatically corrects them."
             "<b>This might be necessary if the provided file format is of the Syscal type!</b>"    
-            "<br><i>Note: this assumes a provided survey is on a flat surface.</i></p>"
+            "<br><i>Note: this assumes a provided survey is on a flat surface.</i></p>", 
+'pseudo_start': "If checked, then the starting resistivity will be looked up from the pseudo section, otherwise starting resistivities will be unchanged (normally a homogeneous model of 100 ohm.m)", 
 }
 

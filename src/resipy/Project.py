@@ -151,7 +151,7 @@ def getSysStat():
     ram_total = ram.total*9.31e-10
     return cpu_speed, cpu_usage, ram_avail, ram_usage, ram_total 
 
-def getMacOSVersion():
+def getMacOSVersion(): # this is obsolete now
     OpSys=platform.system()    
     if OpSys=='Darwin':
         versionList = platform.mac_ver()[0].split('.')
@@ -160,6 +160,40 @@ def getMacOSVersion():
             return True
         else:
             return False
+
+def whichWineMac():
+    """
+    Checks if 'wine' or 'wine64' should be used on macOS.
+
+    Returns:
+        str: The appropriate wine executable ('wine' or 'wine64'), or None if neither is found.
+    """
+
+    wine_paths = ['/usr/local/bin/wine', '/opt/homebrew/bin/wine', '/usr/bin/wine'] # common wine paths
+    wine64_paths = ['/usr/local/bin/wine64', '/opt/homebrew/bin/wine64', '/usr/bin/wine64'] # common wine64 paths
+    
+    global wPath
+    for path in wine_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine is working
+                subprocess.run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine'
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine either timed out, was not found, or had an OS error.
+
+    for path in wine64_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine64 is working
+                subprocess.run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine64'
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine64 either timed out, was not found, or had an OS error.
+
+    return None
         
 def systemCheck(dump=print):
     """Performs a simple diagnostic of the system, no input commands needed. System
@@ -233,33 +267,40 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
         dump('Wine Version = Native Windows (N/A)')
                 
     elif OpSys=='Darwin':
-        try: 
-            winetxt = 'wine'
-            if getMacOSVersion():
-                winetxt = 'wine64' 
-            winePath = []
-            wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
-            else:
-                global wPath
-                try:
-                    is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
-                    wPath = '/usr/local/bin/'
-                except:
-                    is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
-                    wPath = '/opt/homebrew/bin/'
-            wineVersion = []
-            for stdout_line in iter(is_wine.stdout.readline, ""):
-                wineVersion.append(stdout_line)
-            wine_version = stdout_line.split()[0].split('-')[1]
-            dump("Wine version = "+wine_version)
-        except:
+        if whichWineMac() is None:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True
             wineCheck = False
+        else:
+            dump("Wine is installed")
+        
+        # try: # old method
+        #     winetxt = 'wine'
+        #     if getMacOSVersion(): # looks like new wine-stable is no longer wine64 and is just wine
+        #         winetxt = 'wine64' 
+        #     winePath = []
+        #     wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        #     for stdout_line in iter(wine_path.stdout.readline, ''):
+        #         winePath.append(stdout_line)
+        #     if winePath != []:
+        #         is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+        #     else:
+        #         global wPath
+        #         try:
+        #             is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+        #             wPath = '/usr/local/bin/'
+        #         except:
+        #             is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+        #             wPath = '/opt/homebrew/bin/'
+        #     wineVersion = []
+        #     for stdout_line in iter(is_wine.stdout.readline, ""):
+        #         wineVersion.append(stdout_line)
+        #     wine_version = stdout_line.split()[0].split('-')[1]
+        #     dump("Wine version = "+wine_version)
+        # except:
+        #     warnings.warn("Wine is not installed!", Warning)
+        #     msg_flag = True
+        #     wineCheck = False
         
     else:
         print(OpSys)
@@ -2363,9 +2404,10 @@ class Project(object): # Project master class instanciated by the GUI
             if OS == 'Windows':
                 cmd = [exePath]
             elif OS == 'Darwin':
-                winetxt = 'wine'
-                if getMacOSVersion():
-                    winetxt = 'wine64'
+                # winetxt = 'wine'
+                # if getMacOSVersion():
+                #     winetxt = 'wine64'
+                winetxt = whichWineMac()
                 winePath = []
                 wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)
                 for stdout_line in iter(wine_path.stdout.readline, ''):
@@ -2373,7 +2415,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = [wPath + winetxt, exePath]
+                    cmd = [wPath, exePath]
             else:
                 #if platform.machine() == 'aarch64':
                 #    cmd = [exePath.replace('.exe', '_aarch64')]
@@ -3766,6 +3808,7 @@ class Project(object): # Project master class instanciated by the GUI
         mx, my, mz = self.mesh.df.X, self.mesh.df.Y, self.mesh.df.Z
         # xnew,ynew,znew,xknown, yknown, zknown, iknown
         res0 = nearest3d(mx, my, mz, px, py, pz, app)
+        res0[res0 < 0] = 1.0 # cap minimum resistivity value 
         # self.mesh.df.loc[:,'res0'] = res0 #  perhaps dont assign res0 here? 
         return res0 
         
@@ -4084,9 +4127,10 @@ class Project(object): # Project master class instanciated by the GUI
             if OS == 'Windows':
                 cmd = [exePath]
             elif OS == 'Darwin':
-                winetxt = 'wine'
-                if getMacOSVersion():
-                    winetxt = 'wine64'
+                # winetxt = 'wine'
+                # if getMacOSVersion():
+                #     winetxt = 'wine64'
+                winetxt = whichWineMac()
                 winePath = []
                 wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
                 for stdout_line in iter(wine_path.stdout.readline, ''):
@@ -4094,7 +4138,8 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = [wPath + winetxt, exePath]
+                    cmd = [wPath, exePath]
+            
             else:  # linux here
                 # check if running on raspberrypi
                 #if platform.machine() == 'aarch64':
@@ -4233,9 +4278,10 @@ class Project(object): # Project master class instanciated by the GUI
         if OS == 'Windows':
             cmd = ['powershell', '-Command', '&', '"'+exePath+'"']
         elif OS == 'Darwin':
-            winetxt = 'wine'
-            if getMacOSVersion():
-                winetxt = 'wine64'
+            # winetxt = 'wine'
+            # if getMacOSVersion():
+            #     winetxt = 'wine64'
+            winetxt = whichWineMac()
             winePath = []
             wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
@@ -4243,7 +4289,7 @@ class Project(object): # Project master class instanciated by the GUI
             if winePath != []:
                 cmd = ['%s' % (winePath[0].strip('\n')), exePath]
             else:
-                cmd = [wPath + winetxt, exePath]
+                cmd = [wPath, exePath]
         else:
             # check if running on raspberrypi
             if platform.machine == 'aarch64':
@@ -4382,7 +4428,7 @@ class Project(object): # Project master class instanciated by the GUI
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None, 
-               homogeneousStart = False):
+               pseudoStart = True):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.  
 
@@ -4427,9 +4473,9 @@ class Project(object): # Project master class instanciated by the GUI
         errIPCol : str, optioanl
             If no reciprocal data, a user supplied column can be read as IP
             error.
-        homogeneousStart : bool, optional 
-            Flag to start the inversion using a homogenous model. Default is 
-            False, in which case the starting resistivities will be estimated
+        pseudoStart : bool, optional 
+            Flag to start the inversion using using resisitivities from the pseudo section.
+            Default is True, in which case the starting resistivities will be estimated
             from the psuedo section values. 
         """
         if dump is None:
@@ -4479,10 +4525,7 @@ class Project(object): # Project master class instanciated by the GUI
         if modelDOI is True:
             sensScaled = self.modelDOI(dump=dump)
             
-        if homogeneousStart:
-            dump('Assuming homogenous starting model of 100 ohm.m')
-            self.mesh.df.loc[:,'res0'] = 100 
-        else:
+        if pseudoStart: 
             dump('Looking up starting resistivities from pseudo section')
             self.mesh.df.loc[:,'res0'] = self.res0fromPseudo() # res0 assigned
 

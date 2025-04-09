@@ -1670,12 +1670,20 @@ def primeParserTab(fname, espacing=1):
     if temp['pt_line_number:'].dtype == object:
         keepidx = [True]*len(temp)
         for i in range(len(temp)):
-            if '**Error' in temp['pt_line_number:'][i]:
+            if '**Error' in temp['pt_line_number:'][i]: # filter error lines 
+                keepidx[i] = False 
+        temp = temp[keepidx].reset_index().drop(columns='index')
+        warnings.warn('Data error lines in PRIME/RESIMGR file!')
+        
+    # filter glitchy lines too with the forward slashes 
+    if temp['pt_calc_res:'].dtype == object:
+        keepidx = [True]*len(temp)
+        for i in range(len(temp)):
+            if '/.//' in temp['pt_calc_res:'][i]: 
                 keepidx[i] = False 
         temp = temp[keepidx].reset_index().drop(columns='index')
         warnings.warn('Data missing in PRIME/RESIMGR file!')
     
-
     #Note R2 expects the electrode format in the form:
     #meas.no | P+ | P- | C+ | C- | transfer resistance
     

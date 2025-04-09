@@ -12,8 +12,8 @@ Dependencies:
     python3 standard libaries
 """
 #import standard python packages
-import os, platform, warnings, psutil, struct, base64, time, ntpath 
-from subprocess import PIPE, Popen
+import os, platform, warnings, psutil, struct, base64, time, ntpath, shutil
+from subprocess import PIPE, Popen, run, TimeoutExpired
 import tempfile
 import xml.etree.ElementTree as ET
 import numpy as np
@@ -186,7 +186,7 @@ def findminmax(a, pad=20):
     return [mina, maxa]
 
 #%% check mac version for wine
-def getMacOSVersion():
+def getMacOSVersion(): # this is obsolete now
     OpSys=platform.system()    
     if OpSys=='Darwin':
         versionList = platform.mac_ver()[0].split('.')
@@ -195,6 +195,40 @@ def getMacOSVersion():
             return True
         else:
             return False
+
+def whichWineMac():
+    """
+    Checks if 'wine' or 'wine64' should be used on macOS.
+
+    Returns:
+        str: The appropriate wine executable ('wine' or 'wine64'), or None if neither is found.
+    """    
+
+    wine_paths = ['/usr/local/bin/wine', '/opt/homebrew/bin/wine', '/usr/bin/wine'] # common wine paths
+    wine64_paths = ['/usr/local/bin/wine64', '/opt/homebrew/bin/wine64', '/usr/bin/wine64'] # common wine64 paths
+    
+    global wPath
+    for path in wine_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine is working
+                run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine'
+            except (TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine either timed out, was not found, or had an OS error.
+
+    for path in wine64_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
+            try:
+                # Basic check if wine64 is working
+                run([path, '--version'], capture_output=True, timeout=1)
+                wPath = path
+                return 'wine64'
+            except (TimeoutExpired, FileNotFoundError, OSError):
+                pass # wine64 either timed out, was not found, or had an OS error.
+
+    return None
         
 #%% create mesh object
 class Mesh:
@@ -4596,6 +4630,138 @@ def vtuImport(file_path,order_nodes=True):
     return mesh
 
 
+def vtsImport(file_path,order_nodes=True):
+    """Vtk importer for newer format (not fully validated)
+    """
+    if os.path.getsize(file_path)==0: # So that people dont ask me why you cant read in an empty file, throw up this error. 
+        raise ImportError("Provided mesh file is empty!")
+        
+    # get vtu file information (not robust yet)
+    root = ET.parse(file_path)
+    for child in root.iter('VTKFile'):
+        byte_order = child.attrib['byte_order']
+        vtk_type = child.attrib['type']
+    
+    if vtk_type != 'StructuredGrid':
+        raise Exception('vts file of unrecognised grid type, only structed grids allowed')
+
+    # function to convert acsii data contained in an xml element array to python list 
+    def child2Array(child):
+        if 'format' not in child.attrib.keys():
+            raise Exception('Cannot find format identifier in vtu file')
+        fmt = child.attrib['format']
+        if fmt not in ['ascii','binary']: 
+            raise Exception('Vtu data array not of ASCII  or Binary type, aborting...')
+            
+        typ = float
+        bcode = '<d' # byte decoding code 
+        if byte_order == 'BigEndian':
+            bcode = '>d'
+        pad = 1 # padding 
+        if 'int' in child.attrib['type'].lower():
+            typ = int
+            bcode = bcode.replace('b','q') # change code to long int 
+            if 'uint8' in child.attrib['type'].lower():
+                bcode = bcode.replace('q','B') # change code to unsigned char 
+                pad = 8 
+            
+        t = child.text.strip() # get raw text 
+        if fmt == 'ascii': 
+            t = t.replace('\n','')
+            a = [typ(x) for x in t.split()]
+        else:
+            b64 = bytes(t, encoding='ascii') # convert to ascii with base64 binary 
+            b = base64.decodebytes(b64)
+            a = [u[0] for u in struct.iter_unpack(bcode,b)]
+            a = a[pad:]
+        return a 
+
+    cellType = [12]
+
+    # get the number of cells and points 
+    for child in root.iter('Piece'):
+        extents = child.attrib['Extent'].split()
+        numnpx = int(extents[1])+1
+        numnpy = int(extents[3])+1
+        numnpz = int(extents[5])+1
+        numnp = numnpx * numnpy * numnpz
+        numel = int(extents[1])*int(extents[3])*int(extents[5])
+        
+    # get point data 
+    ptdf = pd.DataFrame()
+    for child in root.iter('PointData'):
+        for subchild in child.findall('DataArray'):
+            a = child2Array(subchild)
+            ptdf[subchild.attrib['Name']]=a
+            
+    # get cell data 
+    df = pd.DataFrame()
+    for child in root.iter('CellData'):
+        for subchild in child.findall('DataArray'):
+            a = child2Array(subchild)
+            df[subchild.attrib['Name']]=a
+            
+    # get node coordinates 
+    for child in root.iter('Points'):
+        for subchild in child.findall('DataArray'):
+            if not subchild.attrib['Name'] == 'Points':
+                continue 
+            ncomp = int(subchild.attrib['NumberOfComponents'])
+            assert ncomp == 3 
+            shape = (numnp,ncomp)
+            node = np.array(child2Array(subchild)).reshape(shape)
+             
+    # get connectivity matrix properties 
+    connection = np.zeros((numel, 8), dtype=int) 
+    xcounter = 1
+    ycounter = 1
+    zcounter = 1
+    i = 0 
+    j = 0 
+    while i < numnp: 
+        #note: the nodes are sorted by x, y, then z. 
+        if xcounter == numnpx: 
+            ycounter += 1
+            xcounter = 1
+            i += 1 # jump to next x row 
+        
+        if ycounter == numnpy:
+            zcounter += 1 
+            ycounter = 1
+            xcounter = 1
+            i += numnpx # jump to next y row 
+            
+        if zcounter == numnpz:
+            # reached top or bottom of mesh, so break here 
+            break 
+        
+        connection[j, 0] = i
+        connection[j, 1] = i + 1
+        connection[j, 4] = i + numnpx 
+        connection[j, 5] = i + numnpx + 1 
+        connection[j, 3] = i + (numnpy * numnpx)
+        connection[j, 2] = i + (numnpy * numnpx) + 1 
+        connection[j, 7] = i + (numnpy * numnpx) + numnpx
+        connection[j, 6] = i + (numnpy * numnpx) + numnpx + 1  
+        j += 1 
+        i += 1 
+        xcounter += 1 
+                
+    mesh = Mesh(node[:,0],#x coordinates of nodes 
+                node[:,1],#y coordinates of nodes
+                node[:,2],#z coordinates of nodes 
+                connection,#nodes of element vertices
+                cellType,#according to vtk format
+                file_path,
+                False) 
+    
+    #add attributes / cell parameters 
+    mesh.df = df 
+    mesh.ptdf = ptdf 
+
+    return mesh
+
+
 #%% import mesh from native .dat format
 def dat_import(file_path='mesh.dat', order_nodes=True):
     """ Import R2/cR2/R3t/cR3t .dat kind of mesh. 
@@ -5122,9 +5288,10 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         cmd_line = [os.path.join(ewd,'gmsh.exe'), file_name+'.geo', opt, 'nt %i'%ncores]
         
     elif platform.system() == 'Darwin': # its a macOS 
-        winetxt = 'wine'
-        if getMacOSVersion():
-            winetxt = 'wine64'
+        # winetxt = 'wine'
+        # if getMacOSVersion():
+        #     winetxt = 'wine64'
+        winetxt = whichWineMac()
         winePath = []
         wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
         for stdout_line in iter(wine_path.stdout.readline, ''):
@@ -5132,14 +5299,8 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         if winePath != []:
             cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
         else:
-            try:
-                is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
-                wPath = '/usr/local/bin/'
-            except:
-                is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
-                wPath = '/opt/homebrew/bin/'
-            cmd_line = [wPath + winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
-    
+            cmd_line = [wPath, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]   
+        
     elif platform.system() == 'Linux':
         #if platform.machine() == 'aarch64':
         #    cmd_line = [ewd + '/gmsh_aarch64', file_name + '.geo', opt,'-nt','%i'%ncores]
@@ -6810,6 +6971,8 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
         mesh = vtk_import(file_path, order_nodes=order_nodes)
     elif ext == '.vtu':
         mesh = vtuImport(file_path, order_nodes=order_nodes)
+    elif ext == '.vts':
+        mesh = vtsImport(file_path, order_nodes=False)
     elif ext == '.msh':
         mesh_dict = gw.mshParse(file_path, debug=False)
 

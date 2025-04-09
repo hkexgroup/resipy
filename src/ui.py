@@ -513,8 +513,15 @@ class SequenceHelper(QWidget):
             self.reccheck.setEnabled(True)
 
     def exportFunc(self):
-        fname, _ = QFileDialog.getSaveFileName(self,'Export File', self.dirname, 'Generic (*.csv)')
-        ftype = 'generic' # todo: allow for more file types 
+        fname, ftypeinfo = QFileDialog.getSaveFileName(
+            self,'Export File', 
+            self.dirname, 
+            "Generic (*.csv);;PRIME template (*.txt);; Syscal (*.txt);;Sting (*.cmd)")
+        avialTypes = ["prime", "sting", "syscal", "generic"] # todo: allow for more file types 
+        for t in avialTypes:
+            if t in ftypeinfo.lower(): 
+                ftype = t 
+                break 
         integer = self.intcheck.isChecked()
         recip = self.reccheck.isChecked()
         split = self.splcheck.isChecked()
@@ -5817,7 +5824,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.rho_max.setText('1000')
         self.rho_max.editingFinished.connect(rho_maxFunc)
         invForm.addRow(self.rho_maxLabel, self.rho_max)
-
+        
+        # add option to look up starting resistivities from psuedo section 
+        self.pseudoStartLabel = QLabel('<a href="pseudo_start">Starting model from pseudo section</a>:')
+        self.pseudoStartCheck = QCheckBox()
+        self.pseudoStartCheck.setChecked(True)
+        self.pseudoStartLabel.linkActivated.connect(showHelp)
+        invForm.addRow(self.pseudoStartLabel, self.pseudoStartCheck)
 
         generalLayout.addLayout(invForm)
 
@@ -6063,6 +6076,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 modErr = self.modErrCheck.isChecked()
                 parallel = self.parallelCheck.isChecked()
                 modelDOI = self.modelDOICheck.isChecked()
+                pseudoStart = self.pseudoStartCheck.isChecked()
 
                 kwargs = {'dump': logTextFunc, # keyword arguments for project.invert
                           'iplot': False,
@@ -6072,6 +6086,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                           'ncores': ncores,
                           'errResCol': errResCol,
                           'errIPCol': errIPCol,
+                          'pseudoStart':pseudoStart, 
                           }
 
                 # run inversion in different thread to not block the UI
@@ -6087,8 +6102,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
                 # self.project.invert(iplot=False, dump=logTextFunc,
                 #                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
-                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s}, errResCol={:s}, errIPCol={:s})'.format(
-                    str(modErr), str(parallel), str(modelDOI), str(errResCol), str(errIPCol)))
+                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s}, errResCol={:s}, errIPCol={:s}, pseudoStart = {:s}'.format(
+                    str(modErr), str(parallel), str(modelDOI), str(errResCol), str(errIPCol), str(pseudoStart)))
 
                 self.thread.finished.connect(afterInversion)
                 self.thread.finished.connect(afterInversionShow)
