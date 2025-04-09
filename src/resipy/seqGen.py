@@ -1039,14 +1039,13 @@ class Generator():
             # write out header information 
             fh.write(";Automatically created command file from ResIPy\n") 
             fh.write(":header\n") 
-            typeid = "F"
-            progid = "CUSTOM(%i)F"%len(lines)
+            typeid = "R" # R for resistance (no other types available according to sting docs)
+            progid = "CUSTOM%iF"%len(lines)
             if i == 1: 
-                typeid = "R"
-                progid = "CUSTOM(%i)R"%len(lines)
+                progid = "CUSTOM%iR"%len(lines)
             fh.write("progID=%s\n"%progid) 
             fh.write("type=%s\n"%typeid)
-            fh.write("arraytype=3\n") 
+            fh.write("arraytype=0\n") 
             fh.write("Binf=0\n")
             fh.write("Ninf=0\n")
             fh.write("MUX=1\n") 
