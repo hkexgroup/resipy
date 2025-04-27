@@ -1545,6 +1545,73 @@ class Survey(object):
         ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}^{{{}}}$ (R$^2$ = {})'.format(a1s,a2s,R2s))
         if ax is None:
             return fig
+    
+    def fitErrorPwlEnv(self, ax=None):
+        """Fit an power law to the resistivity data with an enveloppe fit.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()        
+        if 'recipMean' not in self.df.columns:
+            self.computeReciprocal()
+        dfg = self.df[self.df['irecip'] > 0][['recipMean','recipError']].copy()
+        dfg = dfg.replace([np.inf,-np.inf], np.nan).dropna()
+        binsize = 20 # default to 20 sample per bins
+        numbins = int(dfg.shape[0]/binsize) # max 20 bins
+        if numbins > 20: # we want max 20 bins
+            binsize = int(len(dfg['recipMean'])/20) # at least 20 samples per bin
+            numbins = 20
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
+        error_input['recipError'] = error_input['recipError']
+        bins = np.zeros((numbins,2))
+        for i in range(numbins): # bining 
+            ns=i*binsize
+            ne=ns+binsize-1
+            bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
+            bins[i,1] = error_input['recipError'].iloc[ns:ne].quantile(0.95)    
+#        print(bins)
+#        print(np.sum(np.isnan(bins)))
+#        print(np.sum(np.isinf(bins)))
+#        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)       
+        coefs = polyfit(np.log(bins[:,0]), np.log(bins[:,1]), 1)[::-1] #order is of coefs is opposite to lstqd       
+        R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
+        ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
+        ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
+        ax.plot(bins[:,0],R_error_predict,'r', label="Power Law Fit")
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        # lines above are work around to https://github.com/matplotlib/matplotlib/issues/5541/
+        ax.set_ylabel(r'$R_{error} [\Omega]$')
+        ax.set_xlabel(r'$R_{avg} [\Omega]$')      
+        ax.legend(loc='best', frameon=True)
+        R2 = self.R_sqr(np.log(bins[:,1]), np.log(R_error_predict))
+        a1 = np.exp(coefs[0])
+        a2 = coefs[1]
+
+        self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
+        def errorModel(df):
+            x = df['recipMean'].values
+            return a1*(np.abs(x)**a2)
+        self.errorModel = errorModel
+        # formatting coefs for print
+        formattedCoefs = self.numFormating([a1, a2, R2])
+        a1s = formattedCoefs[0]
+        a2s = formattedCoefs[1]
+        R2s = formattedCoefs[2]
+        if self.debug: 
+            print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1s,a2s,R2s))
+        ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}^{{{}}}$ (R$^2$ = {})'.format(a1s,a2s,R2s))
+        if ax is None:
+            return fig
         
         
     def fitErrorLin(self, ax=None):
