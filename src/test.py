@@ -736,7 +736,7 @@ pl = pv.Plotter(off_screen=True)
 k.surveys[0]._showElecStrings3D(ax=pl)
 
 k.createSequence()
-k.invert(modErr=True, homogeneousStart=False)
+k.invert(modErr=True, pseudoStart=True)
 k.saveVtks()
 k.showResults(use_pyvista=False)
 pl = pv.Plotter(off_screen=True)

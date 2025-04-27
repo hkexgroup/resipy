@@ -27,7 +27,7 @@ import matplotlib.path as mpath
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from scipy.spatial import cKDTree, Voronoi, ConvexHull
+from scipy.spatial import cKDTree, Voronoi, ConvexHull, Delaunay
 from scipy.interpolate import interp1d
 from copy import deepcopy
 
@@ -476,7 +476,7 @@ class Mesh:
             return 5
         #add element types as neccessary 
         else:
-            print("WARNING: unrecognised cell type")
+            warnings.warn("Unrecognised cell type")
             return 0
         
     def summary(self,flag=True):
@@ -1016,28 +1016,28 @@ class Mesh:
             if return_idx == True an array of int
         """
         if self.ndims == 2:
-            typ = 2
+            typ = 2 # flag the type of algorithm to use 
             if self.type2VertsNo() == 4: 
                 qmesh = self.quad2tri() # get the triangle mesh instead 
                 return qmesh.extractSurface() # run the same function 
-
         elif self.ndims == 3: 
             typ = 3
             if self.type2VertsNo() == 6 or self.type2VertsNo() == 8:#not a tetrahedra 3d mesh 
-                raise Exception("Sorry surface extraction is not available for this type of mesh")
+                typ = 4 
         
-        con_mat = self.connection
-        if self.neigh_matrix is None: # compute neighbour matrix 
-            self.computeNeigh() # this will find the element neighbours and the elements which lie on the outside of the mesh! 
-        neigh = self.neigh_matrix
-        
-        out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
-        neigh_trunc = neigh[out_elem]
-        con_trunc = con_mat[out_elem]           
-        
-        node_x = self.node[:,0]
-        node_y = self.node[:,1]
-        node_z = self.node[:,2]
+        if typ != 4: # below parameters not used for type 4 flag 
+            con_mat = self.connection
+            if self.neigh_matrix is None: # compute neighbour matrix 
+                self.computeNeigh() # this will find the element neighbours and the elements which lie on the outside of the mesh! 
+            neigh = self.neigh_matrix
+            
+            out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
+            neigh_trunc = neigh[out_elem]
+            con_trunc = con_mat[out_elem]           
+            
+            node_x = self.node[:,0]
+            node_y = self.node[:,1]
+            node_z = self.node[:,2]
         
         if typ == 2: ### Extract 2D faces of top of the mesh ###
             xm = self.elmCentre[:,0]
@@ -1096,7 +1096,7 @@ class Mesh:
             else:
                 return (uni_x,uni_z)
             
-        else:  ### Extract 3D faces of top of the mesh ###
+        elif typ == 3:  ### Extract 3D faces of top of the mesh ###
             fcon, outelem = mc.faces3d(self.connection,
                                        neigh) # first get external faces 
             # outelem = np.array(outelem)
@@ -1143,6 +1143,38 @@ class Mesh:
             # might cuase a bug where post_neigh_check == True
             else:
                 return nmesh
+            
+        else: 
+            # in this case assume that the nodes are all aligned in the horizontal axis 
+            # firstly find the unique x y positions in the mesh 
+            # from https://stackoverflow.com/questions/7989722/finding-unique-points-in-numpy-array
+            unixy = np.vstack([np.array(u) for u in set([tuple(p) for p in self.node[:,0:2]])])
+            unode = np.zeros((unixy.shape[0],3), dtype=float)
+
+            # secondly triangulate the nodes at the uppermost position of each 
+            # vertical column 
+            for i in range(unode.shape[0]):
+                x = unixy[i,0]
+                y = unixy[i,1]
+                boolidx = (x==self.node[:,0]) & (y==self.node[:,1])
+                zvals = self.node[boolidx,2] # values of z in the xy column 
+                z = max(zvals) # take the maximum value as the upper most point 
+                unode[i,0] = x; unode[i,1] = y; unode[i,2] = z; 
+                
+            # thirdly triangulate between the unique nodes in the xy plane 
+            tri = Delaunay(unode[:,0:2]) # triangulate 
+            
+            nmesh = Mesh(unode[:,0], # make new mesh 
+                         unode[:,1], 
+                         unode[:,2], 
+                         node_data = tri.simplices, 
+                         cell_type = [5], 
+                         order_nodes=False,
+                         compute_centre=True,
+                         check2D=False)
+            
+            return nmesh 
+            
         
     #%% Truncating the mesh 
     def __rmexcessNodes(self):
