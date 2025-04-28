@@ -2614,7 +2614,8 @@ def stingParser(fname):
     # 30 IP reading in sec for the sixth time slot
     # 31 total IP reading in sec
     
-    if 'IP' in df_raw.iloc[0,21]: 
+    try: # some data don't have col 21 (i.e., IP)
+    # if 'IP' in df_raw.iloc[0,21]: 
         # convert into chargeability via equation 1 in Mwakanyamale et al (2012)
         Vs_index = [24 + i for i in range(6)]
         #lookup table for time constants and corresponding time slot lengths 
@@ -2645,7 +2646,7 @@ def stingParser(fname):
             mrad[i] = Ma*-1 
 
         df['ip'] = mrad  
-    else:
+    except:
         df['ip'] = [0]*len(df_raw)
     
     #for pole-pole and pole-dipole arrays
