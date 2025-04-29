@@ -60,6 +60,9 @@ pre-processing and error models for unique, combined or multiple surveys:
     index = -1 : apply to each datasets the same type of model
     index > 0 : apply an error model to the selected unique survey
 '''
+if int(np.version.version.split('.')[0]) >= 2: 
+    # if numpy version > 2 then set print options to legacy, otherwise the gmsh wrapper will crash gmsh 
+    np.set_printoptions(legacy='1.25') 
 
 #%% check executables are here
 def checkSHA1(fname):
@@ -1759,19 +1762,19 @@ class Project(object): # Project master class instanciated by the GUI
             
         # get survey ids and unique survey indexes 
         # returned indexes are the first instance of each survey index 
-        sid, uidx = np.unique(finfo.sid.values,return_index=True)
+        usid, _ = np.unique(finfo.sid.values,return_index=True)
         
         self.surveys = [] # flush other surveys
 
-        if len(sid) > 1: 
+        if len(usid) > 1: 
             self.iTimeLapse = True 
             
         c = 0 
-        for i in uidx: 
+        for i in usid: 
             self.createSurvey(finfo.fpath[i].strip(), ftype=finfo.ftype[i], 
                               debug=debug, estMemory=False, string=finfo.string[i])
             sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
-            # print(sidx)
+
             _ = sidx.pop(0)
                 
             for j in sidx: 

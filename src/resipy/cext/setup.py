@@ -10,8 +10,8 @@ if platform.system() == 'Linux': #open mp support on linux
         Extension(
             "meshCalc",
             ["meshCalcUnix.pyx"],
-            extra_compile_args=["-fopenmp"],
-            extra_link_args=['-fopenmp'],
+            # extra_compile_args=["-fopenmp"],
+            # extra_link_args=['-fopenmp'],
         ),
         Extension(
         	"fastRecip",
@@ -38,15 +38,17 @@ else: # macOS
 		brew install cmake gcc
         brew install cmake gcc@xx for specific version of gcc - then change below to specific version
         Note: gcc-13 works on Apple Silicon
+        
+        Edit: With the openmp dependency removed, extension can be compiled with apple clang 
     '''
-    os.environ['CC'] = 'gcc-13' # gcc-xx based on gcc version
-    os.environ['CXX'] = 'g++-13' # g++-xx based on g++ version
+    os.environ['CC'] = 'gcc' # gcc-xx based on gcc version
+    os.environ['CXX'] = 'g++' # g++-xx based on g++ version
     ext_modules = [
         Extension(
             "meshCalc",
-            ["meshCalc.pyx"],
-            extra_compile_args=["-fopenmp"],
-            extra_link_args=['-fopenmp'],
+            ["meshCalcUnix.pyx"],
+            # extra_compile_args=["-fopenmp"],
+            # extra_link_args=["-fopenmp"],
         ),
         Extension(
         	"fastRecip",

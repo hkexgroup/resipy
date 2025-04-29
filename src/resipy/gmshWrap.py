@@ -1500,7 +1500,7 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     fh.write("//Add line loops and plane surfaces for the Neumann region\n")
     #now add background region line loop (cos this be made more efficent?)
     basal_ln_cache_flipped = list(np.flipud(np.array(basal_ln_cache))*-1)
-    coarse_msh_loop = n_ln_cache + end_ln_r + basal_ln_cache_flipped + [end_ln_l[i]*-1 for i in range(len(end_ln_l))]
+    coarse_msh_loop = n_ln_cache + end_ln_r + basal_ln_cache_flipped + [int(end_ln_l[i])*-1 for i in range(len(end_ln_l))]
     fh.write("Line Loop(2) = {%s};\n"%str(coarse_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
     fh.write("Plane Surface(1) = {1, 2};//Coarse mesh region surface\n")
     

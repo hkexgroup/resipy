@@ -6,12 +6,16 @@ import numpy as np
 #NB: Unix users will need gcc installed 
 
 ext_modules = [
+    # Extension(
+    #     "meshCalc",
+    #     ["meshCalc.c"],
+    #     extra_compile_args=['/openmp'],
+    #     extra_link_args=['/openmp'],
+    # ),
     Extension(
-        "meshCalc",
-        ["meshCalc.c"],
-        extra_compile_args=['/openmp'],
-        extra_link_args=['/openmp'],
-    )
+       	"fastRecip",
+       	["fastRecip.pyx"]
+   	),
 ]
 
 setup(

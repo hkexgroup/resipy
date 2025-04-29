@@ -1,8 +1,8 @@
 cimport cython  #import relevant modules 
 import numpy as np
 cimport numpy as np
-from cython.parallel import prange, parallel 
-cimport openmp
+# from cython.parallel import prange, parallel 
+# cimport openmp
 
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)
@@ -13,7 +13,7 @@ DINT = np.intc
 # mesh calculations - need to be in cython otherwise they will take too long 
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
 @cython.wraparound(False)        
-cdef int bisection_search(long long[:] arr, long long var) nogil:
+cdef int bisectionSearch(long long[:] arr, long long var) nogil:
     """Efficent search algorithm for sorted array of postive ints 
     (memory veiw parallel capable version)
     
@@ -40,7 +40,7 @@ cdef int bisection_search(long long[:] arr, long long var) nogil:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)  
-def bisection_searchL(list arr, long long var):
+def bisectionSearchL(list arr, long long var):
     """Efficent search algorithm for sorted list of postive ints 
     
     Parameters
@@ -95,7 +95,7 @@ def unique(list arr): # unique with out numpy for an array of ints
     idx = [temp_idx[0]]
     
     for i in range(1,len(arrs)):
-        search = bisection_searchL(uni,arrs[i])
+        search = bisectionSearchL(uni,arrs[i])
         if search == -1:
             uni.append(arrs[i])
             idx.append(temp_idx[i])
@@ -132,7 +132,7 @@ cdef double fmax(double[:] arr) nogil: # import note: You need to pass the memor
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef double mean_average(double[:] arr) nogil:
+cdef double meanAverage(double[:] arr) nogil:
     #compute mean average of an array 
     cdef int n = arr.shape[0]
     cdef double tmp = 0
@@ -157,7 +157,7 @@ cdef ccw(p,q,r):#code expects points as p=(x,y) and so on ...
 
 @cython.boundscheck(False)
 @cython.wraparound(False)    
-cdef long tetra_signp(double[:] a, double[:] b, double [:] c,  double [:] d) nogil:
+cdef long tetrasignp(double[:] a, double[:] b, double [:] c,  double [:] d) nogil:
     #parrall nogil tetra sign code, but needs memory views passed to it 
     cdef double v00,v01,v02,v10,v11,v12,v20,v21,v22,s0,s1,s2, N 
     
@@ -280,9 +280,10 @@ def neigh3d(long long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef long long[:] lookup_idxv = lookup_idx
   
     #loop is parallel becuase it can be intense
-    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+    # for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+    for i in range(numel): 
         for j in range(npere):
-            o = bisection_search(tri_sortv,tri_combov[i,j]) # only works on a sorted array
+            o = bisectionSearch(tri_sortv,tri_combov[i,j]) # only works on a sorted array
             #find the reference index
             if lookup_idxv[o]==i:# then there are 2 options 
                 #1 ) the face in question is unique or
@@ -434,9 +435,10 @@ def neigh2d(long long[:,:] connection, int return_tri_combo=1, int num_threads=2
     cdef long long[:] lookup_idx = lookup[temp_idx]
     
     #loop is parallel becuase it can be intense
-    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+    # for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+    for i in range(numel): 
         for j in range(npere):
-            o = bisection_search(tri_sort,tri_combov[i,j]) # only works on a sorted list 
+            o = bisectionSearch(tri_sort,tri_combov[i,j]) # only works on a sorted list 
             #find the reference index
             if lookup_idx[o]==i:# then there are 2 options 
                 #1 ) the face in question is unique or
@@ -549,9 +551,10 @@ def neighPrism(long long[:,:] connection, int return_tri_combo, int num_threads=
     cdef long long[:] lookup_idxv = lookup_idx
   
     #loop is parallel becuase it can be intense
-    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='dynamic'):
+    # for i in prange(numel,nogil=True,num_threads=num_threads,schedule='dynamic'):
+    for i in range(numel): 
         for j in range(npere):
-            o = bisection_search(tri_sortv,tri_combov[i,j]) # only works on a sorted array
+            o = bisectionSearch(tri_sortv,tri_combov[i,j]) # only works on a sorted array
             #find the reference index
             if lookup_idxv[o]==i:# then there are 2 options 
                 #1 ) the face in question is unique or
@@ -780,7 +783,7 @@ def splitTri(long long[:,:] connection, double[:,:] node):
             nodes[0] = n[a[j]]; nodes[1] = n[b[j]]
             sortInt(nodes,2)
             mn = mergeInt(nodes[0],nodes[1],pad)
-            search = bisection_search(unicl,mn)
+            search = bisectionSearch(unicl,mn)
             
             n[j+3] = node_id[search]#reference index
     
@@ -905,7 +908,7 @@ def splitTetra(long long[:,:] connection, double[:,:] node):
             nodes[0] = n[a[j]]; nodes[1] = n[b[j]]
             sortInt(nodes,2)
             mn = mergeInt(nodes[0],nodes[1],pad)
-            search = bisection_search(unicl,mn)
+            search = bisectionSearch(unicl,mn)
             n[j+4] = node_id[search]#reference index
     
         tmpi = i*8 # temporary index for indexing new connection matrix
@@ -983,7 +986,8 @@ def orderTetra(long long[:,:] connection, double[:,:] node, int num_threads=2):
     cdef int count_out #rolling total for the number of corrected elements 
 
     #with nogil, parallel(num_threads=num_threads):
-    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+    # for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+    for i in range(numel): 
         v00 = nodex[connection[i,1]] - nodex[connection[i,0]] 
         v01 = nodex[connection[i,2]] - nodex[connection[i,0]] 
         v02 = nodex[connection[i,3]] - nodex[connection[i,0]] 
@@ -1204,48 +1208,49 @@ def surfaceCall(long[:,:] fconnection, double[:,:] node, double[:,:] cellcentres
     cdef long s1,s2,s3,s4,s5
     
     #construct query arrays for each element and extract surface cells 
-    with nogil, parallel(num_threads=num_threads):
-        for i in prange(nfaces,schedule='dynamic', chunksize=1):
-            xx = 0
-            yy = 0 
-            for j in range(3):
-                xx = xx + node_xv[fconnection[i,j]]
-                yy = yy + node_yv[fconnection[i,j]]
-                
-            xm = xx/3 # x mid 
-            ym = yy/3 # y mid 
-            bqz = cellcentres[i,2] # zmid 
+    # with nogil, parallel(num_threads=num_threads):
+    # for i in prange(nfaces,schedule='dynamic', chunksize=1):
+    for i in range(nfaces): 
+        xx = 0
+        yy = 0 
+        for j in range(3):
+            xx = xx + node_xv[fconnection[i,j]]
+            yy = yy + node_yv[fconnection[i,j]]
             
-            q0[i,0] = xm
-            q0[i,1] = ym
-            q0[i,2] = tqz # top query point 
-            
-            q1[i,0] = xm
-            q1[i,1] = ym
-            q1[i,2] = bqz #bottom query point 
-            
-            p0[i,0] = node_xv[fconnection[i,0]] # corner 1 
-            p0[i,1] = node_yv[fconnection[i,0]]
-            p0[i,2] = node_zv[fconnection[i,0]]
-            
-            p1[i,0] = node_xv[fconnection[i,1]] # corner 2
-            p1[i,1] = node_yv[fconnection[i,1]]
-            p1[i,2] = node_zv[fconnection[i,1]]
-            
-            p2[i,0] = node_xv[fconnection[i,2]] # corner 3
-            p2[i,1] = node_yv[fconnection[i,2]]
-            p2[i,2] = node_zv[fconnection[i,2]]
-            
-            s1 = tetra_signp(q0[i,:],p0[i,:],p1[i,:],p2[i,:])
-            s2 = tetra_signp(q1[i,:],p0[i,:],p1[i,:],p2[i,:])
-            
-            if s1 != s2: # then query point is either side of the triangle so probe
-                s3 = tetra_signp(q0[i,:],q1[i,:],p0[i,:],p1[i,:])
-                s4 = tetra_signp(q0[i,:],q1[i,:],p1[i,:],p2[i,:])
-                s5 = tetra_signp(q0[i,:],q1[i,:],p2[i,:],p0[i,:])
-    
-                if s3 == s4 and s4 == s5:
-                    ocheckv[i] = 1 
+        xm = xx/3 # x mid 
+        ym = yy/3 # y mid 
+        bqz = cellcentres[i,2] # zmid 
+        
+        q0[i,0] = xm
+        q0[i,1] = ym
+        q0[i,2] = tqz # top query point 
+        
+        q1[i,0] = xm
+        q1[i,1] = ym
+        q1[i,2] = bqz #bottom query point 
+        
+        p0[i,0] = node_xv[fconnection[i,0]] # corner 1 
+        p0[i,1] = node_yv[fconnection[i,0]]
+        p0[i,2] = node_zv[fconnection[i,0]]
+        
+        p1[i,0] = node_xv[fconnection[i,1]] # corner 2
+        p1[i,1] = node_yv[fconnection[i,1]]
+        p1[i,2] = node_zv[fconnection[i,1]]
+        
+        p2[i,0] = node_xv[fconnection[i,2]] # corner 3
+        p2[i,1] = node_yv[fconnection[i,2]]
+        p2[i,2] = node_zv[fconnection[i,2]]
+        
+        s1 = tetrasignp(q0[i,:],p0[i,:],p1[i,:],p2[i,:])
+        s2 = tetrasignp(q1[i,:],p0[i,:],p1[i,:],p2[i,:])
+        
+        if s1 != s2: # then query point is either side of the triangle so probe
+            s3 = tetrasignp(q0[i,:],q1[i,:],p0[i,:],p1[i,:])
+            s4 = tetrasignp(q0[i,:],q1[i,:],p1[i,:],p2[i,:])
+            s5 = tetrasignp(q0[i,:],q1[i,:],p2[i,:],p0[i,:])
+
+            if s3 == s4 and s4 == s5:
+                ocheckv[i] = 1 
                 
     return ocheck
 
@@ -1485,13 +1490,13 @@ def externalN(long long[:,:] connection, double[:,:] node, long[:,:] neigh):
                     q1[1] = ymf
                     q1[2] = zm #bottom query point 
                     
-                    s1 = tetra_signp(q0,p0,p1,p2)
-                    s2 = tetra_signp(q1,p0,p1,p2)
+                    s1 = tetrasignp(q0,p0,p1,p2)
+                    s2 = tetrasignp(q1,p0,p1,p2)
                     
                     if s1 != s2: # then query point is either side of the triangle so probe
-                        s3 = tetra_signp(q0,q1,p0,p1)
-                        s4 = tetra_signp(q0,q1,p1,p2)
-                        s5 = tetra_signp(q0,q1,p2,p0)
+                        s3 = tetrasignp(q0,q1,p0,p1)
+                        s4 = tetrasignp(q0,q1,p1,p2)
+                        s5 = tetrasignp(q0,q1,p2,p0)
             
                         if s3 == s4 and s4 == s5:
                             for k in range(3):
@@ -1611,7 +1616,7 @@ def fcrosscheck(long long[:,:] fconnection1, long long[:,:] fconnection2):#, int
     
     for i in range(numel1):
     #for i in prange(numel1,nogil=True,num_threads=num_threads,schedule='static'): # parrallel implimentation  
-        o = bisection_search(csort,combov1[i]) # only works on a sorted array  
+        o = bisectionSearch(csort,combov1[i]) # only works on a sorted array  
         #if the item is found then o!=-1 and it must be a repeat 
         if o!=-1:
             repeatv[i] = 1
@@ -1694,16 +1699,16 @@ def boundcall(long long[:,:] tconnection, long long[:,:] fconnection, double[:,:
         if dy < 1e-16 or dx < 1e-16 : #face is on the side of the mesh 
             bd = 2
         else:
-            fcentriod[0] = mean_average(x)
-            fcentriod[1] = mean_average(y)
-            fcentriod[2] = mean_average(z)
+            fcentriod[0] = meanAverage(x)
+            fcentriod[1] = meanAverage(y)
+            fcentriod[2] = meanAverage(z)
             for j in range(npere):
                 cx[j] = node[tconnection[i,j],0]
                 cy[j] = node[tconnection[i,j],1]
                 cz[j] = node[tconnection[i,j],2]
-            tcentriod[0] = mean_average(cx)
-            tcentriod[1] = mean_average(cy)
-            tcentriod[2] = mean_average(cz)              
+            tcentriod[0] = meanAverage(cx)
+            tcentriod[1] = meanAverage(cy)
+            tcentriod[2] = meanAverage(cz)              
             #if outward vector faces downwards then then the element is on base of mesh 
             if fcentriod[2] > tcentriod[2]:
                 bd = 1
@@ -1719,7 +1724,7 @@ def boundcall(long long[:,:] tconnection, long long[:,:] fconnection, double[:,:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def rmRepeatNodes(double[:,:] node, long [:,:] connection, int n=10, int num_threads=2):
+def rmRepeatNodes(double[:,:] node, long [:,:] connection, int n=10):
     """
     Remove colocated nodes, useful for some mesh formats or remapping the ABMN 
     matrix when colocated electrodes are present (becuase of multiple survey lines). 
@@ -1779,7 +1784,7 @@ def rmRepeatNodes(double[:,:] node, long [:,:] connection, int n=10, int num_thr
     cdef long long[:] remap = np.zeros(numnp,dtype=np.int64)-1 # array to allocate remapped node values to 
     cdef long long[:] flag = np.zeros(numnp,dtype=np.int64) # decides if point already added
     
-    for i in prange(numnp,nogil=True,num_threads=num_threads,schedule='static'):
+    for i in range(numnp):
         #this bit can be parallel 
         idx[i,0] = i
         c=1
