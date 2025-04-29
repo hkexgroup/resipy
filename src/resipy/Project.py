@@ -2775,7 +2775,37 @@ class Project(object): # Project master class instanciated by the GUI
             self.surveys[index].fitErrorPwl(ax=ax)
         self.pinfo['Error model'] = True 
 
+    def fitErrorPwlEnv(self, index=-1, ax=None):
+        """Fit an power law to the resistivity data with an envelope fit.
 
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to fit. If `index == -1` (default) then the fit
+            is done on all surveys independantly.
+            If `ìndex == -2` then the fit is done on the combined surveys.
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if index == -2: # apply to combined data of bigSurvey
+            self.bigSurvey.fitErrorPwlEnv(ax=ax)
+            for s in self.surveys:
+                s.df['resError'] = self.bigSurvey.errorModel(s.df)
+        elif index == -1: # apply to each
+            for s in self.surveys:
+                s.fitErrorPwlEnv(ax=ax)
+            # redo the legend
+            if ax is not None and len(self.surveys) > 1:
+                self.fixLegendItems(ax)
+        else:
+            self.surveys[index].fitErrorPwlEnv(ax=ax)
+        self.pinfo['Error model'] = True 
+        
     def fitErrorLME(self, index=-1, ax=None, rpath=None, iplot=True): # :pragma: no cover
         """Fit a linear mixed effect (LME) model by having the electrodes as
         as grouping variables.
@@ -7299,7 +7329,10 @@ class Project(object): # Project master class instanciated by the GUI
                 except Exception as e:
                     print('error in computing difference:', e)
                     pass
-        
+                
+        # crop the mesh0 object
+        if self.iTimeLapse:
+            self.meshResults[0] = self.meshResults[0].crop(self.param['xz_poly_table'])
         
 
     def saveVtks(self, dirname=None):
