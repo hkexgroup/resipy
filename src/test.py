@@ -7,18 +7,17 @@ run indicates a broken commit/update to the code.
 @author: jkl
 
 """
-
+import os, shutil, platform, time 
 import numpy as np
-import os
-import shutil
 import pandas as pd
-import time
 import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy import Project, Survey
 from resipy.Project import apiPath
 import pyvista as pv  # pyvista will be rendered as with 'pv.Plotter(off_screen=True)'
-pv.start_xvfb()  # virtual frame buffer when running without x server
+
+if platform.system().lower() == 'linux':
+    pv.start_xvfb()  # virtual frame buffer when running without x server
 
 tstart = time.time()
 timings = {}
@@ -26,6 +25,8 @@ timings = {}
 testdir = 'examples/'
 
 print('======================= GENERAL METHOD TESTS =====================')
+print('Operating system = %s'%platform.system())
+
 #%% testing all importing features
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
