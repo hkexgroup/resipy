@@ -8,7 +8,8 @@ and electrode positions as numpy.array
 """
 import os, warnings, struct, re, io, chardet 
 import numpy as np
-import pandas as pd
+import pandas as pd 
+from scipy.spatial import cKDTree 
 
 #%% function to compute geometric factor - Jamyd91
 def geom_fac(C1,C2,P1,P2):
@@ -2501,9 +2502,40 @@ def stingParser(fname):
     elec_x =  np.concatenate(df_raw.iloc[:,[9,12,15,18]].values)
     elec_y =  np.concatenate(df_raw.iloc[:,[10,13,16,19]].values)
     elec_z =  np.concatenate(df_raw.iloc[:,[11,14,17,20]].values)
-    elec_raw = np.unique(np.column_stack((elec_x,elec_y,elec_z)), axis=0)
-#    elec_raw = elec_raw[elec_raw[:,1].argsort(kind='mergesort')] # to make an stable mesh, but its not working with the 3D example
+    # sort by the x column (should work for 2D surveys where electrodes should be
+    # ordered positively in the x direction)
+    # however frankly the sting format is not great format due to the electrodes 
+    # being stored by their positions and not index, this is very ambigous if the 
+    # user wants to update their electrode positions outside of the raw data
+    sort_by_x = np.argsort(elec_x)
+    elec_x = elec_x[sort_by_x]
+    elec_y = elec_y[sort_by_x]
+    elec_z = elec_z[sort_by_x]
+    elec = np.unique(np.column_stack((elec_x,elec_y,elec_z)), axis=0)
+
+    # look up electrode by and match it to the raw electrode data frame 
+    abmn_index = np.zeros((len(df_raw),4), dtype=int) # these are the columns which will store the index of electrode 
+    a_columns = [ 9,10,11] # these are columns which store the postional information of each electrode in the raw data frame 
+    b_columns = [12,13,14]
+    m_columns = [15,16,17]
+    n_columns = [18,19,20]
+
+    # look up electrode by matching via its 3D location, using cKDTree 
+    tree = cKDTree(elec)  
+    for i in range(len(df_raw)):
+        # get A column index  
+        for j, column in enumerate([a_columns, b_columns, m_columns, n_columns]): 
+            x = df_raw[column[0]][i]
+            y = df_raw[column[1]][i]
+            z = df_raw[column[2]][i]
+            idist, ielec = tree.query(np.array([x,y,z]))
+            if idist > 0.0: 
+                # shouldn't happen ... 
+                raise Exception('lookup error when indexing electrodes on line %i of sting file'%(i+4)) 
+            abmn_index[i,j] = ielec + 1 
+
     
+    """ this code does not work for arbitary electrode locations - jimmy 
     #detect 2D or 3D
     survey_type = '2D' if len(np.unique(elec_raw[:,1])) == 1 else '3D'
     
@@ -2520,7 +2552,7 @@ def stingParser(fname):
             m_f[i] = list(elec[:,0]).index(df_raw.iloc[i,[15]].values)+1
             n_f[i] = list(elec[:,0]).index(df_raw.iloc[i,[18]].values)+1
     
-    else: # below assumes the array is organized in a grid and not rangom XYZ values
+    else: # below assumes the array is organized in a grid and not random XYZ values
         elecdf = pd.DataFrame(elec_raw[elec_raw[:,1].argsort(kind='mergesort')]).rename(columns={0:'x',1:'y',2:'z'})
         # organize 3D electrodes
         elecdf_groups = elecdf.groupby('y', sort=False, as_index=False)
@@ -2593,7 +2625,7 @@ def stingParser(fname):
             for i in range(len(line)):
                 n[i] = elecdf_lines[line_num]['x'][elecdf_lines[line_num]['x'] == line['x'].iloc[i]].index[0] + 1
             n_f.extend(n)
-    
+
     #build df
     df = pd.DataFrame()
     df['a'] = np.array(a_f)
@@ -2601,8 +2633,14 @@ def stingParser(fname):
     df['n'] = np.array(n_f)
     df['m'] = np.array(m_f)
     df['resist']=df_raw.iloc[:,4]
+    """
+    
+    # build data frame 
+    df = pd.DataFrame(abmn_index, columns=['a', 'b', 'm', 'n'])
+    df['resist'] = df_raw.iloc[:,4]
 
     #detecting IP, columns should read as follows in the case of IP measurements 
+    # reading in of IP measurements is still dodgey 
     # 22 IP:
     # 23 IP time slot in msec.
     # 24 IP time constant

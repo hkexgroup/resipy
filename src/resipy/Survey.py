@@ -1008,6 +1008,9 @@ class Survey(object):
         phase = np.asarray(-self.kFactor*self.df['ip'].values,dtype=float) #converting chargeability to phase shift
         ndata = self.df.shape[0]
         array = np.asarray(self.isequence - 1, dtype=int)
+        # if platform.system() == 'Windows':
+        #     print('converting sequencing to long')
+        #     array = np.asarray(self.isequence - 1, dtype=np.longlong)
         
         # print(type(phase))
         unpackme = fastReciprocals(array, resist, phase)
