@@ -521,9 +521,16 @@ class Generator():
                     dump('Warning, config of type "%s" is not recognised'%config)
                     
         return self.seq.copy() 
+    
+    def checkString(self):
+        # check for string numbers in the labels 
+        hasString = False 
+        if len(self.seq[0,0].split()) == 2:
+            hasString = True 
+        return hasString 
          
     ## convert labels to integers  
-    def seq2int(self):
+    def seq2int(self,ignorestring=False):
         """
         Convert sequence into integers. 
     
@@ -565,7 +572,10 @@ class Generator():
                     label = self.seq[i,j]
                     string = int(label.split()[0])
                     number = int(label.split()[1])
-                    if hasMoreThan1String:
+                    
+                    if ignorestring:
+                        iseq[i,j] = number 
+                    elif hasMoreThan1String:
                         iseq[i,j] = int(template.format(string, number))
                     else:
                         iseq[i,j] = number 
@@ -1139,7 +1149,7 @@ class Generator():
             fh.close() 
             
     ## export sequence 
-    def exportSequence(self, fname, ftype = 'generic', integer = True, 
+    def exportSequence(self, fname, ftype = 'generic', integer = True, ignorestring=False, 
                        reciprocals = True,  split=True, multichannel = True,  
                        condition = True, maxcha = 8, dump=print): 
         """
@@ -1156,6 +1166,9 @@ class Generator():
             Electrode data frame 
         integer : bool, optional
             Flag to convert sequence into integers before export. The default is True.
+        ignorestring: bool, optional
+            Flag to ignore line number in the case of multiple electrode strings 
+            (or lines) being present in the electrode labels. Default is False. 
         reciprocals : bool, optional
             Flag to add reciprocal measurements. The default is True.
         split: bool, optional 
@@ -1193,7 +1206,10 @@ class Generator():
             
         if integer or multichannel: 
             # have to convert to integer to get multichannel code working currently 
-            self.seq2int()
+            if ignorestring:
+                print('Debug: Ignoring string in PRIME sequence')
+                dump('Debug: Ignoring string in PRIME sequence')
+            self.seq2int(ignorestring)
             
         if reciprocals: 
             dump('Generating reciprocals...')

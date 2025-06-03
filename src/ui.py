@@ -401,6 +401,7 @@ class SequenceHelper(QWidget):
             QHBoxLayout(),
             QHBoxLayout(),
             QHBoxLayout(),
+            QHBoxLayout(),
             ]
 
         # integer handling 
@@ -408,15 +409,26 @@ class SequenceHelper(QWidget):
         self.intcheck = QCheckBox()
         self.rows[0].addWidget(self.intlabel)
         self.rows[0].addWidget(self.intcheck)
-        t = 'Forces sequence to be converted from string to integer format. Note that string numbers will be appended to the start of the electrode indexes (so  <b>electrode #1 on string #1</b> will become <b>1001</b>).' 
+        self.intcheck.clicked.connect(self.checkStringIgnore)
+        t = 'Forces sequence to be converted from string to integer format. Note that string numbers will be appended to the start of the electrode indexes (so  <b>electrode #1 on string #1</b> will become <b>1001</b>), unless the ignore string number box is checked.' 
         self.intlabel.setToolTip(t)
         self.intcheck.setToolTip(t)
+        
+        # integer handling -> ignoring line/string numbers 
+        self.stringlabel = QLabel('Ignore String Number')
+        self.stringcheck = QCheckBox()
+        self.rows[1].addWidget(self.stringlabel)
+        self.rows[1].addWidget(self.stringcheck)
+        t = 'Forces integer sequence to ignore the string numbers (see above)' 
+        self.stringlabel.setToolTip(t)
+        self.stringcheck.setToolTip(t)
+        self.stringcheck.setEnabled(False)
         
         # include reciprocals 
         self.reclabel = QLabel('Include Reciprocals')
         self.reccheck = QCheckBox()
-        self.rows[1].addWidget(self.reclabel)
-        self.rows[1].addWidget(self.reccheck)
+        self.rows[2].addWidget(self.reclabel)
+        self.rows[2].addWidget(self.reccheck)
         t = 'Appends reciprocal measurements to the sequence'
         self.reclabel.setToolTip(t)
         self.reccheck.setToolTip(t)
@@ -424,8 +436,8 @@ class SequenceHelper(QWidget):
         # split reciprocals 
         self.spllabel = QLabel('Split Reciprocals')
         self.splcheck = QCheckBox()
-        self.rows[2].addWidget(self.spllabel)
-        self.rows[2].addWidget(self.splcheck)
+        self.rows[3].addWidget(self.spllabel)
+        self.rows[3].addWidget(self.splcheck)
         self.splcheck.clicked.connect(self.checkRecip)
         t = 'If checked, seperate reciprocal and forward measurements into different files'
         self.spllabel.setToolTip(t)
@@ -434,8 +446,8 @@ class SequenceHelper(QWidget):
         # multichannel 
         self.mullabel = QLabel('Multichannelise')
         self.mulcheck = QCheckBox() 
-        self.rows[3].addWidget(self.mullabel)
-        self.rows[3].addWidget(self.mulcheck)
+        self.rows[4].addWidget(self.mullabel)
+        self.rows[4].addWidget(self.mulcheck)
         self.mulcheck.clicked.connect(self.checkMult)
         t = 'Optimise measurements for multichannel acquistion with modern resistivity instruments. Requires the sequence to be in integer format.'
         self.mullabel.setToolTip(t)
@@ -444,8 +456,8 @@ class SequenceHelper(QWidget):
         # condition for ip
         self.conlabel = QLabel('Condition')
         self.concheck = QCheckBox()
-        self.rows[4].addWidget(self.conlabel)
-        self.rows[4].addWidget(self.concheck)
+        self.rows[5].addWidget(self.conlabel)
+        self.rows[5].addWidget(self.concheck)
         self.concheck.clicked.connect(self.checkCond)
         t = 'Condition multichannel sequence to minimize electrode polarization effects'
         self.conlabel.setToolTip(t)
@@ -456,8 +468,8 @@ class SequenceHelper(QWidget):
         self.chaedit = QLineEdit()
         self.chaedit.setValidator(QIntValidator())
         self.chaedit.setText('8')
-        self.rows[5].addWidget(self.chalabel)
-        self.rows[5].addWidget(self.chaedit)
+        self.rows[6].addWidget(self.chalabel)
+        self.rows[6].addWidget(self.chaedit)
         t = 'Number of channels that your instrument can leverage'
         self.chalabel.setToolTip(t)
         self.chaedit.setToolTip(t)
@@ -465,14 +477,14 @@ class SequenceHelper(QWidget):
         # export button 
         self.exportBtn = QPushButton('Export')
         self.exportBtn.clicked.connect(self.exportFunc)
-        self.rows[6].addWidget(self.exportBtn)    
+        self.rows[7].addWidget(self.exportBtn)    
         t = 'Export sequence for various intrument types or for further modelling. Note: See the main "Export" tab if you wish to save the synthetic measurements with the transfer resistances.'
         self.exportBtn.setToolTip(t)
         
         # log 
         self.logText = QTextEdit()
         self.logText.setReadOnly(True)
-        self.rows[7].addWidget(self.logText)    
+        self.rows[8].addWidget(self.logText)    
     
         # add rows 
         for row in self.rows: 
@@ -489,6 +501,14 @@ class SequenceHelper(QWidget):
         cursor.insertText(text+'\n')
         self.logText.ensureCursorVisible()
         QApplication.processEvents()
+        
+    def checkStringIgnore(self):
+        if self.intcheck.isChecked(): # and self.generator.checkString():
+            self.stringcheck.setEnabled(True)
+            self.stringcheck.setChecked(True)
+        else:
+            self.stringcheck.setChecked(False)
+            self.stringcheck.setEnabled(False)
         
     def checkMult(self): 
         if self.mulcheck.isChecked():
@@ -523,6 +543,8 @@ class SequenceHelper(QWidget):
                 ftype = t 
                 break 
         integer = self.intcheck.isChecked()
+        ignore = self.stringcheck.isChecked()
+        self.logTextFunc('Ignore string = %s'%str(ignore))
         recip = self.reccheck.isChecked()
         split = self.splcheck.isChecked()
         multi = self.mulcheck.isChecked()
@@ -531,7 +553,7 @@ class SequenceHelper(QWidget):
 
         if fname != '':
             self.generator.exportSequence(
-                fname, ftype, integer, 
+                fname, ftype, integer, ignore, 
                 recip, split, 
                 multi, cond, maxcha, 
                 self.logTextFunc)
