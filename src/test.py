@@ -112,10 +112,10 @@ k.createSurvey(testdir + 'dc-2d-pole-dipole/syscal.csv', ftype='Syscal')
 k.showPseudo(vmax=20)
 
 # merged survey
-k = Project(typ='R3t')
-k.createMergedSurveys('examples/dc-2d-timelapse/merged-file.csv',
-                     ftype='Syscal', delimiter=',',
-                            dump=None, debug=False)
+# k = Project(typ='R3t')
+# k.createMergedSurveys('examples/dc-2d-timelapse/merged-file.csv',
+#                      ftype='Syscal', delimiter=',',
+#                             dump=None, debug=False)
 
 # 3D survey from 2D parallel lines
 k = Project(typ='R3t')
