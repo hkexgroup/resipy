@@ -6862,22 +6862,7 @@ class Project(object): # Project master class instanciated by the GUI
         ax : matplotlib axis
             If provided, the graph will be plotted against this axis.
         """
-        errors = self.surveys[index].df['resInvError'].values
-        errors = errors[~np.isnan(errors)]
-        measurement_no = np.arange(1,len(errors)+1)
-        #make figure
-        if ax is None:
-            fig, ax = plt.subplots()
-        ax.scatter(measurement_no,errors)
-        ax.set_ylabel("Normalised Error")
-        ax.set_xlabel("Measurement Number")
-        #add diagnositic lines
-        y_pos_limit = (3,3)
-        y_neg_limit = (-3,-3)
-        baseline = (0,0)
-        ax.plot((1,measurement_no[-1]),y_pos_limit,'r--')
-        ax.plot((1,measurement_no[-1]),y_neg_limit,'r--')
-        ax.plot((1,measurement_no[-1]),baseline,'--')
+        self.surveys[index].showInvError(ax=ax)
 
 
     def filterInvError(self, index=-1, vmin=None, vmax=None):

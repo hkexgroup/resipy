@@ -473,7 +473,7 @@ class Survey(object):
         for i,label in enumerate(self.elec.label): 
             lookup[label] = i + 1 
 
-        self.isequence = np.zeros((ndata,4),dtype=int)
+        self.isequence = np.zeros((ndata, 4), dtype=int)
         for i in range(ndata):
             for j,char in enumerate(['a','b','m','n']):
                 self.isequence[i,j] = lookup[self.df[char].values[i]]
@@ -1141,6 +1141,32 @@ class Survey(object):
         else:
             raise ValueError("No stacking error column (dev) found!")
     
+    def showInvError(self, index=0, ax=None):
+        """Display inversion error by measurment numbers.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of survey (if time-lapse or batch). Default `index == 0`.
+        ax : matplotlib axis
+            If provided, the graph will be plotted against this axis.
+        """
+        errors = self.df['resInvError'].values
+        errors = errors[~np.isnan(errors)]
+        measurement_no = np.arange(1, len(errors) + 1)
+        if ax is None:
+            fig, ax = plt.subplots()
+        ax.scatter(measurement_no, errors)
+        ax.set_ylabel('Normalised Error')
+        ax.set_xlabel('Measurement Number')
+        # add diagnositic lines
+        y_pos_limit = (3, 3)
+        y_neg_limit = (-3, -3)
+        baseline = (0, 0)
+        ax.plot((1, measurement_no[-1]), y_pos_limit, 'r--')
+        ax.plot((1, measurement_no[-1]), y_neg_limit, 'r--')
+        ax.plot((1, measurement_no[-1]), baseline, '--')
+        
     def filterInvError(self, vmin=None, vmax=None, debug=False):
         """Filter measurements by inversion error. 
         
@@ -1158,14 +1184,11 @@ class Survey(object):
             return
         else:
             resInvError = self.df['resInvError'].values
-            resInvError[np.isnan(resInvError)] = 0 # do not remove NaNs
             if vmin is None:
-                vmin = np.min(resInvError)
+                vmin = np.nanmin(resInvError)
             if vmax is None:
-                vmax = np.max(resInvError)
-            ikeep = (resInvError >= vmin) & (resInvError <= vmax)
-            # self.df = df[ikeep]
-            # self.df.reset_index()
+                vmax = np.nanmax(resInvError)
+            ikeep = np.isnan(resInvError) | ((resInvError >= vmin) & (resInvError <= vmax))
             self.filterData(ikeep) # use the filter data function to ensure that the sequence is reset 
             
             if debug:
