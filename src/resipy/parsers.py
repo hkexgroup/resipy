@@ -1029,13 +1029,16 @@ def syscalBinxParser(fname):
     df['magErr'] = df['et_rho']
     df['cR'] = df['rs_check']*1000
     df['Rho'] = df['rho']
-    if df['mpp'].eq(0).sum() == 0:
+    if df['mpp'].sum() == 0:
         df['ip'] = np.nan
     else:
         df = df.rename(columns={'mpp': 'ip'})
         df = df.rename(columns=dict(zip(
-            ['M{:d}'.format(d+1) for d in range(20)],
-            ['mppx{:d}'.format(d+1) for d in range(20)])))
+            ['mppx{:d}'.format(d+1) for d in range(20)],
+            ['M{:d}'.format(d+1) for d in range(20)])))
+        df = df.rename(columns=dict(zip(
+            ['tm{:d}'.format(d) for d in range(20)],
+            ['TM{:d}'.format(d+1) for d in range(20)])))
     
     # create string index based on xyz of elec (for later faster replace())
     for role in ['a', 'b', 'm', 'n']:
@@ -1408,13 +1411,16 @@ def syscalBinParser2(fname):
     else:
         df['cR'] = np.nan
     df['Rho'] = df['rho']
-    if df['m'].eq(0).sum() == 0:
+    if df['m'].sum() == 0:
         df['ip'] = np.nan
     else:
         df = df.rename(columns={'m': 'ip'})
         df = df.rename(columns=dict(zip(
-            ['M{:d}'.format(d+1) for d in range(20)],
-            ['Mx{:d}'.format(d) for d in range(20)])))
+            ['Mx{:d}'.format(d) for d in range(20)],
+            ['M{:d}'.format(d+1) for d in range(20)])))
+        df = df.rename(columns=dict(zip(
+            ['Tm{:d}'.format(d) for d in range(20)],
+            ['TM{:d}'.format(d+1) for d in range(20)])))
     
     # create string index based on xyz of elec (for later faster replace())
     for role in ['A', 'B', 'M', 'N']:
