@@ -1720,12 +1720,11 @@ class Project(object): # Project master class instanciated by the GUI
             
         Notes
         -----
-        Format of survey details file should have up to 3 columns with these names. 
+        Format of survey details file should have up to 4 columns with these names. 
         fpath, sid (optional), and ftype (optional), string (optional). 
         
         fpath: str
             Path to survey file, best to use full system path 
-        
         ftype: str, optional 
             File type, should correspond to the file 'ftype' for each file (they
             might be different for some reason, though best avoided). If not
@@ -1733,7 +1732,6 @@ class Project(object): # Project master class instanciated by the GUI
             function. Type of files avialable are: Either 'Syscal','ProtocolDC',
             'ResInv','BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund',
             'Lippmann' or 'ARES'.
-        
         sid: int, optional 
             Survey index, used for making timelapse surveys from multiple files
         string: int, optional 
@@ -1742,7 +1740,7 @@ class Project(object): # Project master class instanciated by the GUI
         
         """
 
-        finfo = pd.read_csv(fname,sep=delimiter) # file info dataframe 
+        finfo = pd.read_csv(fname, sep=delimiter) # file info dataframe 
         
         if 'fpath' not in finfo.columns: 
             msg = 'File paths are not defined in survey merge file, the file headers should read:\n'
@@ -1762,16 +1760,25 @@ class Project(object): # Project master class instanciated by the GUI
             
         # get survey ids and unique survey indexes 
         # returned indexes are the first instance of each survey index 
-        usid, _ = np.unique(finfo.sid.values,return_index=True)
+        usid, _ = np.unique(finfo.sid.values, return_index=True)
         
         self.surveys = [] # flush other surveys
+        
+        # check paths
+        paths = []
+        for path in finfo['fpath']:
+            fpath = path.strip()
+            if os.path.isabs(fpath) is False:
+                fpath = os.path.join(os.path.dirname(fname), fpath)
+            paths.append(fpath)
+        finfo['fpath'] = paths
 
         if len(usid) > 1: 
             self.iTimeLapse = True 
             
         c = 0 
         for i in usid: 
-            self.createSurvey(finfo.fpath[i].strip(), ftype=finfo.ftype[i], 
+            self.createSurvey(finfo.fpath[i], ftype=finfo.ftype[i], 
                               debug=debug, estMemory=False, string=finfo.string[i])
             sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
 
