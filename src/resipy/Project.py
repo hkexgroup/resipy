@@ -4163,7 +4163,7 @@ class Project(object): # Project master class instanciated by the GUI
                 #     winetxt = 'wine64'
                 winetxt = whichWineMac()
                 winePath = []
-                wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+                wine_path = Popen(['which', winetxt], stdout=PIPE, stderr=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
                 for stdout_line in iter(wine_path.stdout.readline, ''):
                     winePath.append(stdout_line)
                 if winePath != []:
@@ -4186,9 +4186,9 @@ class Project(object): # Project master class instanciated by the GUI
     
             def execute(cmd):
                 if OS == 'Windows':
-                    self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                    self.proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
                 else:
-                    self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
+                    self.proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False, universal_newlines=True)
                 for stdout_line in iter(self.proc.stdout.readline, ""):
                     yield stdout_line
                 self.proc.stdout.close()
