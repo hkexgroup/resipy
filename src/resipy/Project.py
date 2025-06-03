@@ -3940,9 +3940,7 @@ class Project(object): # Project master class instanciated by the GUI
                   'as the survey to be inverted is from a forward model.')
             ifixed = self.mesh.df['param'] == 0
             res0 = np.array(self.mesh.df['res0'])
-            # res0 = np.zeros(self.mesh.numel)+100
             phase0 = np.array(self.mesh.df['phase0'])
-            phase0 = np.zeros(self.mesh.numel)
             res0f = res0.copy()
             phase0f = phase0.copy()
             res0f[~ifixed] = 100
@@ -4665,8 +4663,19 @@ class Project(object): # Project master class instanciated by the GUI
             def dump(x):
                 print(x, end='')
                 
+        # we store the value of the iForward flag is this flag is True
+        # res0 is automatically ovewritten when doing the inversion
+        iForward = self.iForward  # store the value
+        self.iForward = False  # set to false so write2in won't overwrite us
+        print('All non fixed parameters reset to 100 Ohm.m and 0 mrad, '
+              'as the survey to be inverted is from a forward model.')
+                
         # backup for normal inversion (0 : original, 1 : normal background, 2: background *10)
+        ifixed = self.mesh.df['param'] == 0
         res0 = np.array(self.mesh.df['res0'])
+        res0f = res0.copy()
+        res0f[~ifixed] = 100
+        self.mesh.df['res0'] = list(res0f)
         param0 = self.param.copy()
         self.param['reg_mode'] = 1 # we need constrain to background
         typ0 = self.typ
@@ -4722,7 +4731,6 @@ class Project(object): # Project master class instanciated by the GUI
         invValues2 = np.array(mesh2.df[res_name])
         sens = (invValues1 - invValues2)/(res1[iselect]-res2[iselect])
         sensScaled = np.abs(sens)
-#        mesh0.df['doiSens'] = sensScaled # add attribute to original mesh
         self.doiComputed = True
         
         # restore
@@ -4731,8 +4739,10 @@ class Project(object): # Project master class instanciated by the GUI
         self.typ = typ0
         self.surveys = surveys0
         self.iTimeLapse = iTimeLapse0
+        self.mesh.df['res0'] = list(res0)
+        self.iForward = iForward # restore value
         # .in and protocol will be written again in R2.invert()
-        
+            
         return sensScaled
         
     def _clipContour(self, ax, collections, cropMaxDepth=False, clipCorners=False):
@@ -5814,7 +5824,7 @@ class Project(object): # Project master class instanciated by the GUI
         >>> k.createSequence([('custom', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
         >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
-        avialconfig = [
+        availconfig = [
             'dipole-dipole', 'dpdp', 
             'wenner', 'w',
             'wenner-schlumberger', 'schlum', 'ws', 
@@ -5823,11 +5833,11 @@ class Project(object): # Project master class instanciated by the GUI
             'custom', 'custSeq']
         
         msg = 'Sorry, given config parameter {:s} is not recognised!'
-        msg += 'Avialable configs are = \n'
-        for config in avialconfig:
+        msg += 'Available configs are = \n'
+        for config in availconfig:
             msg += '\t%s\n'%config 
         for p in params: 
-            if p[0] not in avialconfig: 
+            if p[0] not in availconfig: 
                 warnings.warn(msg.format(p[0])) 
 
         if seqIdx is None: #(not been set, so use electrode strings)
