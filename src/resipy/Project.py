@@ -1720,12 +1720,11 @@ class Project(object): # Project master class instanciated by the GUI
             
         Notes
         -----
-        Format of survey details file should have up to 3 columns with these names. 
+        Format of survey details file should have up to 4 columns with these names. 
         fpath, sid (optional), and ftype (optional), string (optional). 
         
         fpath: str
             Path to survey file, best to use full system path 
-        
         ftype: str, optional 
             File type, should correspond to the file 'ftype' for each file (they
             might be different for some reason, though best avoided). If not
@@ -1733,7 +1732,6 @@ class Project(object): # Project master class instanciated by the GUI
             function. Type of files avialable are: Either 'Syscal','ProtocolDC',
             'ResInv','BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund',
             'Lippmann' or 'ARES'.
-        
         sid: int, optional 
             Survey index, used for making timelapse surveys from multiple files
         string: int, optional 
@@ -1742,7 +1740,7 @@ class Project(object): # Project master class instanciated by the GUI
         
         """
 
-        finfo = pd.read_csv(fname,sep=delimiter) # file info dataframe 
+        finfo = pd.read_csv(fname, sep=delimiter) # file info dataframe 
         
         if 'fpath' not in finfo.columns: 
             msg = 'File paths are not defined in survey merge file, the file headers should read:\n'
@@ -1762,16 +1760,25 @@ class Project(object): # Project master class instanciated by the GUI
             
         # get survey ids and unique survey indexes 
         # returned indexes are the first instance of each survey index 
-        usid, _ = np.unique(finfo.sid.values,return_index=True)
+        usid, _ = np.unique(finfo.sid.values, return_index=True)
         
         self.surveys = [] # flush other surveys
+        
+        # check paths
+        paths = []
+        for path in finfo['fpath']:
+            fpath = path.strip()
+            if os.path.isabs(fpath) is False:
+                fpath = os.path.join(os.path.dirname(fname), fpath)
+            paths.append(fpath)
+        finfo['fpath'] = paths
 
         if len(usid) > 1: 
             self.iTimeLapse = True 
             
         c = 0 
         for i in usid: 
-            self.createSurvey(finfo.fpath[i].strip(), ftype=finfo.ftype[i], 
+            self.createSurvey(finfo.fpath[i], ftype=finfo.ftype[i], 
                               debug=debug, estMemory=False, string=finfo.string[i])
             sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
 
@@ -4745,15 +4752,15 @@ class Project(object): # Project master class instanciated by the GUI
             
         return sensScaled
         
-    def _clipContour(self, ax, collections, cropMaxDepth=False, clipCorners=False):
+    def _clipContour(self, ax, cax, cropMaxDepth=False, clipCorners=False):
         """Clip contours using mesh bound and surface if available.
         
         Parameters
         ----------
         ax : matplotlib.Axes
             Axis.
-        collections : matplotlib.collections
-            Matplotlib collection.
+        cax : matplotlib.Artist
+            Artist (Collection) returned.
         cropMaxDepth : bool, optional
             If 'True', area below fmd will be cropped out.
         clipCorners : bool, optional
@@ -4766,8 +4773,7 @@ class Project(object): # Project master class instanciated by the GUI
             path = mpath.Path(verts, poly_codes)
             patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
             ax.add_patch(patch) # need to add so it knows the transform
-            for col in collections:
-                col.set_clip_path(patch)
+            cax.set_clip_path(patch)
         
         # mask outer region
         node_x = self.mesh.node[:,0]
@@ -4962,10 +4968,9 @@ class Project(object): # Project master class instanciated by the GUI
                     triang = tri.Triangulation(xc, yc)
                     cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
                     if clipContour:
-                        self._clipContour(mesh.ax, cont.collections, clipCorners=clipCorners)
-                colls = mesh.cax.collections if contour == True else [mesh.cax]
+                        self._clipContour(mesh.ax, cont, clipCorners=clipCorners)
                 if clipContour:
-                    self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth, clipCorners=clipCorners)
+                    self._clipContour(mesh.ax, mesh.cax, cropMaxDepth=cropMaxDepth, clipCorners=clipCorners)
             elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys (pseudo 3D)
                 self.showPseudo3DResults(ax=ax, edge_color=edge_color,
                     attr=attr, color_map=color_map, clabel=clabel, returnMesh=True,
@@ -6675,7 +6680,7 @@ class Project(object): # Project master class instanciated by the GUI
                     print('elec', self.elec['buried'].sum())
                     if (self.topo.shape[0] != 0) | (self.elec['buried'].sum() < self.elec.shape[0]):
                         # just checking we don't have a whole space mesh
-                        self._clipContour(ax, cax.collections, cropMaxDepth)
+                        self._clipContour(ax, cax, cropMaxDepth)
                 fig.colorbar(cax, ax=ax, label=r'$\log_{10}\rho$ [$\Omega$.m]')
                 elec = self.elec[~self.elec['remote']][['x','y','z']].values
                 if self.typ[-1] == 't': # adjust for 3D 
