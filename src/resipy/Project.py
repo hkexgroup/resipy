@@ -392,7 +392,7 @@ def fitXYangle(x,y):
     return a 
 
 # find min and max of an array with some padding
-def findminmax(a, pad=20):
+def findminmax(a, pad=1):
     a = np.array(a)
     delta = abs(np.max(a) - np.min(a))
     mina = np.min(a) - (delta*(pad/100))
