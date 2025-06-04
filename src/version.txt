@@ -1,2 +1,2 @@
 ResIPy_Version:
-3.6.2
+3.6.3
