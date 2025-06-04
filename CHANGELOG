@@ -3,6 +3,7 @@ v3.6.3
 - Added module sequence generation (min/max a, n or s parameters)
 - Fix post-processing resitivity inversion error going to 0 after filtering (display bug)
 - Fix modelDOI after forward modelling
+- Fix Wine not installed on macOS
 - Added option to filter line/string numbers from forward modelling
 - Added support for Syscal binary .bin/.binx
 - Fix white area on side of inverted section
