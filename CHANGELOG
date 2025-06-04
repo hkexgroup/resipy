@@ -1,3 +1,20 @@
+v3.6.3
+------
+- Added module sequence generation (min/max a, n or s parameters)
+- Fix post-processing resitivity inversion error going to 0 after filtering (display bug)
+- Fix modelDOI after forward modelling
+- Added option to filter line/string numbers from forward modelling
+- Added support for Syscal binary .bin/.binx
+- Fix white area on side of inverted section
+- Updated Sting parser to work for any 3D geometry
+- Crop reference mesh in timelapse inversion
+- Duplicated readings are now averaged and not removed
+- Add ability to export command sequences of different types in UI
+- Fix sign for apparent values (#630)
+- Added cropping function for 3D mesh
+- Full Changelog: https://github.com/hkexgroup/resipy/compare/v3.6.2...v3.6.3
+
+
 v3.6.2
 ------
 - Add filter-by electrode labels to the pre-processing.
