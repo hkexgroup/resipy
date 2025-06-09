@@ -343,7 +343,7 @@ class cd:
     
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
-
+   
 #%% other helper functions 
 # distance matrix function for 2D (numpy based from https://stackoverflow.com/questions/22720864/efficiently-calculating-a-euclidean-distance-matrix-using-numpy)
 def cdist(a):
@@ -1151,6 +1151,16 @@ class Project(object): # Project master class instanciated by the GUI
         from zipfile import ZipFile, ZipInfo
         import json
         
+        class NumpyEncoder(json.JSONEncoder): # JSON encoder to fix Numpy int64 issue
+            def default(self, obj):
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                elif isinstance(obj, np.floating):
+                    return float(obj)
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                return super(NumpyEncoder, self).default(obj)
+        
         if fname[-7:] != '.resipy':
             fname = fname + '.resipy'
         
@@ -1214,7 +1224,7 @@ class Project(object): # Project master class instanciated by the GUI
                     'surfaceIdx': list(self.surfaceIdx) if self.surfaceIdx is not None else None
                    }
         with open(os.path.join(savedir, 'settings.json'), 'w') as f:
-            f.write(json.dumps(settings))
+            f.write(json.dumps(settings, cls=NumpyEncoder))
             
         # also save summary information 
         with open(os.path.join(savedir,'summary.json'), 'w') as f:
