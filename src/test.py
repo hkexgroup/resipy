@@ -17,7 +17,11 @@ from resipy.Project import apiPath
 import pyvista as pv  # pyvista will be rendered as with 'pv.Plotter(off_screen=True)'
 
 if platform.system().lower() == 'linux':
-    pv.start_xvfb()  # virtual frame buffer when running without x server
+    try: 
+        pv.start_xvfb()  # virtual frame buffer when running without x server
+    except: 
+        print("warning: x server frame buffer failed to start")
+        pass 
 
 tstart = time.time()
 timings = {}

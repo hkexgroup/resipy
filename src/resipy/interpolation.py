@@ -874,11 +874,11 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False,
         
     """
     
-    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
-    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
-    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
-    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
-    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    if type(xnew) != 'numpy.ndarray':xnew = np.asarray(xnew, dtype=np.float64)
+    if type(ynew) != 'numpy.ndarray':ynew = np.asarray(ynew, dtype=np.float64)
+    if type(xknown) != 'numpy.ndarray':xknown = np.asarray(xknown, dtype=np.float64)
+    if type(yknown) != 'numpy.ndarray':yknown = np.asarray(yknown, dtype=np.float64)
+    if type(zknown) != 'numpy.ndarray':zknown = np.asarray(zknown, dtype=np.float64)
     
     #error checking 
     if len(xnew) != len(ynew):
@@ -888,8 +888,13 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False,
     # >>> map the known points to the new points using cKDTree
     pknown = np.array([xknown,yknown]).T # known points 
     pnew = np.array([xnew,ynew]).T # new points 
-
-    tree = cKDTree(pknown)#tree object 
+    
+    inan = np.isnan(pknown[:,0]) | np.isnan(pknown[:,1])# filter out nan 
+    pknown = pknown[~inan]
+    iinf = np.isinf(pknown[:,0]) | np.isinf(pknown[:,1])# filter out inf
+    pknown = pknown[~iinf]
+    
+    tree = cKDTree(pknown)#tree object  ---->> problem with this in scipy 1.15.3 
     dist,idx = tree.query(pnew)# map known points to new points 
     
     if return_idx:

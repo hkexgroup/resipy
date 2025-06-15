@@ -3,19 +3,17 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 import numpy as np
 import platform
-import os
+import os, shutil 
 
 if platform.system() == 'Linux': #open mp support on linux 
     ext_modules = [
         Extension(
             "meshCalc",
-            ["meshCalcUnix.pyx"],
-            # extra_compile_args=["-fopenmp"],
-            # extra_link_args=['-fopenmp'],
+            ["meshCalc.pyx"],
         ),
         Extension(
-        	"fastRecip",
-        	["fastRecip.pyx"]
+        	"recipCalc",
+        	["recipCalc.pyx"]
         	)
     ]
 elif platform.system() == 'Windows': #open mp support on windows
@@ -23,12 +21,10 @@ elif platform.system() == 'Windows': #open mp support on windows
         Extension(
             "meshCalc",
             ["meshCalc.pyx"],
-            extra_compile_args=['/openmp'],
-            #extra_link_args=['/openmp'],
         ),
         Extension(
-        	"fastRecip",
-        	["fastRecip.pyx"]
+        	"recipCalc",
+        	["recipCalc.pyx"]
         	)
     ]
 else: # macOS
@@ -47,12 +43,10 @@ else: # macOS
         Extension(
             "meshCalc",
             ["meshCalcUnix.pyx"],
-            # extra_compile_args=["-fopenmp"],
-            # extra_link_args=["-fopenmp"],
         ),
         Extension(
-        	"fastRecip",
-        	["fastRecip.pyx"]
+        	"recipCalc",
+        	["recipCalc.pyx"]
         	)
     ]
 
@@ -61,6 +55,12 @@ setup(
     include_dirs=[np.get_include()]
 )   
 
+# move compiled file into cextension folder 
+for f in os.listdir():
+    if f.endswith('.pyd') or f.endswith('.so'):
+        shutil.move(f, os.path.join('cext',f))
+        
+
 #run in console under working directory 
-#"python setup.py build_ext --inplace"
+#"python cbuild.py build_ext --inplace"
 

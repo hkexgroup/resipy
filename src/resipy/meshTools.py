@@ -600,8 +600,7 @@ class Mesh:
         
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
             con_mat, count, _ = mc.orderTetra(self.connection,
-                                              self.node,
-                                              ncores) # call cython 
+                                              self.node) # call cython 
                     
         elif int(self.cell_type[0]) == 13: # elements are 3d wedges 
             for i in range(self.numel):
@@ -775,19 +774,17 @@ class Mesh:
     def computeNeigh(self): # fix me 
         """Compute element neighbour matrix
         """
-        if self.ndims == 2: #2d mesh 
-            self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1)
-        elif self.ndims == 3: #3d mesh 
-            if self.type2VertsNo() == 4:# tetra mesh 
-                self.neigh_matrix, self.tri_combo = mc.neigh3d(np.asarray(self.connection, dtype=self.dint),1,ncores)
-            elif self.type2VertsNo() == 6:  # prism mesh 
-                self.neigh_matrix, self.tri_combo = mc.neighPrism(self.connection,1,ncores)
-
+        cell_type = int(self.cell_type[0])
+        connection = np.asarray(self.connection, dtype=self.dint)
+        if cell_type == 13: 
+            self.neigh_matrix = mc.neighPrism(connection)
+        else: 
+            self.neigh_matrix = mc.neighSearch(connection, cell_type)
 
     def computeNconnec(self):
         cell_type = self.cell_type[0]
-        self.NsizeA, self.fconm = mc.conductanceCall(self.connection, self.numnp,
-                                                     cell_type,ncores)
+        connection = np.asarray(self.connection, dtype=self.dint)
+        self.NsizeA, self.fconm = mc.conductanceCall(connection, self.numnp, cell_type)
         
     def externalNodes(self):
         """
@@ -1103,7 +1100,7 @@ class Mesh:
             points = self.elmCentre[outelem]#get middle points of elements with external face 
                 
             # extract surface cells             
-            ochecka = mc.surfaceCall(fcon, self.node, points, num_threads=ncores) # send to c extension 
+            ochecka = mc.surfaceCall(fcon, self.node, points) # send to c extension 
         
             ikeep = ochecka == 1
             nmesh = Mesh(node_x, # make new mesh 
@@ -1127,12 +1124,12 @@ class Mesh:
             
             if post_neigh_check: 
                 # remove faces without 3 nieghbours 
-                nneigh = mc.neigh2d(nmesh.connection,0)
+                nneigh = mc.neighSearch(nmesh.connection,5)
                 ikeep2 = np.min(nneigh,axis=1) > -1
                 nmesh = nmesh.filterIdx(ikeep2)
                 
                 # remove faces with 1 or less neighbours 
-                nneigh = mc.neigh2d(nmesh.connection,0)
+                nneigh = mc.neighSearch(nmesh.connection,5)
                 ikeep3 = np.count_nonzero(nneigh+1,axis=1) > 1
                 nmesh = nmesh.filterIdx(ikeep3) 
               

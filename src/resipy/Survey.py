@@ -41,10 +41,10 @@ except ModuleNotFoundError:
     # warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
     
 try:
-    from resipy.cext.fastRecip import fastReciprocals
-    fastrecip_installed = True 
+    from resipy.cext.recipCalc import computeRecip
+    recipCalc_installed = True 
 except: 
-    fastrecip_installed = False 
+    recipCalc_installed = False 
     
 #replacement for numpy polyfit function which works on open blas 
 def polyfit(x,y,deg=1):
@@ -769,7 +769,7 @@ class Survey(object):
             raise Exception('Reciprocal error algorithm not recognised')
             
         ## need to put something in here in case the cython module can't be found 
-        if not fastrecip_installed: 
+        if not recipCalc_installed: 
             alg = 'Pandas Merge' 
             
         if alg == 'Bisection Search':
@@ -1013,7 +1013,7 @@ class Survey(object):
         #     array = np.asarray(self.isequence - 1, dtype=np.longlong)
         
         # print(type(phase))
-        unpackme = fastReciprocals(array, resist, phase)
+        unpackme = computeRecip(array, resist, phase)
         irecip = unpackme[0] 
         reciprocalErr = unpackme[1] 
         reciprocalErrRel = unpackme[2] 

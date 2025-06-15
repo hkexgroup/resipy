@@ -14,7 +14,7 @@ cdef extern from 'math.h' nogil: # get c square root function
     
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
 @cython.wraparound(False)        
-cdef int bisection_search(long[:] arr, long var) nogil:
+cdef int bisectionSearch(long[:] arr, long var) nogil:
     """Efficent search algorithm for sorted array of postive ints 
     (memory veiw parallel capable version)
     
@@ -80,7 +80,7 @@ cdef long long mergeInt(int a, int b, int pad): #merge 2 ints
     return np.floor(a*10**pad + b) # merge a and b
     
 
-def fastReciprocals(long[:,:] conf, double[:] r, double[:] p): 
+def computeRecip(long[:,:] conf, double[:] r, double[:] p): 
     """Compute reciprocal measurements with compiled code.
     
     Parameters
@@ -167,7 +167,7 @@ def fastReciprocals(long[:,:] conf, double[:] r, double[:] p):
         if ifwdv[i] != 0:
             continue 
 
-        k = bisection_search(sortR,comboF[i]) # nb: only works on a sorted array
+        k = bisectionSearch(sortR,comboF[i]) # nb: only works on a sorted array
         # returned index is -1 if no match found. 
         if k != -1: # then match has been found 
             j = idxcrv[k] # index of reverse measurement 
@@ -256,7 +256,7 @@ def perElecRi(long[:,:] conf, double[:] recip, long max_elec):
         # find index of electrode id 
         for j in range(4): 
             a = abmn[j]
-            idx = bisection_search(elecid,a) # quick search for the electrode id index
+            idx = bisectionSearch(elecid,a) # quick search for the electrode id index
             risum[idx] += recip[i] # add ri to sum of reciprocal errors 
             ricount[idx] += 1 # add one to count of reciprocal errors 
     
