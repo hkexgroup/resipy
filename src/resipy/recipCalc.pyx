@@ -3,7 +3,10 @@ cimport cython  #import relevant modules
 import numpy as np
 cimport numpy as np
 from cpython cimport array 
-# from libc.stdlib cimport malloc, free
+import platform
+ctypedef long long dlong
+npy_long = np.int64 
+
 
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)
@@ -14,7 +17,7 @@ cdef extern from 'math.h' nogil: # get c square root function
     
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
 @cython.wraparound(False)        
-cdef int bisectionSearch(long[:] arr, long var) nogil:
+cdef dlong bisectionSearch(dlong[:] arr, dlong var) nogil:
     """Efficent search algorithm for sorted array of postive ints 
     (memory veiw parallel capable version)
     
@@ -25,9 +28,9 @@ cdef int bisectionSearch(long[:] arr, long var) nogil:
     var: int
         item to be searched / indexed. If not found False is returned 
     """
-    cdef int L = 0
-    cdef int n = len(arr)
-    cdef int R = n-1
+    cdef dlong L = 0
+    cdef dlong n = len(arr)
+    cdef dlong R = n-1
     cdef int m
     while L <= R:
         m = int((L+R)/2)
@@ -64,7 +67,7 @@ cdef double fmax(double[:] arr) nogil: # import note: You need to pass the memor
     return tmp
 
 @cython.boundscheck(False)    
-cdef void sortInt(long[:] arr, int n) nogil: 
+cdef void sortInt(dlong[:] arr, int n): 
     #adapted from https://www.geeksforgeeks.org/insertion-sort/
     #sorts array in place
     cdef int i, j, key
@@ -76,17 +79,17 @@ cdef void sortInt(long[:] arr, int n) nogil:
                 j -= 1
         arr[j + 1] = key 
 
-cdef long long mergeInt(int a, int b, int pad): #merge 2 ints 
+cdef dlong mergeInt(int a, int b, int pad): #merge 2 ints 
     return np.floor(a*10**pad + b) # merge a and b
     
 
-def computeRecip(long[:,:] conf, double[:] r, double[:] p): 
+def computeRecip(conf_data, double[:] r, double[:] p): 
     """Compute reciprocal measurements with compiled code.
     
     Parameters
     ----------
     conf: nd array 
-        N by 4 Array of ints
+        N by 4 Array of long 
     r: nd array 
         N by 1 array of floats (resistance measurements)
     p: nd array 
@@ -102,10 +105,13 @@ def computeRecip(long[:,:] conf, double[:] r, double[:] p):
     for reciprocal pairs with a bisection search. 
     """
     # declare function variables 
+    cdef dlong[:,:] conf = np.asarray(conf_data, dtype=npy_long) # force long data type 
     cdef int ndata = conf.shape[0] # number of measurements 
     cdef int conf_check = conf.shape[1]
     cdef int max_elec = 0 
-    cdef int i,j,k # loop variables 
+    cdef Py_ssize_t i,j # loop variables 
+    cdef dlong k # result of index search 
+    
 
     if conf_check != 4: # check conf is of expected length 
         raise Exception('conf should be 4 by N matrix')
@@ -120,26 +126,26 @@ def computeRecip(long[:,:] conf, double[:] r, double[:] p):
             max_elec = max(conf[:,i])
     
     cdef int pad = len(str(max_elec)) # order of magnitude of max electrode number 
-    cdef long[:,:] ab = conf[:,0:2].copy() # ab configuration 
-    cdef long[:,:] mn = conf[:,2:4].copy() # mn configuration 
+    cdef dlong[:,:] ab = conf[:,0:2].copy() # ab configuration 
+    cdef dlong[:,:] mn = conf[:,2:4].copy() # mn configuration 
 
-    cdef long[:] AB = np.zeros(ndata,dtype=int) # holds AB combination as one integer 
-    cdef long[:] MN = np.zeros(ndata,dtype=int) # holds MN combination as one integer 
-    cdef long[:] comboF = np.zeros(ndata,dtype=int) # forward combination
-    cdef long[:] comboR = np.zeros(ndata,dtype=int) # reverse combination 
+    cdef dlong[:] AB = np.zeros(ndata,dtype=npy_long) # holds AB combination as one integer 
+    cdef dlong[:] MN = np.zeros(ndata,dtype=npy_long) # holds MN combination as one integer 
+    cdef dlong[:] comboF = np.zeros(ndata,dtype=npy_long) # forward combination
+    cdef dlong[:] comboR = np.zeros(ndata,dtype=npy_long) # reverse combination 
     
-    cdef np.ndarray[long, ndim=1] ifwd = np.zeros(ndata,dtype=int)
-    cdef long[:] ifwdv = ifwd # flag for forward and reverse direction 
+    cdef np.ndarray[dlong, ndim=1] ifwd = np.zeros(ndata,dtype=npy_long)
+    cdef dlong[:] ifwdv = ifwd # flag for forward and reverse direction 
     cdef double rj, pj # recipocal resistance and phase 
     cdef double re, rer, rm, pe # recip error, relative error, reciprocal mean, phase error  
 
     # outputs of function (so need to be in python/numpy type format)
-    cdef np.ndarray[long, ndim=1] irecip = np.zeros(ndata,dtype=int) # index of reciprocal measurement  
+    cdef np.ndarray[dlong, ndim=1] irecip = np.zeros(ndata,dtype=npy_long) # index of reciprocal measurement  
     cdef np.ndarray[double, ndim=1] reciprocalErr = np.zeros(ndata,dtype=float)*np.nan # raw reciprocal error 
     cdef np.ndarray[double, ndim=1] reciprocalErrRel = np.zeros(ndata,dtype=float)*np.nan # relative error 
     cdef np.ndarray[double, ndim=1] reciprocalMean = np.zeros(ndata,dtype=float)*np.nan # mean of 2 measurements 
     cdef np.ndarray[double, ndim=1] reciprocalPhase = np.zeros(ndata,dtype=float)*np.nan # mean of 2 measurements 
-    cdef long[:] irecipv = irecip 
+    cdef dlong[:] irecipv = irecip 
     cdef double[:] reciprocalErrv = reciprocalErr
     cdef double[:] reciprocalErrRelv = reciprocalErrRel
     cdef double[:] reciprocalMeanv = reciprocalMean
@@ -155,9 +161,9 @@ def computeRecip(long[:,:] conf, double[:] r, double[:] p):
         comboR[i] = mergeInt(MN[i], AB[i], pad*2)
 
     # sort arrays for efficient lookup 
-    cdef np.ndarray[long, ndim=1] idxcr = np.argsort(comboR).astype(int,order='C') # (pure python code)
-    cdef long[:] idxcrv = idxcr # memory view of sorted index  
-    cdef long[:] sortR = np.zeros(ndata,dtype=int)
+    cdef np.ndarray[dlong, ndim=1] idxcr = np.argsort(comboR).astype(npy_long,order='C') # (pure python code)
+    cdef dlong[:] idxcrv = idxcr # memory view of sorted index  
+    cdef dlong[:] sortR = np.zeros(ndata,dtype=npy_long)
     for i in range(ndata):
         sortR[i] = comboR[idxcrv[i]]
     
@@ -213,7 +219,7 @@ def computeRecip(long[:,:] conf, double[:] r, double[:] p):
     return irecip, reciprocalErr, reciprocalErrRel, reciprocalMean, reciprocalPhase, ifwd 
 
 
-def perElecRi(long[:,:] conf, double[:] recip, long max_elec):
+def perElecRi(dlong[:,:] conf, double[:] recip, long max_elec):
     """
     Average electrode reciprocal error (can be in percent)
 
@@ -239,14 +245,14 @@ def perElecRi(long[:,:] conf, double[:] recip, long max_elec):
         if max(conf[:,i]) > max_elec:
             max_elec = max(conf[:,i])
             
-    cdef np.ndarray[long, ndim=1] elecid = np.arange(1,max_elec+1,dtype=int)
+    cdef np.ndarray[long, ndim=1] elecid = np.arange(1,max_elec+1,dtype=npy_long)
     # note that id numbers are not forced to be consectutive 
     cdef int nelec = len(elecid) # number of electrodes 
     cdef double[:] risum = np.zeros(nelec,dtype=float) # empty array to hold summed contact resistances 
-    cdef long[:] ricount = np.zeros(nelec,dtype=int) # hold number of times contact resistance measured on a electrode 
+    cdef dlong[:] ricount = np.zeros(nelec,dtype=npy_long) # hold number of times contact resistance measured on a electrode 
     cdef np.ndarray[double, ndim=1] riavg = np.zeros(nelec,dtype=float) # holds the average reciprocal measurement 
     
-    cdef long[:] abmn 
+    cdef dlong[:] abmn 
 
     
     for i in range(ndata): # loop through each measurement to get per measurement contact resistance stats 

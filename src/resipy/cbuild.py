@@ -13,7 +13,8 @@ if platform.system() == 'Linux': #open mp support on linux
         ),
         Extension(
         	"recipCalc",
-        	["recipCalc.pyx"]
+        	["recipCalc.pyx"],
+            
         	)
     ]
 elif platform.system() == 'Windows': #open mp support on windows
@@ -24,7 +25,8 @@ elif platform.system() == 'Windows': #open mp support on windows
         ),
         Extension(
         	"recipCalc",
-        	["recipCalc.pyx"]
+        	["recipCalc.pyx"],
+            define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         	)
     ]
 else: # macOS

@@ -739,6 +739,7 @@ class Survey(object):
         self.filterData(i2keep)
         return np.sum(~i2keep)
     
+    # def computeReciprocal(self, alg='Pandas Merge'):
     def computeReciprocal(self, alg='Bisection Search'):
         """
         Compute Reciprocals and store them in self.df (the dataframe)
@@ -1007,10 +1008,12 @@ class Survey(object):
         resist = np.asarray(self.df['resist'].values,dtype=float)
         phase = np.asarray(-self.kFactor*self.df['ip'].values,dtype=float) #converting chargeability to phase shift
         ndata = self.df.shape[0]
-        array = np.asarray(self.isequence - 1, dtype=int)
-        # if platform.system() == 'Windows':
-        #     print('converting sequencing to long')
-        #     array = np.asarray(self.isequence - 1, dtype=np.longlong)
+        
+        if platform.system() == 'Windows':
+            print('converting sequencing to long')
+            array = np.asarray(self.isequence - 1, dtype=np.int64)
+        else: 
+            array = np.asarray(self.isequence - 1, dtype=int)
         
         # print(type(phase))
         unpackme = computeRecip(array, resist, phase)

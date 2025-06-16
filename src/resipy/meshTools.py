@@ -300,7 +300,7 @@ class Mesh:
         
         self.dint = np.int64 # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
-            self.dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer
+            self.dint = np.int64 # avoid windows quirk where type long is actually a 32 bit integer
         elif platform.machine() == 'armv7l':
             self.dint = np.int64
         self.connection = np.asarray(node_data,dtype=self.dint) #connection matrix
@@ -783,8 +783,10 @@ class Mesh:
 
     def computeNconnec(self):
         cell_type = self.cell_type[0]
-        connection = np.asarray(self.connection, dtype=self.dint)
-        self.NsizeA, self.fconm = mc.conductanceCall(connection, self.numnp, cell_type)
+        # connection = np.asarray(self.connection, dtype=self.d)
+        # print(connection.dtype)
+        # connection = np.asarray(self.connection, dtype=np.npy_long)
+        self.NsizeA, self.fconm = mc.conductanceCall(self.connection, self.numnp, cell_type)
         
     def externalNodes(self):
         """
