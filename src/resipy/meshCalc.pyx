@@ -1,8 +1,9 @@
+
+# mesh calculations - need to be in cython otherwise they will take too dlong 
 cimport cython  #import relevant modules 
 import numpy as np
-import platform 
 cimport numpy as np
-ctypedef long long dlong # 64bit dlong data type, plaform dependent, edit as necessary 
+ctypedef {:s} dlong # 64bit dlong data type, plaform dependent, edit as necessary 
 npy_long = np.int64 # what numpy considers a dlong data type, note that this not platform dependent 
 
 cdef extern from "math.h" nogil:
@@ -10,8 +11,6 @@ cdef extern from "math.h" nogil:
 cdef extern from "math.h" nogil:
     cpdef double atan(double x)
 
-DINT = np.intc
-# mesh calculations - need to be in cython otherwise they will take too dlong 
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
 @cython.wraparound(False)        
 cdef dlong bisectionSearch(dlong [:] arr, dlong var):
@@ -75,11 +74,6 @@ cdef dlong bisectionSearch(dlong [:] arr, dlong var):
 #             uni.append(arrs[i])
 #             idx.append(temp_idx[i])
 #     return uni,idx
-
-def int2str(int a, int pad):
-    cdef str s
-    s = '{:0>%id}'%pad
-    return s.format(a)
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -951,7 +945,7 @@ def orderQuad(dlong[:,:] connection, double[:,:] node):
     if npere!=4: 
         raise ValueError('Got the wrong number of nodes per element when ordering mesh nodes')
     
-    con = np.zeros((numel,npere), dtype=DINT)# new connection matrix 
+    cdef np.ndarray[dlong, ndim=2] con = np.zeros((numel,npere), dtype=npy_long)# new connection matrix 
     cdef int[:,:] conv = con # connection view
     
     cdef np.ndarray[double, ndim=1] node_x = np.asarray(node[:,0],dtype=float) 
