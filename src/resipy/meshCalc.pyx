@@ -282,6 +282,8 @@ def neighSearch(dlong[:,:] connection, int cell_type = 10):
             # rewind until the the start of the part of the matrix/table with the relevant node is found 
             while face_connection_expanded_sorted[ii-1,0] == face[0]:
                 ii -= 1 
+                if ii == 0: # fail safe against end of array 
+                    break 
 
             # there should be 2 exact matches in the faces which are found if the face has a neighbour 
             fcmatch = 0 
