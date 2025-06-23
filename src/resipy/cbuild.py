@@ -6,7 +6,8 @@ import platform
 import os, shutil, platform
 
 # sort out long integer data types for each platform 
-if platform.system == "Windows":
+if platform.system() == "Windows":
+    print("Platform is windows -> changing long data type")
     long_data_type = "long long"
 else: 
     long_data_type = "long"

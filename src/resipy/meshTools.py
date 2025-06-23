@@ -298,12 +298,10 @@ class Mesh:
         self.numel = node_data.shape[0] # numel 
         self.node = np.array([node_x,node_y,node_z]).T 
         
-        self.dint = np.int64 # connection matrix needs to be in long format 
+        self.dint = int # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
             self.dint = np.int64 # avoid windows quirk where type long is actually a 32 bit integer
-        elif platform.machine() == 'armv7l':
-            self.dint = np.int64
-        self.connection = np.asarray(node_data,dtype=self.dint) #connection matrix
+        self.connection = np.asarray(node_data, dtype=self.dint) #connection matrix
         
         self.cell_type = cell_type # cellType
         self.originalFilePath = original_file_path # originalFilePath 
