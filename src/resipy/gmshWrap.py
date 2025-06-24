@@ -385,31 +385,38 @@ def mshParse47(fname, debug=True):
     stream('reading node coordinates...')
     #read in node stats 
     line = dump[node_start+1].split()
-    node_ent = int(line[0])
-    numnp = int(line[3])
-    min_tag = int(line[2])
+    num_node_ent = int(line[0])
+    numnp = int(line[1])
+    # min_tag = int(line[2])
     max_tag = int(line[3])
     
     #allocate arrays for nodes 
-    node = np.zeros((numnp,3))
-    node_id=[0]*numnp
+    node = np.zeros((max_tag,3), dtype=float)-1
+    node_id = np.zeros(max_tag, dtype=int)-1 
+    node_found_count = 0 
     #read in node information
     tmp = node_start + 2
-    for i in range(node_ent):
+    for i in range(num_node_ent):
         lno = tmp # line number of node block info 
         line = dump[lno].split()
+        # entitydim = int(line[0])
+        # entitytag = int(line[1])
         nodeinblock = int(line[-1])
         for j in range(nodeinblock):
-            line_np=dump[lno+1+j].split()#node id line 
-            line_co=dump[lno+1+j+nodeinblock].split()#node coordinate line 
-            #convert info 
-            idx = int(line_np[0])
-            node_id[idx-1] = idx
-            
-            node[idx-1,0]=float(line_co[0])
-            node[idx-1,1]=float(line_co[1])
-            node[idx-1,2]=float(line_co[2])
+            node_tag = int(dump[lno+1+j].split()[0]) # node id/tag line 
+            node_co = dump[lno+1+j+nodeinblock].split()#node coordinate line 
+            node_id[node_tag-1] = node_tag # assign node tag to node id 
+            node[node_tag-1,0]=float(node_co[0]) # assign xyz coordinates of node 
+            node[node_tag-1,1]=float(node_co[1])
+            node[node_tag-1,2]=float(node_co[2])
+            node_found_count += 1 
         tmp = lno+nodeinblock+nodeinblock+1
+    num_ignored_tags = max_tag - node_found_count
+    if num_ignored_tags > 0:
+        ikeep = node_id >= 0
+        node = node[ikeep,:]
+        node_id = node_id[ikeep]
+        stream('%i node tags ignored in gmsh file (that is odd!?)'%num_ignored_tags)
         
     #### read in elements 
     # find where the elements start 
@@ -424,14 +431,12 @@ def mshParse47(fname, debug=True):
     nat_elm_num = []#native element number to gmsh
     elm_type = []#element type
     phys_entity = [] # defines the physical entity type the element is assocaited with
-
     ignored_elements=0#count the number of ignored elements
     
     #determine element type 
     stream('Determining element type...',end='') # this depends a bit on the version of gmsh 
     for i in range(element_start,element_end):
         line = dump[i].split()
-
         elm_type.append(len(line)-1)
             
 
@@ -489,8 +494,8 @@ def mshParse47(fname, debug=True):
             ignored_elements += nef
             i += nef+1
     # connection = np.array(con_matrix).T
-            
-    stream("ignoring %i elements in the mesh file, as they are not required for (c)R2/3t"%ignored_elements)
+    if ignored_elements > 0: 
+        stream("ignoring %i elements in the mesh file, as they are not required for (c)R2/3t"%ignored_elements)
     
     real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
     if real_no_elements == 0:

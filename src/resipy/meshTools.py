@@ -5419,9 +5419,10 @@ def check4repeatNodes(X,Y,Z,flag=None):
                 y_ = Y[p]
                 z_ = Z[p]
                 f_ = flag[p]
-                line = "X = {:16.8f}, Y = {:16.8f}, Z = {:16.8f}, flag = {:}\n".format(x_,y_,z_,f_)
+                line = "X = {:16.8f}, Y = {:16.8f}, Z = {:16.8f}, flag = {:}, idx ={:d}\n".format(x_,y_,z_,f_, p)
                 # print(line.strip())
-                error += line 
+                error += line
+                break 
             count += 1 
             if count > 10:
                 break # otherwise error message will be too big 
