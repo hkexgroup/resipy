@@ -935,18 +935,43 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False,
     
     if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
     if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(znew) != 'numpy.ndarray':znew = np.array(znew)
     if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
     if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
     if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    if type(iknown) != 'numpy.ndarray':iknown = np.array(iknown)
     
     #error checking 
     if len(xnew) != len(ynew) or len(xnew) != len(znew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
     if len(xknown) != len(yknown) or len(xknown) != len(zknown) or len(xknown) != len(iknown):
         raise ValueError('Mismatch in known coordinate array lengths')
+        
+    
+    nknown = len(xknown)
+    ## check for repeated positions in the known coordinates 
+    pknown = np.array([])
+    iknown_copy = iknown.copy()
+    _pknown = np.c_[xknown[0], yknown[0], zknown[0]]
+    _iknown = iknown_copy[0]
+    pknown =  _pknown.copy() 
+    iknown = np.array(_iknown)
+    tree = cKDTree(pknown) # tree object
+    for i in range(1, nknown): # this for loop is not particularly efficient :(  
+        _pknown = np.c_[xknown[i], yknown[i], zknown[i]]
+        _iknown = iknown_copy[i]
+        if np.isnan(_iknown) or np.isinf(_iknown):
+            continue 
+        if any(np.isnan(_pknown)[0]):
+            continue 
+        dist, _ = tree.query(_pknown)
+        if dist > 0.0: # append point if not yet seen before 
+            pknown = np.vstack([pknown, _pknown])
+            iknown = np.append(iknown, _iknown)
+            tree = cKDTree(pknown)#tree object
+
     # >>> map the known points to the new points using cKDTree
-    pknown = np.array([xknown,yknown,zknown]).T # known points 
-    pnew = np.array([xnew,ynew,znew]).T # new points 
+    pnew = np.c_[xnew,ynew,znew] # new points 
     tree = cKDTree(pknown)#tree object 
     dist,idx = tree.query(pnew)# map known points to new points 
     

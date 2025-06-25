@@ -3859,7 +3859,6 @@ class Project(object): # Project master class instanciated by the GUI
         # xnew,ynew,znew,xknown, yknown, zknown, iknown
         res0 = nearest3d(mx, my, mz, px, py, pz, app)
         res0[res0 < 0] = 1.0 # cap minimum resistivity value 
-        # self.mesh.df.loc[:,'res0'] = res0 #  perhaps dont assign res0 here? 
         return res0 
         
 
