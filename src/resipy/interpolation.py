@@ -949,7 +949,7 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False,
         
     
     nknown = len(xknown)
-    ## check for repeated positions in the known coordinates 
+    ## check for repeated positions in the known coordinates, keep only unique positions 
     pknown = np.array([])
     iknown_copy = iknown.copy()
     _pknown = np.c_[xknown[0], yknown[0], zknown[0]]

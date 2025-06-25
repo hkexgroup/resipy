@@ -3,7 +3,7 @@
 cimport cython  #import relevant modules 
 import numpy as np
 cimport numpy as np
-ctypedef {:s} dlong # 64bit dlong data type, plaform dependent, edit as necessary 
+ctypedef {:} dlong # 64bit dlong data type, plaform dependent, edit as necessary 
 npy_long = np.int64 # what numpy considers a dlong data type, note that this not platform dependent 
 
 cdef extern from "math.h" nogil:
@@ -13,7 +13,7 @@ cdef extern from "math.h" nogil:
 
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
 @cython.wraparound(False)        
-cdef dlong bisectionSearch(dlong [:] arr, dlong var):
+cdef Py_ssize_t bisectionSearch(dlong [:] arr, dlong var):
     """Efficent search algorithm for sorted array of postive ints 
     (memory veiw parallel capable version)
     
@@ -27,7 +27,7 @@ cdef dlong bisectionSearch(dlong [:] arr, dlong var):
     cdef dlong L = 0
     cdef dlong n = len(arr)
     cdef dlong R = n-1
-    cdef dlong m
+    cdef Py_ssize_t m
     while L <= R:
         m = int((L+R)/2)
         if arr[m]<var:
@@ -160,7 +160,8 @@ cdef dlong tetrasignp(double[:] a, double[:] b, double [:] c,  double [:] d) nog
 cdef void sortInt(dlong[:] arr, int n): 
     #adapted from https://www.geeksforgeeks.org/insertion-sort/
     #sorts array in place
-    cdef int i, j, key
+    cdef Py_ssize_t i, j
+    cdef dlong key
     for i in range(1, n): 
         key = arr[i] 
         j = i-1
@@ -201,8 +202,7 @@ def neighSearch(dlong[:,:] connection, int cell_type = 10):
     cell types for each type of element supported by meshtools 
     
     """
-    cdef Py_ssize_t i, j, jj # variables used in loops 
-    cdef int ii 
+    cdef Py_ssize_t i, j, ii, jj # variables used in loops 
     cdef int numel = connection.shape[0] # number of elements 
     cdef int npere = 4 # number of nodes per element (defaults for tetra)
     cdef int npfac = 3 # number of nodes per face 
@@ -339,7 +339,7 @@ def faces3d(dlong[:,:] connection, dlong[:,:] neigh):
         N by 1 array. Indices of original mesh elements 
 
     """
-    cdef int i,j #loop variables
+    cdef Py_ssize_t i,j #loop variables
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
     cdef int c = 0
@@ -392,7 +392,7 @@ def neighPrism(dlong[:,:] connection):
         connection matrix
     """
     
-    cdef int i, j
+    cdef Py_ssize_t i, j
     cdef int numel = connection.shape[0]
     cdef int npere = 5
     #face arrays 
@@ -449,7 +449,8 @@ def neighPrism(dlong[:,:] connection):
     cdef dlong[:] tri_sortv = tri_sort
     cdef int maxo = len(tri_sort)-1
 
-    cdef dlong o, idx
+    cdef dlong idx
+    cdef Py_ssize_t o 
     #create lookup array 
     cdef np.ndarray[dlong, ndim=1] lookup = np.zeros((numel*5),dtype=npy_long)
     for i in range(numel):
@@ -507,7 +508,7 @@ def facesPrism(dlong[:,:] connection, double[:,:] node, dlong[:,:] neigh):
         N by 1 array. Indices of original mesh elements 
 
     """
-    cdef int i,j,k #loop variables
+    cdef Py_ssize_t i,j,k #loop variables
     cdef int numel = connection.shape[0]
     cdef int c = 0
     cdef np.ndarray[dlong, ndim=2] nmap = np.array([[0, 1, 2, -1], 
@@ -569,7 +570,7 @@ def sortNeigh(dlong[:,:] neigh, dlong[:] zone):
     neigh: nd array
         Prepared neighbour matrix 
     """
-    cdef int i,j 
+    cdef Py_ssize_t i,j 
     cdef int numel = neigh.shape[0]
     cdef int npere = neigh.shape[1]
     
@@ -619,8 +620,8 @@ def splitTri(dlong[:,:] connection, double[:,:] node):
     cdef dlong[:] n = np.zeros(6,dtype=npy_long) # new node numbers 
     cdef float mx, my, mz
     cdef dlong[:] nodes = np.zeros(2,dtype=npy_long)
-    cdef dlong mn
-    cdef int i, j, nno, tmpi, search
+    cdef dlong mn, nno 
+    cdef Py_ssize_t i, j, tmpi, search
 
     #node handling 
     cdef int num_nodes = len(node_x) # number of nodes 
@@ -741,8 +742,8 @@ def splitTetra(dlong[:,:] connection, double[:,:] node):
     cdef dlong[:] n = np.zeros(10,dtype=npy_long) # new node numbers 
     cdef double mx, my, mz
     cdef dlong[:] nodes = np.zeros(2,dtype=npy_long)
-    cdef dlong mn
-    cdef int i, j, nno, tmpi, search #loop variables 
+    cdef dlong mn, nno 
+    cdef Py_ssize_t i, j, tmpi, search #loop variables 
 
     cdef int num_nodes = len(node_x)
     cdef int numel = connection.shape[0]
@@ -882,7 +883,7 @@ def orderTetra(dlong[:,:] connection, double[:,:] node):
     cdef np.ndarray[dlong, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
     cdef dlong[:] ccwv = ccw #clockwise view
     cdef Py_ssize_t i 
-    cdef int k, ei, tid # loop integers 
+    cdef int ei # loop integers 
     cdef np.ndarray[dlong, ndim=1] count = np.zeros(numel,dtype=int)
     cdef dlong[:] countv = count
     cdef int count_out #rolling total for the number of corrected elements 
@@ -978,9 +979,9 @@ def orderQuad(dlong[:,:] connection, double[:,:] node):
     cdef dlong[:] order = np.zeros(4,dtype=npy_long) #ordering array
     
     cdef double pi = np.pi 
-    cdef int i, k, c, j
+    cdef Py_ssize_t i, j, k
     cdef int eflag = 0 # error flag
-    cdef int ei # error number 
+    cdef int c, ei # count, error number 
     cdef double minx, minz
     cdef double xinf = 10*max(node_x) # infinite like x 
     cdef double zinf = 10*max(node_z) # infinite like z 
@@ -1092,7 +1093,7 @@ def surfaceCall(dlong[:,:] fconnection, double[:,:] node, double[:,:] cellcentre
     cdef dlong[:] ocheckv = ocheck
 
     #looping variables 
-    cdef int i,j, tid
+    cdef Py_ssize_t i,j
     cdef double bqz, xx, yy, xm, ym
     
     cdef double[:,:] q0 = np.zeros((nfaces,3))#query points 
@@ -1470,7 +1471,7 @@ def fcrosscheck(dlong[:,:] fconnection1, dlong[:,:] fconnection2):
         in fconnection2. 
     """
     
-    cdef int i
+    cdef Py_ssize_t i
     cdef int numel1 = fconnection1.shape[0]
     cdef int numel2 = fconnection2.shape[0]
     
@@ -1514,7 +1515,7 @@ def fcrosscheck(dlong[:,:] fconnection1, dlong[:,:] fconnection2):
     cdef np.ndarray[dlong, ndim=1] tempidx = np.argsort(cflatten).astype(npy_long,order='C') 
     
     cdef dlong[:] csort = cflatten[tempidx] # sorted faces (for second matrix)
-    cdef dlong o
+    cdef Py_ssize_t o
 
     cdef np.ndarray[dlong, ndim=1] repeats = np.zeros((numel1,),dtype=npy_long ,order='C') 
     cdef dlong[:] repeatv = repeats    
@@ -1674,7 +1675,7 @@ def rmRepeatNodes(double[:,:] node, dlong [:,:] connection, int n=10):
     cdef np.ndarray[dlong,ndim=2] idx = np.zeros((numnp,n), dtype=npy_long)-1 # index grouping 
     cdef dlong[:,:] idxv = idx 
     cdef int err = 0 # error flag
-    cdef int i,j # looping variables 
+    cdef Py_ssize_t i,j # looping variables 
     
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
