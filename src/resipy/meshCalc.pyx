@@ -573,21 +573,24 @@ def sortNeigh(dlong[:,:] neigh, dlong[:] zone):
     cdef Py_ssize_t i,j 
     cdef int numel = neigh.shape[0]
     cdef int npere = neigh.shape[1]
+    cdef np.ndarray[dlong, ndim=2] new_neigh = np.zeros((numel, npere), dtype=npy_long)
+    cdef dlong[:,:] new_neighv= new_neigh; 
     
     #reorder each row (acsending but outside elements at end of row) 
     cdef dlong like_inf = numel*2 #make a big number 
     for i in range(numel):
         for j in range(npere):
+            new_neighv[i,j] = neigh[i,j]
             if neigh[i,j] == -1: #check if outside element 
-                neigh[i,j] = like_inf # if outside assign big number 
+                new_neighv[i,j] = like_inf # if outside assign big number 
             elif zone[i] != zone[neigh[i,j]]:# check if neighbour in different zone 
-                neigh[i,j] = like_inf 
+                new_neighv[i,j] = like_inf 
                 
         sortInt(neigh[i,:],npere) # sort in that part of the row
         for j in range(npere):
-            if neigh[i,j] == like_inf: # replace outside values with -1 
-                neigh[i,j] = -1
-    return neigh
+            if new_neighv[i,j] == like_inf: # replace outside values with -1 
+                new_neighv[i,j] = -1
+    return new_neigh
                 
     
 @cython.boundscheck(False)
