@@ -727,10 +727,12 @@ plt.close('all')
 print('-------------Testing 3D inversion ------------')
 t0 = time.time()
 k = Project(typ='R3t')
-k2.saveSequence(k.dirname + '/seq.csv', ftype='asis')
-k.importSequence(k.dirname + '/seq.csv')
-k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
+k.createSequence()
+k.saveSequence(k.dirname + '/seq.csv', ftype='asis')
+k.importSequence(k.dirname + '/seq.csv')
+k.createMesh()
+k.forward()
 k.typ = 'R2'
 k.elec2distance()
 k.elec2distance(yDominant=True)
@@ -909,7 +911,7 @@ k.createMesh(typ='cylinder',cl=0.005,cl_factor=4)
 k.param['num_xy_poly'] = 0
 k.param['zmin'] = -np.inf
 k.param['zmax'] = np.inf
-k.invert(modErr=True) # tests model error in the case of a generic problem 
+k.invert(err=True, modErr=True) # tests model error in the case of a generic problem 
 k.showResults(use_pyvista=False)
 pl = pv.Plotter(off_screen=True)
 k.showResults(ax=pl)

@@ -298,12 +298,10 @@ class Mesh:
         self.numel = node_data.shape[0] # numel 
         self.node = np.array([node_x,node_y,node_z]).T 
         
-        self.dint = np.int64 # connection matrix needs to be in long format 
+        self.dint = int # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
             self.dint = np.int64 # avoid windows quirk where type long is actually a 32 bit integer
-        elif platform.machine() == 'armv7l':
-            self.dint = np.int64
-        self.connection = np.asarray(node_data,dtype=self.dint) #connection matrix
+        self.connection = np.asarray(node_data, dtype=self.dint) #connection matrix
         
         self.cell_type = cell_type # cellType
         self.originalFilePath = original_file_path # originalFilePath 
@@ -1131,7 +1129,7 @@ class Mesh:
                 nmesh = nmesh.filterIdx(ikeep2)
                 
                 # remove faces with 1 or less neighbours 
-                nneigh = mc.neighSearch(nmesh.connection,5)
+                nneigh = mc.neighSearch(np.asarray(nmesh.connection, dtype=self.dint),5)
                 ikeep3 = np.count_nonzero(nneigh+1,axis=1) > 1
                 nmesh = nmesh.filterIdx(ikeep3) 
               
@@ -1413,7 +1411,7 @@ class Mesh:
         nmesh.elmCentre = self.elmCentre[in_elem,:]
         
         new_con_mat = temp_con_mat[in_elem,:]
-        nmesh.connection = new_con_mat     
+        nmesh.connection = np.asarray(new_con_mat, dtype=self.dint) 
         
         nmesh.__rmexcessNodes() # remove the excess nodes 
             
@@ -1502,10 +1500,6 @@ class Mesh:
         self.node[:,1] += y
         self.node[:,2] += z
         self.cellCentres()
-        
-    def trans_mesh(self,x,y,z):
-        warnings.warn("trans_mesh is depreciated, use transMesh instead", DeprecationWarning)
-        self.transMesh(x, y, z)
         
     #%% mesh display 
     def _clipContour(self, ax, cont, maxDepth=None):
@@ -5421,9 +5415,10 @@ def check4repeatNodes(X,Y,Z,flag=None):
                 y_ = Y[p]
                 z_ = Z[p]
                 f_ = flag[p]
-                line = "X = {:16.8f}, Y = {:16.8f}, Z = {:16.8f}, flag = {:}\n".format(x_,y_,z_,f_)
+                line = "X = {:16.8f}, Y = {:16.8f}, Z = {:16.8f}, flag = {:}, idx ={:d}\n".format(x_,y_,z_,f_, p)
                 # print(line.strip())
-                error += line 
+                error += line
+                break 
             count += 1 
             if count > 10:
                 break # otherwise error message will be too big 

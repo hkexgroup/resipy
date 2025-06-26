@@ -1010,7 +1010,6 @@ class Survey(object):
         ndata = self.df.shape[0]
         
         if platform.system() == 'Windows':
-            print('converting sequencing to long')
             array = np.asarray(self.isequence - 1, dtype=np.int64)
         else: 
             array = np.asarray(self.isequence - 1, dtype=int)

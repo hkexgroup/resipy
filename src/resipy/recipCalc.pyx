@@ -3,10 +3,9 @@ cimport cython  #import relevant modules
 import numpy as np
 cimport numpy as np
 from cpython cimport array 
-import platform
-ctypedef long long dlong
-npy_long = np.int64 
 
+ctypedef {:s} dlong
+npy_long = np.int64 
 
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)

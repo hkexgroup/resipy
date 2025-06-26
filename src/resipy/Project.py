@@ -3859,7 +3859,6 @@ class Project(object): # Project master class instanciated by the GUI
         # xnew,ynew,znew,xknown, yknown, zknown, iknown
         res0 = nearest3d(mx, my, mz, px, py, pz, app)
         res0[res0 < 0] = 1.0 # cap minimum resistivity value 
-        # self.mesh.df.loc[:,'res0'] = res0 #  perhaps dont assign res0 here? 
         return res0 
         
 
@@ -4575,7 +4574,9 @@ class Project(object): # Project master class instanciated by the GUI
             
         if pseudoStart: 
             dump('Looking up starting resistivities from pseudo section')
-            self.mesh.df.loc[:,'res0'] = self.res0fromPseudo() # res0 assigned
+            res0 = self.res0fromPseudo() # res0 assigned
+            ifixed = self.mesh.df['param'] == 0 # need to avoid overwriting fixed values if assigned 
+            self.mesh.df.loc[~ifixed,'res0'] = res0[~ifixed] # res0 assigned
 
         # compute modelling error if selected
         if modErr is True and self.fwdErrModel is False: #check no error model exists
@@ -5725,7 +5726,7 @@ class Project(object): # Project master class instanciated by the GUI
         Region 0 is the background region. It has zone=1, and fixed=False
         """
         regions = np.array(self.mesh.df['region'])
-        res0 = np.array(self.mesh.df['res0']).copy()
+        res0 = np.asarray(self.mesh.df['res0'].values, dtype=float)
         for key in regionValues.keys():
             idx = regions == int(key)
             res0[idx] = regionValues[key]
