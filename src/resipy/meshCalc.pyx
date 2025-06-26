@@ -237,7 +237,7 @@ def neighSearch(dlong[:,:] connection, int cell_type = 10):
         raise Exception('Unknown cell_type passed to mashCalc')
     
     #face arrays 
-    cdef dlong[:] face = np.zeros(npfac, dtype=int)
+    cdef dlong[:] face = np.zeros(npfac, dtype=npy_long)
 
     # how does this work? Need to find the combination of nodes which are shared on each face 
     
@@ -438,7 +438,7 @@ def neighPrism(dlong[:,:] connection):
                                          pad)
         
 
-    cdef np.ndarray[dlong, ndim=2] neigh = np.zeros((numel,5),dtype=int) # allocate space for neighbour matrix        
+    cdef np.ndarray[dlong, ndim=2] neigh = np.zeros((numel,5),dtype=npy_long) # allocate space for neighbour matrix        
     cdef dlong[:,:] neighv = neigh  
     
     #using binary search and sorted lists for efficient index lookup 
@@ -511,11 +511,13 @@ def facesPrism(dlong[:,:] connection, double[:,:] node, dlong[:,:] neigh):
     cdef Py_ssize_t i,j,k #loop variables
     cdef int numel = connection.shape[0]
     cdef int c = 0
-    cdef np.ndarray[dlong, ndim=2] nmap = np.array([[0, 1, 2, -1], 
-                                                   [3, 4, 5, -1], 
-                                                   [0, 1, 4, 3], 
-                                                   [1, 2, 5, 4],
-                                                   [0, 2, 5, 3]])
+    cdef list nmap_list = [
+        [0, 1, 2, -1], 
+        [3, 4, 5, -1], 
+        [0, 1, 4, 3], 
+        [1, 2, 5, 4],
+        [0, 2, 5, 3]]
+    cdef np.ndarray[dlong, ndim=2] nmap = np.array(nmap_list, dtype = npy_long)
     
     #first thing is to find all the cases where neigh == 1 
     cdef list idx = [] # this is the index where a outside edge is 
@@ -679,7 +681,7 @@ def splitTri(dlong[:,:] connection, double[:,:] node):
     ### find unique node configs # ###   
     cdef np.ndarray[dlong, ndim=1] idxa, unicl
     unicl, idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
-    cdef dlong[:] node_id = np.arange(len(unicl)) + num_nodes 
+    cdef dlong[:] node_id = np.arange(len(unicl), dtype=npy_long) + num_nodes 
     
     ### map back to elements #### 
     for i in range(numel):
@@ -804,7 +806,7 @@ def splitTetra(dlong[:,:] connection, double[:,:] node):
     ### find unique node configs # ###       
     cdef np.ndarray[dlong, ndim=1] idxa, unicl
     unicl, idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
-    cdef dlong[:] node_id = np.arange(len(unicl)) + num_nodes
+    cdef dlong[:] node_id = np.arange(len(unicl), dtype=npy_long) + num_nodes
     
     ### map back to elements #### 
     for i in range(numel):
@@ -870,7 +872,7 @@ def orderTetra(dlong[:,:] connection, double[:,:] node):
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
     
-    cdef np.ndarray[dlong,ndim=2] con = np.zeros((numel,npere), dtype=int)# new connection matrix 
+    cdef np.ndarray[dlong,ndim=2] con = np.zeros((numel,npere), dtype=npy_long)# new connection matrix 
     cdef dlong[:,:] conv = con # connection memeory view
     
     cdef np.ndarray[double, ndim=1] node_x = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
@@ -883,11 +885,11 @@ def orderTetra(dlong[:,:] connection, double[:,:] node):
     #looping variables 
     cdef double v00,v01,v02,v10,v11,v12,v20,v21,v22,s0,s1,s2, N 
     
-    cdef np.ndarray[dlong, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
+    cdef np.ndarray[dlong, ndim=1] ccw = np.zeros(numel,dtype=npy_long) # clockwise array 
     cdef dlong[:] ccwv = ccw #clockwise view
     cdef Py_ssize_t i 
     cdef int ei # loop integers 
-    cdef np.ndarray[dlong, ndim=1] count = np.zeros(numel,dtype=int)
+    cdef np.ndarray[dlong, ndim=1] count = np.zeros(numel,dtype=npy_long)
     cdef dlong[:] countv = count
     cdef int count_out #rolling total for the number of corrected elements 
 
@@ -1092,7 +1094,7 @@ def surfaceCall(dlong[:,:] fconnection, double[:,:] node, double[:,:] cellcentre
     cdef np.ndarray[double,ndim=1] nodez =  np.asarray(node[:,2],dtype=float)
     cdef double tqz = (max(nodez) - min(nodez)) + max(nodez) # query point in z axis
     
-    cdef np.ndarray[dlong,ndim=1] ocheck = np.zeros(nfaces,dtype=int)
+    cdef np.ndarray[dlong,ndim=1] ocheck = np.zeros(nfaces,dtype=npy_long)
     cdef dlong[:] ocheckv = ocheck
 
     #looping variables 
@@ -1224,10 +1226,8 @@ def conductanceCall(dlong[:,:] connection, int numnp, int typ=0):
                          'used with meshTools must be one of the following:',
                          '5, 8, 9, 10 or 13')
 
-    #looping variables     
     cdef dlong[:,:] combo = np.zeros((numel,nedges),dtype=npy_long)
-    # cdef dlong[:] nodes = np.zeros(2,dtype=int)
-    cdef Py_ssize_t i,j,k
+    cdef Py_ssize_t i,j,k #looping variables  
     cdef dlong merged 
     cdef dlong na, nb, nid
     
@@ -1320,13 +1320,18 @@ def externalN(dlong[:,:] connection, double[:,:] node, dlong[:,:] neigh):
         raise Exception('Unsupported mesh type for computing external nodes')
         
     cdef dlong[:] a, b, c 
+    cdef dlong[:] a2d = np.asarray([0,1,2], dtype=npy_long)
+    cdef dlong[:] b2d = np.asarray([1,2,0], dtype=npy_long)
+    cdef dlong[:] a3d = np.asarray([1,0,0,0], dtype=npy_long) 
+    cdef dlong[:] b3d = np.asarray([2,3,1,1], dtype=npy_long)  
+    cdef dlong[:] c3d = np.asarray([3,2,3,2], dtype=npy_long)  
     if flag3d == 0: 
-        a = np.asarray([0,1,2], dtype=int)
-        b = np.asarray([1,2,0], dtype=int)
+        a = a2d 
+        b = b2d 
     else:
-        a = np.asarray([1,0,0,0], dtype=int) 
-        b = np.asarray([2,3,1,1], dtype=int)  
-        c = np.asarray([3,2,3,2], dtype=int)  
+        a = a3d
+        b = b3d
+        c = c3d 
       
     cdef list enodesl = [] # will be used to store all found face nodes 
     cdef list surfaceflagl = [] # will be used to store if node is at the surface 
@@ -1443,8 +1448,8 @@ def externalN(dlong[:,:] connection, double[:,:] node, dlong[:,:] neigh):
     cdef np.ndarray[dlong, ndim=1] enodeu, enodeidx 
     enodeu, enodeidx = np.unique(enodesl,return_index=True) # get unique nodes 
     
-    cdef np.ndarray[dlong, ndim=1] enodes = np.zeros(len(enodeu),dtype=int)
-    cdef np.ndarray[dlong, ndim=1] surfaceflag = np.zeros(len(enodeu),dtype=int)
+    cdef np.ndarray[dlong, ndim=1] enodes = np.zeros(len(enodeu),dtype=npy_long)
+    cdef np.ndarray[dlong, ndim=1] surfaceflag = np.zeros(len(enodeu),dtype=npy_long)
 
     for i in range(len(enodeu)):
         enodes[i] = enodesl[enodeidx[i]]

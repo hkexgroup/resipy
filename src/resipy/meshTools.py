@@ -1129,7 +1129,7 @@ class Mesh:
                 nmesh = nmesh.filterIdx(ikeep2)
                 
                 # remove faces with 1 or less neighbours 
-                nneigh = mc.neighSearch(nmesh.connection,5)
+                nneigh = mc.neighSearch(np.asarray(nmesh.connection, dtype=self.dint),5)
                 ikeep3 = np.count_nonzero(nneigh+1,axis=1) > 1
                 nmesh = nmesh.filterIdx(ikeep3) 
               
@@ -1411,7 +1411,7 @@ class Mesh:
         nmesh.elmCentre = self.elmCentre[in_elem,:]
         
         new_con_mat = temp_con_mat[in_elem,:]
-        nmesh.connection = new_con_mat     
+        nmesh.connection = np.asarray(new_con_mat, dtype=self.dint) 
         
         nmesh.__rmexcessNodes() # remove the excess nodes 
             
@@ -1500,10 +1500,6 @@ class Mesh:
         self.node[:,1] += y
         self.node[:,2] += z
         self.cellCentres()
-        
-    def trans_mesh(self,x,y,z):
-        warnings.warn("trans_mesh is depreciated, use transMesh instead", DeprecationWarning)
-        self.transMesh(x, y, z)
         
     #%% mesh display 
     def _clipContour(self, ax, cont, maxDepth=None):
