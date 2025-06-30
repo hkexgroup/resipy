@@ -911,6 +911,7 @@ k.createMesh(typ='cylinder',cl=0.005,cl_factor=4)
 k.param['num_xy_poly'] = 0
 k.param['zmin'] = -np.inf
 k.param['zmax'] = np.inf
+k.estimateError()
 k.invert(err=True, modErr=True) # tests model error in the case of a generic problem 
 k.showResults(use_pyvista=False)
 pl = pv.Plotter(off_screen=True)
