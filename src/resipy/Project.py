@@ -4784,7 +4784,7 @@ class Project(object): # Project master class instanciated by the GUI
             path = mpath.Path(verts, poly_codes)
             patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
             ax.add_patch(patch) # need to add so it knows the transform
-            # cax.set_clip_path(patch) # -> depreciated function 
+            cax.set_clip_path(patch) # -> depreciated function 
         
         # mask outer region
         node_x = self.mesh.node[:,0]
