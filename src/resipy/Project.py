@@ -1788,10 +1788,10 @@ class Project(object): # Project master class instanciated by the GUI
             
         c = 0 
         for i in usid: 
-            self.createSurvey(finfo.fpath[i], ftype=finfo.ftype[i], 
-                              debug=debug, estMemory=False, string=finfo.string[i])
-            sidx = np.argwhere(finfo.sid.values == i).flatten().tolist() # survey index 
-
+            sidx = sorted(np.argwhere(finfo.sid.values == i).flatten().tolist()) # survey index
+            ii = sidx[0] # first index where survey index present 
+            self.createSurvey(finfo.fpath[ii], ftype=finfo.ftype[ii], 
+                              debug=debug, estMemory=False, string=finfo.string[ii])
             _ = sidx.pop(0)
                 
             for j in sidx: 
@@ -1799,8 +1799,8 @@ class Project(object): # Project master class instanciated by the GUI
                              string=finfo.string[j])
                 # add data for each survey 
             if c == 0:
-                self.bigSurvey = Survey(finfo.fpath[i], ftype=finfo.ftype[i],
-                                        string=finfo.string[i])
+                self.bigSurvey = Survey(finfo.fpath[ii], ftype=finfo.ftype[ii],
+                                        string=finfo.string[ii])
                 for j in sidx: 
                     self.bigSurvey.addData(fname=finfo.fpath[j], ftype=finfo.ftype[j],
                                            string=finfo.string[j])
