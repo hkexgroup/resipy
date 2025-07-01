@@ -3357,6 +3357,10 @@ class Project(object): # Project master class instanciated by the GUI
                 def dump(x):
                     pass
                 
+        if int(np.version.version.split('.')[0]) >= 2: 
+            np.set_printoptions(legacy='1.25') # force legacy printing
+            # (as apprently setting it at the top of Project.py is not enough)
+                
         if typ == 'default':
             if self.typ == 'R2' or self.typ == 'cR2': # it's a 2D mesh
                 typ = 'trian'
@@ -6372,7 +6376,7 @@ class Project(object): # Project master class instanciated by the GUI
     
         cases = ['tetra','trian','quad'] # use cases where modelling error is a half space 
         if self.meshParams['typ'] not in cases: 
-            raise Exception('Modelling error mesh not avialable for this mesh type yet')
+            raise Exception('Modelling error mesh not avialable for this mesh type (yet)')
             
         # backup
         elecZ = self.elec['z'].values.copy()

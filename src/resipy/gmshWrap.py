@@ -13,7 +13,7 @@ import numpy as np
 # import matplotlib.pyplot as plt 
 import matplotlib.path as mpath
 from scipy.spatial import cKDTree
-
+    
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
     delta=stop-start
@@ -1123,6 +1123,7 @@ def halfspace2d(electrodes, electrode_type = None, geom_input = None,
     of the actaul survey area. So make sure your topography / surface electrode points cover 
     the area you are surveying, otherwise some funky errors will occur in the mesh. 
     """
+        
     if dp_len != -1 and dp_len<0:
         raise ValueError('Can not have a negative dipole length')
     if fmd != -1 and fmd<0:#then set to a default 
