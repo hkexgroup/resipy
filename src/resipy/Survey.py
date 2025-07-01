@@ -717,7 +717,7 @@ class Survey(object):
             
             self.dfPhaseReset = self.df.copy()
             if 'irecip' in self.df.columns:
-                ie = np.in1d(self.df['irecip'].values, recip2reset)
+                ie = np.isin(self.df['irecip'].values, recip2reset)
                 self.df.loc[ie, 'irecip'] = 0 # as their reciprocal is deleted, we set it to 0
                 self.df.loc[ie, 'recipError'] = np.nan # they don't contribute to the error model anymore
                 self.df.loc[ie, 'recipMean'] = self.df.loc[ie, 'resist'].values
@@ -2017,7 +2017,7 @@ class Survey(object):
         else: # no remote column in elec df yet
             remote_flags = [-9999999, -999999, -99999,-9999,-999,
                         9999999, 999999, 99999] # values asssociated with remote electrodes
-            iremote = np.in1d(elec[:,0], remote_flags)
+            iremote = np.isin(elec[:,0], remote_flags)
             iremote = np.isinf(self.elec[['x','y','z']].values).any(1) | iremote
         if np.isnan(elec[iremote,2]).any():
             elec[iremote,2] = np.average(elec[~iremote,2])
@@ -2069,7 +2069,7 @@ class Survey(object):
         else: # no remote column in elec df yet
             remote_flags = [-9999999, -999999, -99999,-9999,-999,
                         9999999, 999999, 99999] # values asssociated with remote electrodes
-            iremote = np.in1d(elec[:,0], remote_flags)
+            iremote = np.isin(elec[:,0], remote_flags)
             iremote = np.isinf(self.elec[['x','y','z']].values).any(1) | iremote
         if np.isnan(elec[iremote,2]).any():
             elec[iremote,2] = np.average(elec[~iremote,2])

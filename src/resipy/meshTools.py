@@ -117,9 +117,9 @@ def cropSurface(triang, xsurf, ysurf):
     i2keep[(trix > xsurf[imax]) & (triy > ysurf[imax])] = False
     
     i2delete = np.where(~i2keep)[0] # get indices
-    xi = np.in1d(triang.triangles[:,0], i2delete)
-    yi = np.in1d(triang.triangles[:,1], i2delete)
-    zi = np.in1d(triang.triangles[:,2], i2delete)
+    xi = np.isin(triang.triangles[:,0], i2delete)
+    yi = np.isin(triang.triangles[:,1], i2delete)
+    zi = np.isin(triang.triangles[:,2], i2delete)
     i2mask = xi | yi | zi
     
     i2keep2 = ~i2mask

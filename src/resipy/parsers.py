@@ -263,9 +263,9 @@ def syscalParser(fname):
     # the pseudo-section of remote electrode survey nicer...
     remoteFlags_p1 = np.array([-9999999, -999999, -99999,-9999,-999])
     remoteFlags_p2 = np.array([9999999, 999999, 99999, 9999, 999])
-    iremote_p1 = np.in1d(val, remoteFlags_p1)
+    iremote_p1 = np.isin(val, remoteFlags_p1)
     elec[iremote_p1, 0] = -99999
-    iremote_p2 = np.in1d(val, remoteFlags_p2)
+    iremote_p2 = np.isin(val, remoteFlags_p2)
     elec[iremote_p2, 0] = 99999
     
     if np.all(df['dev'].values == 0) and 'Dev. M' in df.columns: # Prosys III has to Dev. lists, assuming Dev. Rho (%) == 0 and Dev. M != 0 when IP data is collected.
@@ -1701,7 +1701,7 @@ def primeParserTab(fname, espacing=1):
                      'pt_c2_no:':'int64',
                      'pt_calc_res:':'float64',
                      'pt_meas_contact_resistance:':'float64'} 
-        df[['pt_c1_no:', 'pt_c2_no:']] = df[['pt_c1_no:', 'pt_c2_no:']].fillna(method='ffill', axis=0) 
+        df[['pt_c1_no:', 'pt_c2_no:']] = df[['pt_c1_no:', 'pt_c2_no:']].ffill(axis=0) 
         return df.astype(force_type)
     # fill in empty values in current electrode columns 
     temp = f_fill(temp)  
@@ -3461,7 +3461,7 @@ def dasParser(fname):
     # remote electrodes?
     remote_flags = [-9999999, -999999, -99999,-9999,-999,
                 9999999, 999999, 99999] # values asssociated with remote electrodes
-    iremote = np.in1d(dfelec['x'].values, remote_flags)
+    iremote = np.isin(dfelec['x'].values, remote_flags)
     iremote = np.isinf(dfelec[['x','y','z']].values).any(1) | iremote
     dfelec['remote'] = iremote
     
@@ -3609,7 +3609,7 @@ def electraParser(fname):
         }
         data = data.astype(data_type_map)
 
-        data['resist'] = data['vp'] / data['i']
+        data['resist'] = data['vp'].values / data['i'].values
 
         data['ip'] = np.nan
 

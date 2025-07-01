@@ -587,7 +587,7 @@ class Project(object): # Project master class instanciated by the GUI
         """
         remote_flags = [-9999999, -999999, -99999,-9999,-999]
                     #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-        iremote = np.in1d(elec['x'].values, remote_flags)
+        iremote = np.isin(elec['x'].values, remote_flags)
         iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
         elec['remote'] = iremote
         if np.sum(iremote) > 0:
@@ -734,7 +734,7 @@ class Project(object): # Project master class instanciated by the GUI
                             ok = True
                         else:
                             raise ValueError('The following electrode labels are missing'
-                                  ' from the electrode declaration: ' + ', '.join(s2[~np.in1d(s2, x)]))
+                                  ' from the electrode declaration: ' + ', '.join(s2[~np.isin(s2, x)]))
                     else:
                         if elec.shape[0] >= self.elec.shape[0]:
                             ok = True
@@ -4744,7 +4744,7 @@ class Project(object): # Project master class instanciated by the GUI
         
         # sensitivity = difference between final inversion / difference init values
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
-        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].df.keys()))][0]
+        res_name = res_names[np.isin(res_names, list(self.meshResults[0].df.keys()))][0]
         invValues1 = np.array(mesh1.df[res_name])
         invValues2 = np.array(mesh2.df[res_name])
         sens = (invValues1 - invValues2)/(res1[iselect]-res2[iselect])
@@ -5078,7 +5078,7 @@ class Project(object): # Project master class instanciated by the GUI
         # compute conductivity in mS/m
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)', 'Magnitude(ohm.m)'])
         for mesh in self.meshResults:
-            res_name = res_names[np.in1d(res_names, list(mesh.df.keys()))][0]
+            res_name = res_names[np.isin(res_names, list(mesh.df.keys()))][0]
             mesh.df['Conductivity(mS/m)'] = 1000/np.array(mesh.df[res_name])
         if self.typ[0] == 'c' and self.surveys[0].kFactor != 1: # if kFactor is 1 then probably phase is provided and we shouldn't estimate chargeability
             for mesh in self.meshResults:
@@ -7326,7 +7326,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
         # compute absolute and relative difference in resistivity
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
-        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].df.keys()))][0]
+        res_name = res_names[np.isin(res_names, list(self.meshResults[0].df.keys()))][0]
         res0 = np.array(self.meshResults[0].df[res_name])[inside]
         
         # nb: the first survey will have 0 % change
