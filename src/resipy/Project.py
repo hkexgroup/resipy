@@ -6420,7 +6420,7 @@ class Project(object): # Project master class instanciated by the GUI
         the class). This action is irreversable. Use case is for simulating 
         modelling errors in unconventional surveys. 
 
-        resError = res*(percent/100) + resError
+        resError = (res*(percent/100)) + resError
 
         Parameters
         ----------

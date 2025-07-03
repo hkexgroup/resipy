@@ -3342,9 +3342,9 @@ class Survey(object):
         pnct: float
             Error in percent
         """
-        res = np.array(self.df['resist'])
-        error = (pnct/100)*res
-        self.df['resError'] = error + np.array(self.df['resError'])
+        res = self.df['resist'].values 
+        error = (pnct/100)*np.abs(res)
+        self.df['resError'] = error + self.df['resError'].values
         
         
     def estimateError(self, a_wgt=0.001, b_wgt=0.02):
