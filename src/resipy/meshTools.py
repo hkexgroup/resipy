@@ -7156,7 +7156,10 @@ def points2vtk (x,y,z,fname="points.vtk",title='points',data=None, file_name=Non
         for i,key in enumerate(data.keys()):
             fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
             fh.write("LOOKUP_TABLE default\n")
-            X = np.array(data[key])
+            if isinstance(data, dict):
+                X = np.array(data[key])
+            else:
+                X = data[key].values 
             X[np.isnan(X)]=-9999
             [fh.write("%16.8f "%X[j]) for j in range(len(x))]
             fh.write("\n")
@@ -7253,7 +7256,10 @@ def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None
     writeXMLline('PointData', tab=3)
     if data is not None: 
         for column in data.keys():
-            X = data[column] 
+            if isinstance(data, dict):
+                X = np.array(data[column])
+            else:
+                X = data[column].values 
             header = data_header_template.format(column, np.min(X), np.max(X))
             writeXMLline(header, tab=4)
             X[np.isnan(X)] = -9999
