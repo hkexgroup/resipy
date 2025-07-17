@@ -1539,6 +1539,7 @@ class Survey(object):
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+
 #        print(bins)
 #        print(np.sum(np.isnan(bins)))
 #        print(np.sum(np.isinf(bins)))

@@ -431,6 +431,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.bigSurvey = None # big combined survey created in the case of timelapse mode 
         self.mesh = None # mesh object (one per Project instance)
         self.meshParams = {} # mesh parameters passed to mesh creation scheme
+        self.modErrMesh = None # mesh object used for estimating forward modelling errors 
         self.wholespace = False # flag for whole space problem 
         self.topo = pd.DataFrame(columns=['x','y','z']) # store additional topo points
         self.coordLocal = False # flag is local coordinate conversion required 
@@ -2772,6 +2773,8 @@ class Project(object): # Project master class instanciated by the GUI
             If `ìndex == -2` then the fit is done on the combined surveys.
         ax : matplotlib axis, optional
             If specified, graph will be plotted on the given axis.
+        envelope : bool
+            If true, use an envelope fit (mean + 2*std)
 
         Returns
         -------
@@ -3602,6 +3605,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of Nodes']=self.mesh.numnp 
         self.pinfo['Mesh Type'] = meshtypename
         self.fwdErrModel = False # reset model error as mesh has changed 
+        self.modErrMesh = None # reset modelling error mesh too 
         
         
     def _computePolyTable(self):
@@ -6466,10 +6470,15 @@ class Project(object): # Project master class instanciated by the GUI
             if self.meshParams['typ'] not in cases and not self.wholespace: 
                 halfspace = False 
                 
-        node_elec = None # we need this as the node_elec with topo and without might be different
-        if not halfspace:
+        node_elec = None # we need this as the node_elec with topo and without might be different 
+        if self.modErrMesh is not None:
+            dump('Model error mesh already assigned, will use for estimating modelling errors...\n\n')
+            mesh = self.modErrMesh
+            node_elec = mesh.moveElecNodes(self.elec.x.values, self.elec.y.values, self.elec.z.values, False)
+        elif not halfspace:
             dump('Refining the mesh for the case of a generic problem...\n\n')
             mesh = self.mesh.refine() # refine the mesh (maybe even need 2x as much? kinda slow though)  
+            self.modErrMesh = mesh 
         elif any(self.elec['z'].values != 0): # so we have topography in this case and need a new mesh 
             dump('Creating mesh without ANY topography...\n\n')
             meshParams = self.meshParams.copy()
@@ -6571,7 +6580,7 @@ class Project(object): # Project master class instanciated by the GUI
         if halfspace: 
             # assume that apparent resistivities should equal 100 in the case of a halfspace 
             ap = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,appResCol]
-            modErrRel = np.abs(refRes-ap)/100 
+            modErrRel = np.abs(refRes-ap)/refRes 
         else: # need to run code again with reference mesh 
             # grab reference transfer resistances made on refined mesh 
             tr0 = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)[:,trCol]
@@ -6604,7 +6613,7 @@ class Project(object): # Project master class instanciated by the GUI
             k = refRes/tr0 # compute geometric factor using refined mesh transfer resistances 
             ap0 = tr0*k # apparent resistivities for refined mesh 
             ap1 = tr1*k # apparent resistivities for unrefined mesh (use same k as before)
-            modErrRel = np.abs(ap0-ap1)/100 # compute relative modelling error 
+            modErrRel = np.abs(ap0-ap1)/refRes # compute relative modelling error 
             
         # append modelling error to survey dataframes 
         # NOTE: In order to compute absolute modelling error multiply it by survey transfer resistances  
