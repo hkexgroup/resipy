@@ -6474,7 +6474,9 @@ class Project(object): # Project master class instanciated by the GUI
         if self.modErrMesh is not None:
             dump('Model error mesh already assigned, will use for estimating modelling errors...\n\n')
             mesh = self.modErrMesh
-            node_elec = mesh.moveElecNodes(self.elec.x.values, self.elec.y.values, self.elec.z.values, False)
+            elecLabels = self.elec['label'].values.astype(str)
+            node_in_mesh = mesh.moveElecNodes(self.elec.x.values, self.elec.y.values, self.elec.z.values, False) + 1  # +1 because of indexing staring at 0 in python
+            node_elec = [elecLabels, node_in_mesh]
         elif not halfspace:
             dump('Refining the mesh for the case of a generic problem...\n\n')
             mesh = self.mesh.refine() # refine the mesh (maybe even need 2x as much? kinda slow though)  
