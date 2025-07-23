@@ -215,6 +215,21 @@ def computeRecip(conf_data, double[:] r, double[:] p):
             ifwdv[i] = 1 # then the measurement is foward only 
             reciprocalMeanv[i] = r[i] # make mean reciprocal equivalent to forward measurement 
     
+    # clear memory views
+    conf = None 
+    ab = None
+    mn = None 
+    AB = None 
+    MN = None 
+    comboF = None 
+    comboR = None 
+    ifwdv = None
+    irecipv = None 
+    reciprocalErrv = None 
+    eciprocalErrRelv = None 
+    reciprocalMeanv = None 
+    reciprocalPhasev = None 
+    
     return irecip, reciprocalErr, reciprocalErrRel, reciprocalMean, reciprocalPhase, ifwd 
 
 
