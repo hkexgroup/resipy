@@ -77,7 +77,7 @@ cdef Py_ssize_t bisectionSearch(dlong [:] arr, dlong var):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef double fmin(double[:] arr) nogil: # import note: You need to pass the memory view
+cdef double fmin(double[:] arr): # import note: You need to pass the memory view
     # to a nogil function like this otherwise you get instability 
     cdef int n = arr.shape[0]
     cdef double tmp = arr[0]
@@ -89,7 +89,7 @@ cdef double fmin(double[:] arr) nogil: # import note: You need to pass the memor
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef double fmax(double[:] arr) nogil: # import note: You need to pass the memory view
+cdef double fmax(double[:] arr): # import note: You need to pass the memory view
     # to a nogil function like this otherwise you get instability 
     cdef int n = arr.shape[0]
     cdef double tmp = arr[0]
@@ -126,7 +126,7 @@ cdef ccw(p,q,r):#code expects points as p=(x,y) and so on ...
 
 @cython.boundscheck(False)
 @cython.wraparound(False)    
-cdef dlong tetrasignp(double[:] a, double[:] b, double [:] c,  double [:] d) nogil:
+cdef dlong tetrasignp(double[:] a, double[:] b, double [:] c,  double [:] d):
     #parrall nogil tetra sign code, but needs memory views passed to it 
     cdef double v00,v01,v02,v10,v11,v12,v20,v21,v22,s0,s1,s2, N 
     
@@ -176,6 +176,138 @@ cdef dlong mergeInts(int a, int b, int c, int pad): # merge 3 ints
 
 cdef dlong mergeInt(int a, int b, int pad): #merge 2 ints 
     return np.floor(a*10**pad + b) # merge a and b
+
+
+# @cython.boundscheck(False)    
+# @cython.wraparound(False)             
+def neighSearchSafe(dlong[:,:] connection, int cell_type = 10):
+    """Search for neighbours of each element within a mesh. 
+    Algorithm updated in June 25 to be more robust against 
+    integer overflow errors. 
+    
+    Parameters
+    -------------
+    connection: np.array 
+        N by 4 array, describes how mesh nodes map to elements 
+    cell_type: int
+        Cell type indentifier (see notes)
+    
+    Returns
+    --------------
+    neigh: np.array 
+        Corresponding neighbour indexes for each face of the cells in the 
+        connection matrix
+    
+    Notes 
+    -----
+    cell types for each type of element supported by meshtools 
+    
+    """
+    cdef Py_ssize_t i, j, ii, jj # variables used in loops 
+    cdef int numel = connection.shape[0] # number of elements 
+    cdef int npere = 4 # number of nodes per element (defaults for tetra)
+    cdef int npfac = 3 # number of nodes per face 
+    cdef int nnper = 4 # number of neighbours per element 
+    cdef dlong[:,:] nmap 
+    cdef dlong[:,:] nmap_tri = np.asarray([[0,1,2],[1,2,0]], dtype=npy_long)
+    cdef dlong[:,:] nmap_quad = np.asarray([[0,1,2,3],[1,2,3,0]], dtype=npy_long)
+    cdef dlong[:,:] nmap_tetra = np.asarray([[1,0,0,0],[2,3,1,1],[3,2,3,2]], dtype=npy_long)
+    
+    # define parameters 
+    if cell_type==5: #then elements are triangles
+        npere = 3 
+        npfac = 2 
+        nnper = 3 
+        nmap = nmap_tri 
+    elif cell_type==8 or cell_type==9: #elements are quads
+        npere = 4 
+        npfac = 2 
+        nnper = 4
+        nmap = nmap_quad 
+    # elif cell_type == 11 or cell_type == 12: # elements are voxels (not tested)
+    #     npere = 8 
+    #     npfac = 4
+    #     nnper = 6
+    elif cell_type == 10:# elements are tetrahedra 
+        npere = 4 # number of nodes per element (defaults for tetra)
+        npfac = 3 # number of nodes per face 
+        nnper = 4 # number of neighbours per element 
+        nmap = nmap_tetra 
+        
+    else: 
+        raise Exception('Unknown cell_type passed to mashCalc')
+    
+    #face arrays 
+    cdef dlong[:] face = np.zeros(npfac, dtype=npy_long)
+
+    # how does this work? Need to find the combination of nodes which are shared on each face 
+    
+    # create sorted arrays so we can expliot bisection search 
+    cdef np.ndarray[dlong, ndim=2] face_connection_expanded = np.zeros((numel*npere,npfac), dtype=npy_long) # expanded table for storing faces 
+    cdef np.ndarray[dlong, ndim=1] face_elementid_reference = np.zeros(numel*npere, dtype=npy_long) # reference for face elements 
+    cdef np.ndarray[dlong, ndim=2] face_connection_expanded_sorted = np.zeros((numel*npere,npfac), dtype=npy_long) # sorted connection matrix 
+    cdef np.ndarray[dlong, ndim=1] face_elementid_reference_sorted = np.zeros(numel*npere, dtype=npy_long) # 
+    cdef np.ndarray[dlong, ndim=1] fconnection_isort = np.zeros(numel*npere, dtype=npy_long) # sorted indices of connection matrix 
+    cdef np.ndarray[dlong, ndim=2] neigh = np.zeros((numel,nnper),dtype=npy_long)-1 # allocate space for neighbour matrix    
+    cdef dlong iimax = numel*npere 
+    cdef int npmatch = 0 # number of node matches per face (should be a max of 3)
+    cdef int fcmatch = 0 # number of matching faces per node combination (should be a max of 2)
+    cdef np.ndarray[dlong, ndim=1] matching_index = np.zeros(2,dtype=npy_long)
+    # allocate memory views for efficient lookup 
+
+    for i in range(numel): 
+        for j in range(npere):
+            #setup nodes which are part of face
+            for ii in range(npfac): 
+                face[ii] = connection[i,nmap[ii,j]]
+            # cache face connection into expanded matrix -> will use this to lookup if the face is referenced by other elements 
+            sortInt(face, npfac)
+            for jj in range(npfac):
+                face_connection_expanded[i+(j*numel), jj] = face[jj]
+            face_elementid_reference[i+(j*numel)] = i 
+
+    # sort by the first face node 
+    fconnection_isort = np.argsort(face_connection_expanded[:,0])
+    face_elementid_reference_sorted = face_elementid_reference[fconnection_isort]
+    face_connection_expanded_sorted = face_connection_expanded[fconnection_isort,:]
+ 
+    # loop through each element and find the matching combinations of nodes associated with each face 
+    for i in range(numel): 
+        for j in range(npere):
+            #setup nodes which are part of face
+            for ii in range(npfac): 
+                face[ii] = connection[i,nmap[ii,j]]
+            sortInt(face, npfac)
+
+            ii = bisectionSearch(face_connection_expanded_sorted[:,0], face[0]) # o is the lookup index 
+            # rewind until the the start of the part of the matrix/table with the relevant node is found 
+            while face_connection_expanded_sorted[ii-1,0] == face[0]:
+                ii -= 1 
+                if ii == 0: # fail safe against end of array 
+                    break 
+
+            # there should be 2 exact matches in the faces which are found if the face has a neighbour 
+            fcmatch = 0 
+            for jj in range(2): 
+                matching_index[jj] = -1 
+            while face_connection_expanded_sorted[ii,0] == face[0] and ii < iimax:
+                npmatch = 0 # set the number of matches to zero 
+                for jj in range(npfac):
+                    if face_connection_expanded_sorted[ii,jj] == face[jj]: 
+                        npmatch += 1 
+                if npmatch == npfac: # then we have found a matching face 
+                    matching_index[fcmatch] = face_elementid_reference_sorted[ii]
+                    fcmatch += 1 
+                if fcmatch == 2: # pick which ever matching index is not the current element in question 
+                    if matching_index[0] == i: 
+                        neigh[i,j] = matching_index[1] 
+                    else: 
+                        neigh[i,j] = matching_index[0] 
+                    break 
+                ii += 1 
+                if ii == iimax: 
+                    break 
+    return neigh 
 
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
@@ -297,7 +429,7 @@ def neighSearch(dlong[:,:] connection, int cell_type = 10):
             # there should be 2 exact matches in the faces which are found if the face has a neighbour 
             fcmatch = 0 
             for jj in range(2): 
-                matching_index[j] = 0 
+                matching_index[jj] = -1 
             while face_connection_expanded_sortedv[ii,0] == face[0] and ii < iimax:
                 npmatch = 0 # set the number of matches to zero 
                 for jj in range(npfac):

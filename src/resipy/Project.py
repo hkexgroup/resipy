@@ -489,6 +489,7 @@ class Project(object): # Project master class instanciated by the GUI
                       'Number of iterations':0,
                       'Median normalised error':np.nan,
                       'Working Directory':self.dirname}
+        print('Project created!')
         
         
     def summary(self): 
@@ -3774,11 +3775,6 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh.df['iter'] = np.zeros(numel, dtype=float)
         self.mesh.iremote = self.elec['remote'].values
 
-        if self.typ == 'R3t' or self.typ == 'cR3t':
-            self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'), iadvanced=self.iadvanced)
-        else:
-            self.mesh.dat(os.path.join(self.dirname, 'mesh.dat'))
-
         # define zlim
         if self.zlim is None:
             self._defineZlim()
@@ -6200,7 +6196,8 @@ class Project(object): # Project master class instanciated by the GUI
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.mesh.dat(os.path.join(fwdDir, 'mesh.dat'))
         else:
-            self.mesh.datAdv(os.path.join(fwdDir, 'mesh3d.dat'), iadvanced=self.iadvanced)
+            # self.mesh.datAdv(os.path.join(fwdDir, 'mesh3d.dat'), iadvanced=self.iadvanced)
+            self.mesh.dat(os.path.join(fwdDir, 'mesh3d.dat'))
             
         # write the forward .in file
         if self.custSeq is True: # only in case of 3D custom sequence
@@ -6298,7 +6295,7 @@ class Project(object): # Project master class instanciated by the GUI
         dump('Running forward model... ')
         self.runR2(fwdDir, dump=dump) # this will copy the R2.exe inside as well
         self.iForward = True
-
+        dump('(forward modelling finished)\n')
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
             return x + np.random.randn(1)*x*level

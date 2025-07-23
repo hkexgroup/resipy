@@ -3140,7 +3140,7 @@ class Mesh:
             #write to mesh.dat total num of elements and nodes
 
             if self.ndims == 3:
-                fid.write('%i %i %i 0 %i\n'%(self.numel,self.numnp,1,self.type2VertsNo()))
+                fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),0)) # flags 
             else:
                 fid.write('%i %i %i\n'%(self.numel,self.numnp,idirichlet))
             
@@ -3171,6 +3171,9 @@ class Mesh:
                 fid.write('{:<16d} '.format(i+1)) # node number 
                 [fid.write('{:<16.8f} '.format(self.node[i,k])) for k in nidx] # node coordinates 
                 fid.write('\n')#drop down a line 
+            
+            if self.ndims == 3: 
+                fid.write('{:d}\n'.format(idirichlet))
                     
     def datAdv(self, file_path='mesh.dat', iadvanced=True):
         """Write a mesh.dat kind of file for mesh input for R2/R3t. Advanced format

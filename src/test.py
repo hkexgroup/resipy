@@ -368,12 +368,13 @@ k.showMesh()
 # angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
 # celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
 # elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
-k = Project(typ='R3t')
+k = Project(typ='R3t'); 
 # k.setElec(elec)
 k.importElec(testdir + 'dc-3d-cylinder/elec.csv')
 k.createMesh('cylinder', zlim=[0, 47.5], cl=0.4, cl_factor=3)
 k.createSequence([('custSeq', testdir + 'dc-3d-cylinder/sequence.csv')])
 k.forward()
+time.sleep(1)
 k.saveMesh(os.path.join(k.dirname, 'mesh.vtk'))
 k.saveMesh(os.path.join(k.dirname, 'mesh.node'))
 k.saveMesh(os.path.join(k.dirname, 'mesh.dat'))

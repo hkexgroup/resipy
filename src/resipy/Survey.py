@@ -2301,7 +2301,7 @@ class Survey(object):
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
             
         if column =='cR': # need to add more labels here probably 
-            label = r'$\R_{cr}$ [$\Omega$]'
+            label = r'$R_{cr}$ [$\Omega$]'
             title = 'Contact Resistance/nPseudo Section'
             
         if vmin is None:        
@@ -3235,11 +3235,9 @@ class Survey(object):
         x = elec[:,0]
         y = elec[:,1]
         z = elec[:,2]
-        
         idx = np.argsort(x) # sort by x axis
         x_sorted = x[idx]
         z_sorted = z[idx]
-        
         x_hor = np.zeros_like(x, dtype=float)
         #the first entry should be x = 0
         for i in range(len(x)-1):
@@ -3247,7 +3245,6 @@ class Survey(object):
             dz = z_sorted[i] - z_sorted[i+1]
             sq = np.abs(h**2 - dz**2)
             x_hor[i+1] =  x_hor[i] + np.sqrt(sq)
-        
         # return values in the order in which they came
         new_elec = np.zeros_like(elec, dtype=float)
         new_elec[:,1] = y         
@@ -3255,7 +3252,6 @@ class Survey(object):
             put_back = idx[i] # index to where to the value back again
             new_elec[put_back,0] = x_hor[i]
             new_elec[put_back,2] = z_sorted[i]
-    
         self.elec[['x','y','z']] = new_elec
         
     def _rmLineNum(self):
