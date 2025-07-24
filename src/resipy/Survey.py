@@ -2647,7 +2647,11 @@ class Survey(object):
             ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
             df = self.df[ie]
         else:
-            df = self.df[isubset]
+            print(isubset)
+            if isinstance(isubset[0], bool): 
+                df = self.df[isubset]
+            else:
+                df = self.df.iloc[isubset, :]
             # we need to take all measurements is subset is specified as some
             # quadrupoles might have reciprocal in one survey (irecip > 0) but
             # not in the next one (irecip = 0). So we take them all.

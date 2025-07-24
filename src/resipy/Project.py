@@ -402,7 +402,6 @@ def findminmax(a, pad=1):
         mina -= 1
         maxa += 1
     return [mina, maxa]
-    
 
 #%% main Project class (called 'R2' in previous versions)
 class Project(object): # Project master class instanciated by the GUI
@@ -2584,7 +2583,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[index].showPseudoIP(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
-    def matchSurveys(self):
+    def matchSurveysOld(self):
         """Will trim all surveys to get them ready for difference inversion
         so that each PAIRS of (background, surveyX) have the same number of
         quadrupoles. We do not take all quadrupoles in common among all
@@ -2619,6 +2618,84 @@ class Project(object): # Project master class instanciated by the GUI
 #                if df.irecip[i] < 0: 
 #                    ie[i] = False  
             indexes.append((ie0, ie))
+
+        print('done in {:.3}s'.format(time.time()-t0))
+
+        return indexes
+    
+    def matchSurveys(self):
+        """Will trim all surveys to get them ready for difference inversion
+        so that each PAIRS of (background, surveyX) have the same number of
+        quadrupoles. We do not take all quadrupoles in common among all
+        surveys as this is not needed and if there is a small survey, it would
+        reduce all other larger surveys. Updated July 2025 to account for 
+        measurements that may also be in different orders. 
+        """
+        print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
+        t0 = time.time()
+        def bisectionSearch(arr, var):
+            """Efficent search algorithm for sorted array of postive ints 
+            (memory veiw parallel capable version)
+            
+            Parameters
+            -------------
+            arr: list 
+                sorted list 
+            var: int
+                item to be searched / indexed. If not found False is returned 
+            """
+            L = 0
+            n = len(arr)
+            R = n-1
+            m = -1 
+            while L <= R:
+                m = int((L+R)/2)
+                if arr[m]<var:
+                    L = m+1
+                elif arr[m]>var:
+                    R = m-1
+                else:
+                    return m
+            return -1
+            
+        df0 = self.surveys[0].df.reset_index(drop=True)
+        iseq0 = self.surveys[0].isequence # get index sequence 
+        # merge sequence into integers 
+        tmp = [0]*4
+        uids0 = np.zeros(iseq0.shape[0], dtype=int) # holds unique identifiers for each abmn combination 
+        for i in range(iseq0.shape[0]):
+            for j in range(4):
+                tmp[j] = iseq0[i,j]
+            tmp = sorted(tmp)
+            uids0[i] = int(str(tmp[0]) + str(tmp[1]) + str(tmp[2]) + str(tmp[3]))
+        uids0_argsrt = np.argsort(uids0)
+        uids0_indexs = np.arange(iseq0.shape[0])[uids0_argsrt]
+        uids0_sorted = uids0[uids0_argsrt]
+
+        ie0 = []
+        for i in range(iseq0.shape[0]):
+            if df0.irecip[i] > 0:
+                ie0.append(i)
+        indexes = [(ie0, ie0)]  # array of tuple
+        for survey in self.surveys[1:]:
+            df = survey.df.reset_index(drop=True)
+            iseqn = survey.isequence # get index sequence 
+            # merge sequence into integers 
+            uidsn = np.zeros(iseqn.shape[0], dtype=int) # holds unique identifiers for each abmn combination 
+            ie0 = []
+            ien = []
+            for i in range(iseqn.shape[0]):
+                for j in range(4):
+                    tmp[j] = iseq0[i,j]
+                tmp = sorted(tmp)
+                uidsn[i] = int(str(tmp[0]) + str(tmp[1]) + str(tmp[2]) + str(tmp[3]))
+                isearch = bisectionSearch(uids0_sorted, uidsn[i])
+                if isearch > -1: # then an index is found then set index to true (if the measurement is not a reciprocal)
+                    if df.irecip[i] > 0: 
+                        ie0.append(uids0_indexs[isearch])
+                        ien.append(i)
+
+            indexes.append((ie0, ien))
 
         print('done in {:.3}s'.format(time.time()-t0))
 
@@ -4207,6 +4284,8 @@ class Project(object): # Project master class instanciated by the GUI
             def execute(cmd):
                 if OS == 'Windows':
                     self.proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                    pp = psutil.Process(self.proc.pid) # set process priority to high on windows 
+                    pp.nice(psutil.HIGH_PRIORITY_CLASS)
                 else:
                     self.proc = subprocess.Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False, universal_newlines=True)
                 for stdout_line in iter(self.proc.stdout.readline, ""):
@@ -4327,7 +4406,8 @@ class Project(object): # Project master class instanciated by the GUI
                 shutil.copy(r2inFile, os.path.join(wd, self.typ + '.in'))
 
         if OS == 'Windows':
-            cmd = ['powershell', '-Command', '&', '"'+exePath+'"']
+            # cmd = ['powershell', '-Command', '&', '"'+exePath+'"']
+            cmd = [exePath]
         elif OS == 'Darwin':
             # winetxt = 'wine'
             # if getMacOSVersion():
@@ -4392,7 +4472,6 @@ class Project(object): # Project master class instanciated by the GUI
         # create essential attribute
         self.irunParallel2 = True
         self.procs = []
-        ts = []
 
         # kill management
         self.proc = ProcsManagement(self)
@@ -4412,8 +4491,11 @@ class Project(object): # Project master class instanciated by the GUI
                 # flooded by R2 output. 'All ok' is only printed in stderr
                 if OS == 'Windows':
                     p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True, startupinfo=startupinfo, stdout=PIPE, stderr=PIPE)
+                    pp = psutil.Process(p.pid) # set process priority to high on windows to avoid R3t / R2 hanging 
+                    pp.nice(psutil.HIGH_PRIORITY_CLASS)
                 else:
                     p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True, stdout=PIPE, stderr=PIPE)
+                    pp = None 
                 self.procs.append(p)
                 # t = Thread(target=dumpOutput, args=(p.stdout,))
                 # t.daemon = True # thread dies with the program
