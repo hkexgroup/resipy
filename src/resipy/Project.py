@@ -2662,7 +2662,7 @@ class Project(object): # Project master class instanciated by the GUI
         iseq0 = self.surveys[0].isequence # get index sequence 
         # merge sequence into integers 
         tmp = [0]*4
-        uids0 = np.zeros(iseq0.shape[0], dtype=int) # holds unique identifiers for each abmn combination 
+        uids0 = np.zeros(iseq0.shape[0], dtype=np.int64) # holds unique identifiers for each abmn combination 
         for i in range(iseq0.shape[0]):
             for j in range(4):
                 tmp[j] = iseq0[i,j]
@@ -2681,7 +2681,7 @@ class Project(object): # Project master class instanciated by the GUI
             df = survey.df.reset_index(drop=True)
             iseqn = survey.isequence # get index sequence 
             # merge sequence into integers 
-            uidsn = np.zeros(iseqn.shape[0], dtype=int) # holds unique identifiers for each abmn combination 
+            uidsn = np.zeros(iseqn.shape[0], dtype=np.int64) # holds unique identifiers for each abmn combination 
             ie0 = []
             ien = []
             for i in range(iseqn.shape[0]):
