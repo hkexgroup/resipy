@@ -2647,7 +2647,6 @@ class Survey(object):
             ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
             df = self.df[ie]
         else:
-            print(isubset)
             if isinstance(isubset[0], bool): 
                 df = self.df[isubset]
             else:
