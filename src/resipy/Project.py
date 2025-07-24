@@ -2686,7 +2686,7 @@ class Project(object): # Project master class instanciated by the GUI
             ien = []
             for i in range(iseqn.shape[0]):
                 for j in range(4):
-                    tmp[j] = iseq0[i,j]
+                    tmp[j] = iseqn[i,j]
                 tmp = sorted(tmp)
                 uidsn[i] = int(str(tmp[0]) + str(tmp[1]) + str(tmp[2]) + str(tmp[3]))
                 isearch = bisectionSearch(uids0_sorted, uidsn[i])
