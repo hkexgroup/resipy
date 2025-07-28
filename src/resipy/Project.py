@@ -2699,7 +2699,7 @@ class Project(object): # Project master class instanciated by the GUI
             ien = []
             nmatch = 0 
             # assign dataframe values to unique ids for indexing 
-            for i in range(len(df0)):
+            for i in range(len(df)):
                 tmp = ''
                 for c in ['a', 'b', 'm', 'n']:
                     tmp += '{:0>4d}'.format(lookup[df[c][i]])
@@ -4158,17 +4158,18 @@ class Project(object): # Project master class instanciated by the GUI
                 if self.param['reg_mode'] == 2 and i > 0:
                     # modelling error already accounted for in the baseline model! 
                     errTot = False 
-                    
-                # s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left') --> old code, potentially dodgy 
-                recipMean0 = np.full(len(s.df), np.nan, dtype=float)
-                resist0 = np.full(len(s.df), np.nan, dtype=float)
-                for j in range(len(indexes[i][0])):
-                    ii = indexes[i][0][j]
-                    jj = indexes[i][1][j]
-                    recipMean0[jj] = df0['recipMean0'][ii]
-                    resist0[jj] = df0['resist0'][ii]
-                s.df['resist0'] = resist0 
-                s.df['recipMean0'] = recipMean0
+                  
+                if self.param['reg_mode'] == 2: 
+                    # s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left') --> old code, potentially dodgy 
+                    recipMean0 = np.full(len(s.df), np.nan, dtype=float)
+                    resist0 = np.full(len(s.df), np.nan, dtype=float)
+                    for j in range(len(indexes[i][0])):
+                        ii = indexes[i][0][j]
+                        jj = indexes[i][1][j]
+                        recipMean0[jj] = df0['recipMean0'][ii]
+                        resist0[jj] = df0['resist0'][ii]
+                    s.df['resist0'] = resist0 
+                    s.df['recipMean0'] = recipMean0
                 # resError and phaseError should already have been populated
                 # handle the case when SOME survey were fitted but not all
                 # then we use the bigSurvey default fit to fullfill them
