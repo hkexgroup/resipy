@@ -2631,7 +2631,7 @@ class Project(object): # Project master class instanciated by the GUI
         reduce all other larger surveys. Updated July 2025 to account for 
         measurements that may also be in different orders. 
         """
-        print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
+        print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...')
         t0 = time.time()
         def bisectionSearch(arr, var):
             """Efficent search algorithm for sorted array of postive ints 
@@ -2677,13 +2677,16 @@ class Project(object): # Project master class instanciated by the GUI
             if df0.irecip[i] > 0:
                 ie0.append(i)
         indexes = [(ie0, ie0)]  # array of tuple
+        sid = 0
         for survey in self.surveys[1:]:
+            sid += 1 
             df = survey.df.reset_index(drop=True)
             iseqn = survey.isequence # get index sequence 
             # merge sequence into integers 
             uidsn = np.zeros(iseqn.shape[0], dtype=np.int64) # holds unique identifiers for each abmn combination 
             ie0 = []
             ien = []
+            nmatch = 0 
             for i in range(iseqn.shape[0]):
                 for j in range(4):
                     tmp[j] = iseqn[i,j]
@@ -2694,7 +2697,8 @@ class Project(object): # Project master class instanciated by the GUI
                     if df.irecip[i] > 0: 
                         ie0.append(uids0_indexs[isearch])
                         ien.append(i)
-
+                        nmatch += 1 
+            print('%i quadrapoles matched at survey index %i'%(nmatch, sid))
             indexes.append((ie0, ien))
 
         print('done in {:.3}s'.format(time.time()-t0))
@@ -4143,7 +4147,16 @@ class Project(object): # Project master class instanciated by the GUI
                     # modelling error already accounted for in the baseline model! 
                     errTot = False 
                     
-                s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
+                # s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left') --> old code, potentially dodgy 
+                recipMean0 = np.full(len(s.df), np.nan, dtype=float)
+                resist0 = np.full(len(s.df), np.nan, dtype=float)
+                for j in range(len(indexes[i][0])):
+                    ii = indexes[i][0][j]
+                    jj = indexes[i][1][j]
+                    recipMean0[jj] = df0['recipMean0'][ii]
+                    resist0[jj] = df0['resist0'][ii]
+                s.df['resist0'] = resist0 
+                s.df['recipMean0'] = recipMean0
                 # resError and phaseError should already have been populated
                 # handle the case when SOME survey were fitted but not all
                 # then we use the bigSurvey default fit to fullfill them
@@ -5902,13 +5915,13 @@ class Project(object): # Project master class instanciated by the GUI
         ----------
         params : list of tuple, optional
             Each tuple is the form (<array_name>, param1, param2, ...)
-            Types of sequences available are : 	
+            Types of sequences available are :     
             - 'dipole-dipole' (or 'dpdp')
-            	- 'wenner' (or 'w') 
-            	- 'wenner-schlumberger' (or 'schlum', 'ws')
-            	- 'multigradient' (or 'mg')
+                - 'wenner' (or 'w') 
+                - 'wenner-schlumberger' (or 'schlum', 'ws')
+                - 'multigradient' (or 'mg')
             - 'cross' (or 'xbh', 'xli')
-            	- 'custom' 
+                - 'custom' 
             if 'custom' is chosen, param1 should be a string of file path to a .csv
             file containing a custom sequence with 4 columns (a, b, m, n) containing 
             forward model sequence.
