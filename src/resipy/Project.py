@@ -2668,13 +2668,19 @@ class Project(object): # Project master class instanciated by the GUI
         # assign dataframe values to unique ids for indexing 
         df0 = self.surveys[0].df.reset_index(drop=True)
         uids0 = np.zeros(len(df0), dtype=np.int64) # holds unique identifiers for each abmn combination 
+        trigger = False 
         for i in range(len(df0)):
+            if df0.irecip[i] <= -1:
+                trigger = True 
+                continue 
             tmp = ''
             for c in ['a', 'b', 'm', 'n']:
                 tmp += '{:0>4d}'.format(lookup[df0[c][i]])
             uids0[i] = int(tmp)
 
-        _, uids0_argsrt = np.unique(uids0, return_index=True)
+        _, uids0_argsrt = np.unique(uids0, return_index=True) # note that first entry will always refernce zero if any of irecip < 0 
+        if trigger: 
+            uids0_argsrt = uids0_argsrt[1:]
         uids0_indexs = np.arange(len(df0))[uids0_argsrt]
         uids0_sorted = uids0[uids0_argsrt]
 
@@ -2699,11 +2705,11 @@ class Project(object): # Project master class instanciated by the GUI
                     tmp += '{:0>4d}'.format(lookup[df[c][i]])
                 uidsn[i] = int(tmp)
                 isearch = bisectionSearch(uids0_sorted, uidsn[i])
-                if isearch > -1: # then an index is found then set index to true (if the measurement is not a reciprocal)
-                    if df.irecip[i] > -1: 
-                        ie0.append(uids0_indexs[isearch])
-                        ien.append(i)
-                        nmatch += 1 
+                if isearch > -1: # then an index is found then set index to true (if the measurement is not a reciprocal on the baseline)
+                    # if df.irecip[i] > -1: 
+                    ie0.append(uids0_indexs[isearch])
+                    ien.append(i)
+                    nmatch += 1 
             print('%i quadrapoles matched (exl. reciprocals) at survey index %i'%(nmatch, sid))
             indexes.append((ie0, ien))
 
@@ -4142,7 +4148,7 @@ class Project(object): # Project master class instanciated by the GUI
             # a bit simplistic but assign error to all based on Transfer resistance
             # let's assume it's False all the time for now
             content = ''
-            df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean','resError']]
+            df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean','resError']].reset_index(drop=True)
             df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0','resError':'resError0'})
             for i, s in enumerate(self.surveys):
                 if 'resist0' in s.df.columns:
