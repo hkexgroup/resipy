@@ -932,7 +932,7 @@ print('------------- 3D time-lapse difference inversion ---------------')
 k = Project(typ='R3t')
 
 ## column type 
-k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-column/data' ,ftype='ProtocolDC')
+k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-column/data', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d-timelapse-column/elec.csv')
 k.createMesh(typ='cylinder',cl=0.5)
 

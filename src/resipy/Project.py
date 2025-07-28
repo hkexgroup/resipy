@@ -2657,48 +2657,54 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     return m
             return -1
+        
+        # create unique id numbers for each electrode label  
+        lookup = {}
+        for s in self.surveys: 
+            for i,label in enumerate(s.elec.label): 
+                if label not in lookup.keys(): 
+                    lookup[label] = i + 1 
             
+        # assign dataframe values to unique ids for indexing 
         df0 = self.surveys[0].df.reset_index(drop=True)
-        iseq0 = self.surveys[0].isequence # get index sequence 
-        # merge sequence into integers 
-        tmp = [0]*4
-        uids0 = np.zeros(iseq0.shape[0], dtype=np.int64) # holds unique identifiers for each abmn combination 
-        for i in range(iseq0.shape[0]):
-            for j in range(4):
-                tmp[j] = iseq0[i,j]
-            tmp = sorted(tmp)
-            uids0[i] = int(str(tmp[0]) + str(tmp[1]) + str(tmp[2]) + str(tmp[3]))
-        uids0_argsrt = np.argsort(uids0)
-        uids0_indexs = np.arange(iseq0.shape[0])[uids0_argsrt]
+        uids0 = np.zeros(len(df0), dtype=np.int64) # holds unique identifiers for each abmn combination 
+        for i in range(len(df0)):
+            tmp = ''
+            for c in ['a', 'b', 'm', 'n']:
+                tmp += '{:0>4d}'.format(lookup[df0[c][i]])
+            uids0[i] = int(tmp)
+
+        _, uids0_argsrt = np.unique(uids0, return_index=True)
+        uids0_indexs = np.arange(len(df0))[uids0_argsrt]
         uids0_sorted = uids0[uids0_argsrt]
 
         ie0 = []
-        for i in range(iseq0.shape[0]):
-            if df0.irecip[i] > 0:
+        for i in range(len(df0)):
+            if df0.irecip[i] > -1:
                 ie0.append(i)
         indexes = [(ie0, ie0)]  # array of tuple
         sid = 0
         for survey in self.surveys[1:]:
             sid += 1 
             df = survey.df.reset_index(drop=True)
-            iseqn = survey.isequence # get index sequence 
             # merge sequence into integers 
-            uidsn = np.zeros(iseqn.shape[0], dtype=np.int64) # holds unique identifiers for each abmn combination 
+            uidsn = np.zeros(len(df), dtype=np.int64) # holds unique identifiers for each abmn combination 
             ie0 = []
             ien = []
             nmatch = 0 
-            for i in range(iseqn.shape[0]):
-                for j in range(4):
-                    tmp[j] = iseqn[i,j]
-                tmp = sorted(tmp)
-                uidsn[i] = int(str(tmp[0]) + str(tmp[1]) + str(tmp[2]) + str(tmp[3]))
+            # assign dataframe values to unique ids for indexing 
+            for i in range(len(df0)):
+                tmp = ''
+                for c in ['a', 'b', 'm', 'n']:
+                    tmp += '{:0>4d}'.format(lookup[df[c][i]])
+                uidsn[i] = int(tmp)
                 isearch = bisectionSearch(uids0_sorted, uidsn[i])
                 if isearch > -1: # then an index is found then set index to true (if the measurement is not a reciprocal)
-                    if df.irecip[i] > 0: 
+                    if df.irecip[i] > -1: 
                         ie0.append(uids0_indexs[isearch])
                         ien.append(i)
                         nmatch += 1 
-            print('%i quadrapoles matched at survey index %i'%(nmatch, sid))
+            print('%i quadrapoles matched (exl. reciprocals) at survey index %i'%(nmatch, sid))
             indexes.append((ie0, ien))
 
         print('done in {:.3}s'.format(time.time()-t0))
