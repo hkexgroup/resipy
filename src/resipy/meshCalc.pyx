@@ -720,7 +720,7 @@ def sortNeigh(dlong[:,:] neigh, dlong[:] zone):
             elif zone[i] != zone[neigh[i,j]]:# check if neighbour in different zone 
                 new_neighv[i,j] = like_inf 
                 
-        sortInt(neigh[i,:],npere) # sort in that part of the row
+        sortInt(new_neigh[i,:],npere) # sort in that part of the row
         for j in range(npere):
             if new_neighv[i,j] == like_inf: # replace outside values with -1 
                 new_neighv[i,j] = -1

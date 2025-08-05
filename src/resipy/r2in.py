@@ -265,7 +265,9 @@ def write3Din(param, dirname, typ='R3t'):
         param['a_wgt'] = 0.01 if typ == 'R2' else 0.02
     if 'b_wgt' not in param:
         param['b_wgt'] = 0.02 if typ == 'R2' else 2
-            
+        
+    if 'max_iterations' in param.keys(): 
+        param['max_iter'] = param['max_iterations']
                 
     content = ''
     content = content + '{}\n\n'.format(param['lineTitle'])
