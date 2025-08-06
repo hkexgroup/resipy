@@ -1358,10 +1358,11 @@ def conductanceCall(dlong[:,:] connection, int numnp, int typ=0):
                          'used with meshTools must be one of the following:',
                          '5, 8, 9, 10 or 13')
 
-    cdef dlong[:,:] combo = np.zeros((numel,nedges),dtype=npy_long)
+    cdef dlong[:,:] combo = np.zeros((numel,nedges), dtype=npy_long)
     cdef Py_ssize_t i,j,k #looping variables  
     cdef dlong merged 
     cdef dlong na, nb, nid
+    # cdef int paired = 0 # flag to say that a node is paired on corner a (nodes need only be paired once)
     
     #find unique node combinations 
     for i in range(numel):
@@ -1374,22 +1375,23 @@ def conductanceCall(dlong[:,:] connection, int numnp, int typ=0):
                 merged = mergeInt(nb,na,pad) # merge
             combo[i,j] = merged       
             
-            #create the conductance matrix              
-            for k in range(nmax):
-                nid = Nconnecv[na,k]
-                if nid == -1: # then its not been assigned as a pair
-                    Nconnecv[na,k] = nb
-                    break # break out the loop 
-                elif nid == nb: #its already been assigned 
-                    break # so break out 
-                
-            for k in range(nmax):#same as above but for the inverse
-                nid = Nconnecv[nb,k]
-                if nid == -1:
-                    Nconnecv[nb,k] = na
-                    break
-                elif nid == na:
-                    break
+            #create the conductance matrix entries 
+            if na < nb: 
+                for k in range(nmax):
+                    nid = Nconnecv[na,k]
+                    if nid == -1: # then its not been assigned as a pair
+                        Nconnecv[na,k] = nb
+                        break # break out the loop 
+                    elif nid == nb: #its already been assigned 
+                        break # so break out 
+            else: 
+                for k in range(nmax):#same as above but for the inverse (nb < na)
+                    nid = Nconnecv[nb,k]
+                    if nid == -1:
+                        Nconnecv[nb,k] = na
+                        break
+                    elif nid == na:
+                        break
 
     #pure python code 
     combof = np.asarray(combo,dtype=npy_long).flatten()
