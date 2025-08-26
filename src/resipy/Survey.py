@@ -20,7 +20,7 @@ from functools import reduce
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
-                     srvParser, bertParser, dasParser, electraParser)
+                     srvParser, bertParser, dasParser, electraParser, ohmpiParser)
 from resipy.DCA import DCA
 from resipy.interpolation import geometricMedian 
 from resipy.saveData import to_csv
@@ -254,7 +254,7 @@ class Survey(object):
         # parsing data to form main dataframe and electrode array
         if fname is not None:
             avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'RESIMGR', 
-                            'ProtocolIP','Sting', 'ABEM-Lund', 'Lippmann', 
+                            'ProtocolIP', 'OhmPi', 'Sting', 'ABEM-Lund', 'Lippmann', 
                             'ARES', 'E4D', 'BERT', 'Electra', 'DAS-1']# add parser types here! 
             if parser is not None:
                 elec, data = parser(fname)
@@ -264,6 +264,8 @@ class Survey(object):
                     self.kFactor = 1.2
                 elif ftype =='ProtocolDC':
                     elec, data = protocolParser(fname, ip=False)
+                elif ftype == 'OhmPi':
+                    elec, data = ohmpiParser(fname)
                 elif ftype == 'ResInv':
                     elec, data = resInvParser(fname)
                 elif ftype == 'BGS Prime':
@@ -618,6 +620,8 @@ class Survey(object):
                 self.kFactor = 1.2
             elif ftype =='ProtocolDC':
                 elec, data = protocolParser(fname, ip=False)
+            elif ftype == 'OhmPi':
+                    elec, data = ohmpiParser(fname)
             elif ftype == 'ResInv':
                 elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':

@@ -3617,4 +3617,21 @@ def electraParser(fname):
 
         return elec, data
 
-    
+
+def ohmpiParser(fname):
+    """Read OhmPi format.
+    """
+    df = pd.read_csv(fname)
+    df['vp'] = df['vmn_[mV]']
+    df['i'] = df['iab_[mA]']
+    df['ip'] = np.nan
+    df = df.rename(columns={
+        'r_[Ohm]': 'resist', 
+        'r_std_[%]': 'dev',
+    })
+    df['cR'] = df['rab_[kOhm]']/2
+    emax = np.max(df[['a', 'b', 'm', 'n']].values)
+    elec = np.zeros((emax, 3))
+    elec[:, 0] = np.arange(emax) * 1                        
+    return elec, df[['a', 'b', 'm', 'n', 'vp', 'i', 'resist', 'ip', 'dev', 'cR']]
+
