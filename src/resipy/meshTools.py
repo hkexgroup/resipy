@@ -853,7 +853,7 @@ class Mesh:
              
         
         nmesh = self.copy() 
-        nmesh.connection = new_con_mat
+        nmesh.connection = np.asarray(new_con_mat, dtype=self.dint) 
         nmesh.node = new_node
         nmesh.numel = nnum_elms
         nmesh.numnp = nnum_nodes
@@ -901,7 +901,7 @@ class Mesh:
          nnum_elms, nnum_nodes) = mc.splitTetra(self.connection, self.node)
          
         nmesh = self.copy() 
-        nmesh.connection = new_con_mat
+        nmesh.connection = np.asarray(new_con_mat, dtype=self.dint) 
         nmesh.node = new_node
         nmesh.numel = nnum_elms
         nmesh.numnp = nnum_nodes
@@ -955,7 +955,7 @@ class Mesh:
         out_mat[1::2,:] = con2 
         
         tri_mesh = self.copy()
-        tri_mesh.connection = out_mat
+        tri_mesh.connection = np.asarray(out_mat, dtype=self.dint)
         tri_mesh.numel = self.numel*2
         tri_mesh.cell_type=[5]
         
