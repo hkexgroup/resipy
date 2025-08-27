@@ -63,6 +63,7 @@ k.createSurvey(testdir + 'parser/syscal-new-format.csv', ftype='Syscal')
 k.createSurvey(testdir + 'parser/syscal_ProsysIII_IP.csv', ftype='Syscal')
 k.createSurvey(testdir + 'parser/BERT_2D_topo.ohm', ftype='BERT')
 k.createSurvey(testdir + 'parser/BERT_IP_2D.dat', ftype='BERT')
+k.createSurvey(testdir + 'parser/ohmpi.csv', ftype='OhmPi')
 k.createSurvey(testdir + 'parser/DAS-1_2D_DC.data', ftype='DAS-1') # python 3.9 has an issue with this parser
 k.createSurvey(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
 k.createSurvey(testdir + 'parser/protocolForward/R2_forward.dat', ftype='ProtocolDC')

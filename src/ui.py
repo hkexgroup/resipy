@@ -1317,39 +1317,42 @@ class App(QMainWindow):
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
             elif index == 3:
+                self.ftype = 'OhmPi'
+                self.fformat = 'CSV (Comma delimited) (*.csv *.CSV)'
+            elif index == 4:
                 self.ftype = 'ResInv'
                 self.fformat = 'DAT (*.dat *.DAT)'
-            elif index == 4:
+            elif index == 5:
                 self.ftype = 'BGS Prime'
                 self.fformat = 'DAT (*.dat *.DAT *.tab *.TAB)'
-            elif index == 5:
+            elif index == 6:
                 self.ftype = 'Sting'
                 self.fformat = 'Sting (*.stg *.STG)'
-            elif index == 6:
+            elif index == 7:
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
-            elif index == 7:
+            elif index == 8:
                 self.ftype = 'Lippmann'
                 self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt *.TXT)'
-            elif index == 8:
+            elif index == 9:
                 self.ftype = 'ARES'
                 self.fformat = 'ARES (*.2dm *.2DM)'
-            elif index == 9:
+            elif index == 10:
                 self.ftype = 'BERT'
                 self.fformat = 'BERT (*.dat *.DAT *.ohm *.OHM)'
-            elif index == 10:
+            elif index == 11:
                 self.ftype = 'E4D'
                 self.fformat = 'srv (*.srv *.SRV)'
-            elif index == 11:
+            elif index == 12:
                 self.ftype = 'DAS-1'
                 self.fformat = 'Data (*.dat *.data *.DAT *.DATA *.txt *.TXT)'
-            elif index == 12:
+            elif index == 13:
                 self.ftype = 'Electra'
                 self.fformat = 'Ele (*.ele)'
-            elif index == 13:
+            elif index == 14:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
-            elif index == 14:
+            elif index == 15:
                 self.ftype = 'Merged'
                 self.fformat = 'Files (*.csv *.CSV *.txt *.TXT)'
                 self.iMerged = True
@@ -1361,6 +1364,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('Protocol DC')
         self.ftypeCombo.addItem('Syscal')
         self.ftypeCombo.addItem('Protocol IP')
+        self.ftypeCombo.addItem('OhmPi')
         self.ftypeCombo.addItem('ResInv (2D/3D)')
         self.ftypeCombo.addItem('PRIME/RESIMGR')
         self.ftypeCombo.addItem('Sting')
