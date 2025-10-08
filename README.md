@@ -98,6 +98,10 @@ On macOS Catalina and higher (paste below in terminal):
 ```sh
 brew install --no-quarantine wine-stable
 ```
+After this, try `wine` in the Terminal app to confirm wine is installed. If you get `command not found` error, then do the following:
+```
+brew install --cask wine@staging
+```
 On *older* macOS versions (paste below in terminal):
 ```sh
 brew install wine
