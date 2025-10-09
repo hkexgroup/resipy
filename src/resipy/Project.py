@@ -1238,6 +1238,7 @@ class Project(object): # Project master class instanciated by the GUI
               'inverse_type', 'target_decrease', 'qual_ratio', 'data_type',
               'reg_mode', 'tolerance', 'max_iter', 'error_mod', 'alpha_aniso',
               'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type']
+        
         sparams = {}
         for key in keys:
             if key in self.param.keys():

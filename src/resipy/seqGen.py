@@ -10,6 +10,10 @@ import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt 
 
+numpy2_flag = False 
+if int(np.version.version.split('.')[0]) >= 2: 
+    numpy2_flag = True 
+
 ## condition a sequence for IP reducing effects 
 def checkCmdSep(lines, limit=None): 
     # limit is needed for efficiency 
@@ -276,6 +280,12 @@ class Generator():
                 if all(belec1[axis] == belec1[axis][0]):
                     # skip if no change in axis 
                     continue 
+                
+                #sort by axis y/z component 
+                belec0.sort_values(axis,inplace=True)#.reset_index(drop=True)
+                belec1.sort_values(axis,inplace=True)#.reset_index(drop=True)
+                belec0.reset_index(drop=True)
+                belec1.reset_index(drop=True)
                 
                 for k in range(nelec0):
                     if k >= nelec1:
@@ -656,7 +666,7 @@ class Generator():
         elec = self.elec[['x','y','z']].values 
         ### first determine if measurements are nested ###
         #find mid points of AB 
-        hasString = False 
+        # hasString = False 
         if isinstance(self.seq[0,0], str): 
             self.seq2int()
             
@@ -737,11 +747,17 @@ class Generator():
             # if subset.shape[0]>3:
             lines.append([])
             c1, c2 = subset[0,0], subset[0,1]
+            if numpy2_flag:
+                c1 = c1.item()
+                c2 = c2.item() 
             lines[-1].append(c1)
             lines[-1].append(c2) 
             for j in range(subset.shape[0]):
                 p1 = subset[j,2]
                 p2 = subset[j,3]
+                if numpy2_flag:
+                    p1 = p1.item()
+                    p2 = p2.item() 
                 if len(lines[-1]) > (maxperline):
                     lines.append([])
                     lines[-1].append(c1)
@@ -765,11 +781,17 @@ class Generator():
             subset = self.seq[index] # subset of sequence 
             lines.append([])
             c1, c2 = subset[0,0], subset[0,1]
+            if numpy2_flag:
+                c1 = c1.item()
+                c2 = c2.item() 
             lines[-1].append(c1)
             lines[-1].append(c2) 
             for j in range(subset.shape[0]):
                 p1 = subset[j,2]
                 p2 = subset[j,3]
+                if numpy2_flag:
+                    p1 = p1.item()
+                    p2 = p2.item() 
                 if len(lines[-1]) > (maxperline-1):
                     lines.append([])
                     lines[-1].append(c1)
@@ -803,7 +825,8 @@ class Generator():
     def condition(self, plot=False, dump=print):
         """
         Condition a multichannel sequence to avoid reusing potential electrodes 
-        after they have just been used for injecting current. This avoids IP effects. 
+        after they have just been used for injecting current. This avoids
+        electrode polarization effects. 
     
         Parameters
         ----------
@@ -813,11 +836,11 @@ class Generator():
         Returns
         -------
         condLines : list 
-            conditioned lines that minimise IP effects on measurements, improving
-            reliability. 
+            conditioned lines that minimise polarization effects on measurements, 
+            improving reliability. 
     
         """
-        dump('Conditioning sequence to avoid IP effects')
+        dump('Conditioning sequence to avoid electrode polarization effects')
         # condition sequence to avoid using current electrodes
         # immiediately after measurement
         nswap = 0 # total number of swaps for all values of n, i, j etc... 
