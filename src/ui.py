@@ -672,6 +672,7 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, '*.resipy')
             if fname != '':
                 try:
+                    self.restartFunc()
                     self.loadingWidget('Loading Project, please wait...', False)
                     k = Project(dirname=self.newwd)
                     k.loadProject(fname)
@@ -725,7 +726,7 @@ class App(QMainWindow):
                             self.topoTable.initTable(self.project.topo.values)
                     else:
                         self.topoTable.initTable(np.array([['',''],['','']]))
-
+                    
                     # display pseudo-section and filtering graphs
                     self.settingUI()
 
@@ -1350,12 +1351,12 @@ class App(QMainWindow):
                 self.ftype = 'Electra'
                 self.fformat = 'Ele (*.ele)'
             elif index == 14:
-                self.ftype = 'Custom'
-                self.tabImporting.setCurrentIndex(2) # switch to the custom parser
-            elif index == 15:
                 self.ftype = 'Merged'
                 self.fformat = 'Files (*.csv *.CSV *.txt *.TXT)'
                 self.iMerged = True
+            elif index == 15:
+                self.ftype = 'Custom'
+                self.tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
                 self.ftype = '' # let to be guessed
         self.ftypeComboLabel = QLabel('File format:')
@@ -2797,7 +2798,7 @@ class App(QMainWindow):
 
             if (self.project.iTimeLapse is False) & (self.project.iBatch is False):
                 self.importFile(self.fnameManual)
-            self.ftypeCombo.setCurrentIndex(12)
+            self.ftypeCombo.setCurrentIndex(15)
             self.tabImporting.setCurrentIndex(0)
 
         self.importBtn = QPushButton('Import Dataset')
@@ -7974,7 +7975,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.elecTable.initTable(self.project.elec)
         self.tabImporting.setTabEnabled(1,True)
-        if 'ip' in self.project.surveys[0].df.columns:
+        
+        if 'ip' in self.project.surveys[0].df.columns and self.project.typ[0] == 'c':
             if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                 self.ipCheck.setChecked(True)
                 self.plotPseudoIP()
