@@ -8,7 +8,7 @@ and electrode positions as numpy.array
 """
 import os, warnings, struct, re, io, chardet 
 import numpy as np
-import pandas as pd 
+import pandas as pd
 from scipy.spatial import cKDTree 
 
 #%% function to compute geometric factor - Jamyd91
@@ -3132,11 +3132,13 @@ def lippmannParser(fname):
     elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
     
     try: 
-        elec_raw = pd.read_csv(fname, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+        elec_raw = pd.read_csv(fname, sep='=', skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[1].str.replace(',', '.')
+        # elec_raw = pd.read_csv(fname, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
     except: #probably the problem is encoding. Doing this way because it's slow!
         with open(fname, 'rb') as f:
             result = chardet.detect(f.read()) 
-        elec_raw = pd.read_csv(fname, encoding=result['encoding'], skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+        elec_raw = pd.read_csv(fname, sep='=', encoding=result['encoding'], skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[1].str.replace(',', '.')
+        # elec_raw = pd.read_csv(fname, encoding=result['encoding'], skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
         encodingFlag = True
         
     elec = np.array(elec_raw.str.split(expand=True).astype(float))
@@ -3149,9 +3151,9 @@ def lippmannParser(fname):
     data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
     data_headers = dump[data_linNum_s[0]+1].split()[1:]
     if encodingFlag:
-        df = pd.read_csv(fname, encoding=result['encoding'], delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
+        df = pd.read_csv(fname, encoding=result['encoding'], sep=r'\s+', skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
     else:
-        df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1)
+        df = pd.read_csv(fname, sep=r'\s+', skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1)
     df = df.rename(columns={'A':'a',
                             'B':'b',
                             'M':'m',
@@ -3175,7 +3177,10 @@ def lippmannParser(fname):
     else:
         df = df[['a','b','m','n','i','vp']]
         df['ip'] = 0
-        
+    
+    df[['i','vp','ip']] = df[['i','vp','ip']].astype(str)
+    df[['i','vp','ip']] = df[['i','vp','ip']].apply(lambda x: x.str.replace(',', '.'))
+    df[['i','vp','ip']] = df[['i','vp','ip']].apply(pd.to_numeric, errors='coerce')
     df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float).reset_index().drop(columns='index')    
     
     #calculations
