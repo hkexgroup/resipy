@@ -6129,7 +6129,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
                 # self.project.invert(iplot=False, dump=logTextFunc,
                 #                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
-                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s}, errResCol={:s}, errIPCol={:s}, pseudoStart = {:s}'.format(
+                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s}, errResCol={:s}, errIPCol={:s}, pseudoStart = {:s})'.format(
                     str(modErr), str(parallel), str(modelDOI), str(errResCol), str(errIPCol), str(pseudoStart)))
 
                 self.thread.finished.connect(afterInversion)

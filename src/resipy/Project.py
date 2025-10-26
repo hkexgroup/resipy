@@ -410,7 +410,7 @@ class Project(object): # Project master class instanciated by the GUI
     Parameters
     ----------
     dirname : str, optional
-        Path of the working directory. Can also be set using `R2.setwd()`.
+        Path of the working directory. Can also be set using `Project.setwd()`.
     typ : str, optional
         Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t`.
         Automatically infered when creating the survey.
@@ -1603,7 +1603,7 @@ class Project(object): # Project master class instanciated by the GUI
             # later if reg_mode == 2 (difference inversion)
         dump('\n')
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
-        # elec and borehole flags assign when first call to R2.createSurvey()
+        # elec and borehole flags assign when first call to Project.createSurvey()
         
         # create bigSurvey (useful if we want to fit a single error model
         # based on the combined data of all the surveys)
@@ -2771,8 +2771,8 @@ class Project(object): # Project master class instanciated by the GUI
         """Interactive manually filters the data visually. The manually selected
         points index are stored in `Survey.iselect` or `Survey.eselect``if it is
         an electrodes. Use `Survey.filterData()` to filter them out for a single
-        survey. Or `R2._filterSimilarQuads()` to filter quadrupoles amongs all
-        `R2.surveys`.
+        survey. Or `Project._filterSimilarQuads()` to filter quadrupoles amongs all
+        `Project.surveys`.
         """
         if self.typ[-1] == 't':
             kwargs['flag3d'] = True 
@@ -3413,7 +3413,7 @@ class Project(object): # Project master class instanciated by the GUI
                 - 'tank': closed geometry with tetrahedra
         buried : numpy.array, optional
             Boolean array of electrodes that are buried. Should be the same
-            length as `R2.elec`
+            length as `Project.elec`
         surface : numpy.array, optional
             Array with two or three columns x, y (optional) and elevation for
             additional surface points.
@@ -4340,8 +4340,7 @@ class Project(object): # Project master class instanciated by the GUI
         dirname : str, optional
             Path of the working directory.
         dump : function, optional
-            Function to be passed to `R2.runR2()` for printing output during
-            inversion.
+            Function for printing output during inversion.
         iMoveElec : bool, optional
             If `True` will move electrodes according to their position in each
             `Survey` object.
@@ -4601,10 +4600,10 @@ class Project(object): # Project master class instanciated by the GUI
         ----------
         param : dict, optional
             Dictionary of parameters for inversion. Will be passed to
-            `R2.write2in()`.
+            `Project.write2in()`.
         iplot : bool, optional
             If `True`, will plot the results of the inversion using
-            `R2.showResults()`.
+            `Project.showResults()`.
         dump : function, optinal
             Function to print the output of the inversion. To be passed to
             `R2.runR2()`.
@@ -4877,7 +4876,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.iTimeLapse = iTimeLapse0
         self.mesh.df['res0'] = list(res0)
         self.iForward = iForward # restore value
-        # .in and protocol will be written again in R2.invert()
+        # .in and protocol will be written again in Project.invert()
             
         return sensScaled
         
@@ -4992,7 +4991,7 @@ class Project(object): # Project master class instanciated by the GUI
             Label of the colorbar (by default the label is the value of `attr`).
         doi : bool, optional
             If True, it will draw a dotted red line corresponding to 0.02 from the
-            Oldenburg and Li method. Note that `R2.modeDOI()` needs to be run
+            Oldenburg and Li method. Note that `Project.modeDOI()` needs to be run
             for that.
         doiSens : bool, optional
             If True, it will draw a dashed line corresponding to 0.001 of the maximum
@@ -5119,19 +5118,19 @@ class Project(object): # Project master class instanciated by the GUI
                         pvcontour=pvcontour, pvdelaunay3d=pvdelaunay3d, darkMode=self.darkMode, volume=volume, **kwargs)
                 
         else:
-            raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
+            raise ValueError('len(Project.meshResults) == 0, no inversion results parsed.')
 
 
 
     def getResults(self, dirname=None):
         """Collect inverted results after running the inversion and adding
-        them to `R2.meshResults` list.
+        them to `Project.meshResults` list.
         
         Parameters
         ----------
         dirname : str, optional
             If specified, dirname will be used as the working directory (this
-            is needed for R2.loadResults()). Default is self.dirname.
+            is needed for Project.loadResults()). Default is self.dirname.
         """
         if dirname is None:
             dirname = self.dirname
@@ -5750,7 +5749,7 @@ class Project(object): # Project master class instanciated by the GUI
 
     def designModel(self, ax=None, dump=print, typ='poly', addAction=None, fmd=None):
         """Interactive model design for forward modelling (triangular only).
-        As opposite to R2.createModel(). R2.designModel() allows to draw mesh
+        As opposite to Project.createModel(). Project.designModel() allows to draw mesh
         region **before** meshing. This allows to have straight boundaries for
         triangular mesh.
 
@@ -5809,11 +5808,11 @@ class Project(object): # Project master class instanciated by the GUI
 
     def createModelMesh(self, **kwargs):
         """Create a triangular mesh given the designed geometry by
-        R2.designModel().
+        Project.designModel().
 
         Parameters
         ----------
-        All parameters to be passed are similar to `R2.createMesh()`.
+        All parameters to be passed are similar to `Project.createMesh()`.
         """
         geom_input = self.geom_input
         self.createMesh(typ='trian', geom_input=geom_input, **kwargs)
@@ -5875,7 +5874,7 @@ class Project(object): # Project master class instanciated by the GUI
     def setRefModel(self, res0):
         """Set the reference model according to a previous inversion, avoids
         the need to invert reference model again for timelapse workflows.
-        In contrast to `R2.setStartingRes()` which assign resistivity to group
+        In contrast to `Project.setStartingRes()` which assign resistivity to group
         of elements, this method requires a vector of the same length as the 
         number of elements. This enables, notably to manually perform consecutive
         background constrained inversion.
@@ -6444,7 +6443,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise/100)
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
-        self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
+        self.setElec(elec) # using Project.createSurvey() overwrite self.elec so we need to set it back
         self.surveys[0].computeK()  # need to recompute K with the new electrode given by setElec()
         self.surveys[0].df['app'] = self.surveys[0].df['K']*self.surveys[0].df['resist']  # and recompute app
         # self.fmd = fmd      
@@ -7927,7 +7926,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
 
     def showParam(self):
-        """Print parameters in `R2.param` dictionary.
+        """Print parameters in `Project.param` dictionary.
         """
         [print(key) for i,key in enumerate(self.param)]
 
