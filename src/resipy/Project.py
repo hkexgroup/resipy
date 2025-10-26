@@ -4592,7 +4592,7 @@ class Project(object): # Project master class instanciated by the GUI
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None, 
-               pseudoStart = True):
+               pseudoStart=False):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.  
 
@@ -4638,9 +4638,9 @@ class Project(object): # Project master class instanciated by the GUI
             If no reciprocal data, a user supplied column can be read as IP
             error.
         pseudoStart : bool, optional 
-            Flag to start the inversion using using resisitivities from the pseudo section.
-            Default is True, in which case the starting resistivities will be estimated
-            from the psuedo section values. 
+            Flag to start the inversion using resisitivities from the pseudo section.
+            Default is False, in which case the starting resistivities will be estimated
+            from the pseudo section values. 
         """
         if dump is None:
             def dump(x):
