@@ -2518,8 +2518,6 @@ class App(QMainWindow):
         self.delimiterBox.hide()
 
         self.delimLabel = QLabel('Delimiter:')
-#        delimiterEdit = QLineEdit('')
-#        delimiterEdit.setToolTip(r'For tab delimited data use: \t')
         self.skipRowsLabel = QLabel('Number of header to skip:')
         self.skipRowsEdit = QLineEdit('0')
         self.skipRowsEdit.setValidator(QIntValidator())
@@ -2732,7 +2730,7 @@ class App(QMainWindow):
                     nrows = self.nrowsEdit.text()
                     nrows = None if nrows == '' else int(nrows)
                     espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
-
+    
                     # parse
                     print('delimiter=', delimiter)
                     df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
@@ -2745,17 +2743,18 @@ class App(QMainWindow):
                         df['ip'] = 0
                     elif self.inputPhaseFlag == True:
                         df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
-
+    
                     ################ better method (adopted from syscalParser)
-
+    
                     array = df[['a','b','m','n']].values
-
+    
                     # get unique electrode positions and create ordered labels for them
                     val = np.sort(np.unique(array.flatten()))
                     elecLabel = 1 + np.arange(len(val))
-                    searchsoterdArr = np.searchsorted(val, array)
-                    newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+                    searchsortedArr = np.searchsorted(val, array)
+                    newval = elecLabel[searchsortedArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
                     df.loc[:,['a','b','m','n']] = newval # assign new label
+                    df[['a','b','m','n']] = df[['a','b','m','n']].astype(int)
                     zval = np.zeros_like(val)
                     yval = np.zeros_like(val) # 2D so Y values are all zeros
                     elec = np.c_[val, yval, zval]
@@ -2765,9 +2764,9 @@ class App(QMainWindow):
                     elec[iremote_p1, 0] = -99999
                     iremote_p2 = np.isin(val, remoteFlags_p2)
                     elec[iremote_p2, 0] = 99999
-
+    
                     ##### Old way
-
+    
                     # array = df[['a','b','m','n']].values.copy()
                     # arrayMin = np.min(np.unique(np.sort(array.flatten())))
                     # if arrayMin != 0:
@@ -2779,16 +2778,17 @@ class App(QMainWindow):
                     # imax = int(np.max(array))
                     # elec = np.zeros((imax,3))
                     # elec[:,0] = np.arange(0,imax)*espacing
-
+    
                     ################
-
+    
                     self.nbElecEdit.setText('%s' % (len(elec)))
     #                self.nbElecEdit.setEnabled(False)
                     self.elecDxEdit.setText('%s' % (espacing))
                     self.activateTabs(True)
                     return elec, df
-                except:
+                except Exception as e:
                     self.activateTabs(False)
+                    print('error: ', str(e))
                     self.errorDump("Import Failed: 'nan' values must be removed before importation. Use the 'Number of rows to read or skip' to remove 'nan's.")
             self.parser = parserFunc
 
@@ -7908,7 +7908,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 spacing = None
             else:
                 spacing = float(self.spacingEdit.text())
-
+    
             self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                  parser=self.parser)
             self.writeLog('k.createSurvey("{:s}", ftype="{:s}")'.format(self.fname, self.ftype))
