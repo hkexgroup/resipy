@@ -516,15 +516,23 @@ class Generator():
                 continue 
             for i in range(len(self.seqIdx)):
                 if config in ['dipole-dipole', 'dpdp']:
+                    if len(p[1:]) == 2:
+                        p = (p[0], 1, p[1], 1, p[2])  # backward compatibility
                     dump('Generating dipole-dipole: %s'%logtext(p[1:5]))
                     _ = self.ddgen(p[1], p[2], p[3], p[4], i) 
                 elif config in ['wenner', 'w']:
+                    if len(p[1:]) == 1:
+                        p = (p[0], 1, p[1])  # backward compatibility
                     dump('Generating wenner: %s'%logtext(p[1:3]))
                     _ = self.wgen(p[1], p[2], i)
                 elif config in ['wenner-schlumberger', 'schlum', 'ws']: 
+                    if len(p[1:]) == 2:
+                        p = (p[0], 1, p[1], 1, p[2])  # backward compatibility
                     dump('Generating wenner-schlum: %s'%logtext(p[1:5]))
                     _ = self.wsgen(p[1], p[2], p[3], p[4], i) 
                 elif config in ['multigradient', 'mg', 'multigrad']:
+                    if len(p[1:]) == 3:
+                        p = (p[0], 1, p[1], 1, p[2], 1, p[3])  # backward compatibility
                     dump('Generating multi-grad: %s'%logtext(p[1:7]))
                     _ = self.mggen(p[1], p[2], p[3], p[4], p[5], p[6], i)
                 else:
