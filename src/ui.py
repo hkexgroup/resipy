@@ -5855,7 +5855,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # add option to look up starting resistivities from psuedo section 
         self.pseudoStartLabel = QLabel('<a href="pseudo_start">Starting model from pseudo section</a>:')
         self.pseudoStartCheck = QCheckBox()
-        self.pseudoStartCheck.setChecked(True)
+        self.pseudoStartCheck.setChecked(False)
         self.pseudoStartLabel.linkActivated.connect(showHelp)
         invForm.addRow(self.pseudoStartLabel, self.pseudoStartCheck)
 
