@@ -460,7 +460,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.mproc = None # where the process for mesh building
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
-        self.trapeziod = None # trapeziod vertices of cropped 2D mesh (triangles removed from bottom corners)
+        self.trapezoid = None # trapezoid vertices of cropped 2D mesh (triangles removed from bottom corners)
         self.geom_input = {} # dictionnary used to create the mesh
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
@@ -2222,12 +2222,12 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     ztrapbot = np.ones_like(xtrapbot) * zminl
                     
-                proj.trapeziod = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+                proj.trapezoid = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
                                   np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
-                mesh = mesh.crop(proj.trapeziod)
+                mesh = mesh.crop(proj.trapezoid)
             
             else:
-                proj.trapeziod = None # make sure trapeziod mask is clear
+                proj.trapezoid = None # make sure trapezoid mask is clear
 
             meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
             
@@ -4910,7 +4910,7 @@ class Project(object): # Project master class instanciated by the GUI
         xmax = np.max(node_x)
         zmin = np.min(node_z)
         zmax = np.max(node_z)
-        
+
         (xsurf, zsurf) = self.mesh.extractSurface()
         if cropMaxDepth and self.fmd is not None:
             xfmd, zfmd = xsurf[::-1], zsurf[::-1] - self.fmd
@@ -4954,12 +4954,12 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 ztrapbot = np.ones_like(xtrapbot) * zminl
                 
-            self.trapeziod = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+            self.trapezoid = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
                                    np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
-            patcher(self.trapeziod)
+            patcher(self.trapezoid)
         
         else:
-            self.trapeziod = None # make sure trapeziod mask is clear
+            self.trapezoid = None # make sure trapezoid mask is clear
      
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
@@ -5060,7 +5060,6 @@ class Project(object): # Project master class instanciated by the GUI
             kwargs['ylim'] = findminmax(elec[:,1])
             if len(self.topo) > 4:
                 kwargs['ylim'] = findminmax(self.topo.y,1)
-            
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
             if self.typ[-1] == '2' and index != -1: # 2D case
@@ -6421,7 +6420,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
-        #fmd = self.fmd#.copy()
+        fmd = self.fmd  # this is needed as createSurvey() and setElec() will recompute fmd
         elec = self.elec.copy()
         if self.typ[-1]=='t' and not self.hasElecString():
             #need to add elec strings to labels if in 3D
@@ -6446,11 +6445,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.setElec(elec) # using Project.createSurvey() overwrite self.elec so we need to set it back
         self.surveys[0].computeK()  # need to recompute K with the new electrode given by setElec()
         self.surveys[0].df['app'] = self.surveys[0].df['K']*self.surveys[0].df['resist']  # and recompute app
-        # self.fmd = fmd      
+        self.fmd = fmd      
 
-        # recompute doi (don't actually otherwise zlim is jumping)
-        # self.computeFineMeshDepth()
-        # self.zlim[0] = np.min(elec['z']) - self.fmd
         if iplot is True:
             self.showPseudo()
             
@@ -7505,8 +7501,8 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 fname = mesh.mesh_title + '.vtk'
             file_path = os.path.join(dirname, fname) 
-            if self.trapeziod is not None and self.pseudo3DMeshResult is None:
-                meshcopy = meshcopy.crop(self.trapeziod)
+            if self.trapezoid is not None and self.pseudo3DMeshResult is None:
+                meshcopy = meshcopy.crop(self.trapezoid)
             elif '3' in self.typ and self.param['num_xy_poly'] > 2: 
                 meshcopy = meshcopy.crop(self.param['xy_poly_table'])
                 meshcopy.elec = None 
@@ -7515,8 +7511,8 @@ class Project(object): # Project master class instanciated by the GUI
                 else: 
                     meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
                                                            self.param['zmax']])
-            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
-                meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapezoid is not None:
+                meshcopy = meshcopy.crop(self.projs[count-1].trapezoid)
                 
             meshcopy.vtk(file_path, title=mesh.mesh_title) # save to vtk 
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
@@ -7630,8 +7626,8 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 fname = mesh.mesh_title + ext 
             file_path = os.path.join(dirname, fname) 
-            if self.trapeziod is not None and self.pseudo3DMeshResult is None:
-                meshcopy = meshcopy.crop(self.trapeziod)
+            if self.trapezoid is not None and self.pseudo3DMeshResult is None:
+                meshcopy = meshcopy.crop(self.trapezoid)
             elif '3' in self.typ and self.param['num_xy_poly'] > 2: 
                 meshcopy = meshcopy.crop(self.param['xy_poly_table'])
                 meshcopy.elec = None 
@@ -7640,8 +7636,8 @@ class Project(object): # Project master class instanciated by the GUI
                 else: 
                     meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
                                                            self.param['zmax']])
-            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
-                meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapezoid is not None:
+                meshcopy = meshcopy.crop(self.projs[count-1].trapezoid)
                 
             # convert to utm if needed (not for psuedo3d, that'll be handled differently)
             if self.coordLocal and self.pseudo3DMeshResult is None: 
