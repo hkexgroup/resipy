@@ -1485,10 +1485,11 @@ class Project(object): # Project master class instanciated by the GUI
                 if len(s.df['a'].iloc[0].split()) == 2: 
                     s._rmLineNum() 
         
-        # Change type to cR2 o cR3t            
+        # Change type to cR2 to cR3t            
         if 'ip' in self.surveys[0].df.columns:
             if np.sum(self.surveys[0].df['ip'].values) > 0 or np.sum(self.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                self.typ = 'c' + self.typ
+                if self.typ[0] != 'c':
+                    self.typ = 'c' + self.typ
         
         # flag that data has been added 
         self.pinfo['Data'] = True 
