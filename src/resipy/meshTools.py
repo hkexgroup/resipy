@@ -1502,21 +1502,21 @@ class Mesh:
         self.cellCentres()
         
     #%% mesh display 
-    def _clipContour(self, ax, cont, maxDepth=None):
+    def _clipContour(self, ax, cax, maxDepth=None):
         """Clip contours using mesh bound and surface if available.
         
         Parameters
         ----------
         ax : matplotlib.Axes
             Axis.
-        cont : matplotlib.collections
-            Collection of contours.
+        cax : matplotlib.Artist
+            Artist (Collection) returned.
         maxDepth : float (m), optional
-                Depth of the fine/coarse region in mesh. 
-                If not None: Contour plots will crop out below maxDepth [m].
+            Depth of the fine/coarse region in mesh. 
+            If not None: Contour plots will crop out below maxDepth [m].
         """
         if self.ndims == 3:
-            raise ValueError('Cant clip contour on a 3D mesh')
+            raise ValueError('Cannot clip contour on a 3D mesh')
         # mask outer region
         xmin = np.min(self.node[:,0])
         xmax = np.max(self.node[:,0])
@@ -1536,8 +1536,7 @@ class Mesh:
         path = mpath.Path(verts)
         patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
         ax.add_patch(patch) # need to add so it knows the transform
-        for col in cont.collections:
-            col.set_clip_path(patch)        
+        cax.set_clip_path(patch)     
 
     def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,

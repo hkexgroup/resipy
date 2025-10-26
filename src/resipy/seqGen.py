@@ -362,7 +362,7 @@ class Generator():
         n : int
             Multiplier for `a` to determine spacing from A to M.
         s : int
-            Seperation factor for current electrodes, should be the intermediate
+            Separation factor for current electrodes, should be the intermediate
             numbers.
         '''
         assert isinstance(amin,int)
