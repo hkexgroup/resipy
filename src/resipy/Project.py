@@ -1486,7 +1486,7 @@ class Project(object): # Project master class instanciated by the GUI
                     s._rmLineNum() 
         
         # Change type to cR2 to cR3t            
-        if 'ip' in self.surveys[0].df.columns:
+        if ('ip' in self.surveys[0].df.columns) and (self.iTimeLapse is False): # no IP timelapse
             if np.sum(self.surveys[0].df['ip'].values) > 0 or np.sum(self.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                 if self.typ[0] != 'c':
                     self.typ = 'c' + self.typ
