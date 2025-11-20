@@ -586,8 +586,7 @@ class Project(object): # Project master class instanciated by the GUI
         elec : dataframe
             remote flag added to electrodes
         """
-        remote_flags = [-9999999, -999999, -99999,-9999,-999]
-                    #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+        remote_flags = [-9999999, -999999, -99999,-9999,-999, 9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes. both + and - values are needed for pole-pole
         iremote = np.isin(elec['x'].values, remote_flags)
         iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
         elec['remote'] = iremote

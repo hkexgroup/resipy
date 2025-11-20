@@ -7557,15 +7557,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             col = 'white'
             bcol = 'red'
             pdebug('errorDump:', text)
+            self.errorLabel.setStyleSheet('QLabel{background:' + bcol + ';}')
         else:
             if resipySettings.param['dark'] == 'True':
                 col = 'white'
-                bcol = 'black'
             else:
                 col = 'black'
-                bcol = 'white'
             pdebug('infoDump:', text)
-        self.errorLabel.setStyleSheet('QLabel{background:' + bcol + ';}') #'font-weight:bold'
+            self.errorLabel.setStyleSheet('') #'font-weight:bold'
         self.errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         self.timer.timeout.connect(partial(self.timeOut, timeStamp))
         self.timer.start(10000) # 10 secs - making sure the error/message doen't stick forever!
