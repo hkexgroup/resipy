@@ -1809,11 +1809,15 @@ class Mesh:
 
         #biuld alpha channel if we have sensitivities 
         if sens:
-            if 'Sensitivity(log10)' not in self.df.keys():
+            if 'Scaled_Sensitivity(log10)' not in self.df.keys() and 'Sensitivity(log10)' not in self.df.keys():
                 print('ERROR: No sensitivity attribute found')
             else:
                 try:
-                    weights = np.array(self.df['Sensitivity(log10)']) #values assigned to alpha channels 
+                    if'Scaled_Sensitivity(log10)' in self.df.keys():
+                        sensColumn = 'Scaled_Sensitivity(log10)'
+                    else:
+                        sensColumn = 'Sensitivity(log10)'
+                    weights = np.array(self.df[sensColumn]) #values assigned to alpha channels 
                     if maxDepth is not None:
                         weights = weights[ikeep]
                     if sensPrc is None:

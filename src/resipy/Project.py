@@ -4903,6 +4903,8 @@ class Project(object): # Project master class instanciated by the GUI
             patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
             ax.add_patch(patch) # need to add so it knows the transform
             cax.set_clip_path(patch)
+            for col in ax.collections: # clipping all collections (e.g., sensitivity overlay)
+                col.set_clip_path(patch)
         
         # mask outer region
         node_x = self.mesh.node[:,0]
@@ -5082,7 +5084,11 @@ class Project(object): # Project master class instanciated by the GUI
                     else:
                         raise ValueError('Rerun the inversion with `modelDOI=True` first or use `doiSens`.')
                 if doiSens is True: # DOI based on log10(sensitivity)
-                    if 'Sensitivity(log10)' in mesh.df.keys():
+                    if 'Scaled_Sensitivity(log10)' in mesh.df.keys():
+                        z = np.array(mesh.df['Scaled_Sensitivity(log10)'])
+                        levels=[np.log10(0.001*(10**np.nanmax(z)))]
+                        linestyle = '--'
+                    elif 'Sensitivity(log10)' in mesh.df.keys(): # for when scaled sensitivity is not there (e.g., IP)
                         z = np.array(mesh.df['Sensitivity(log10)'])
                         levels=[np.log10(0.001*(10**np.nanmax(z)))]
                         linestyle = '--'
