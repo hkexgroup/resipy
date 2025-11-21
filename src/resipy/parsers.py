@@ -3212,7 +3212,7 @@ def lippmannParser(fname):
         df[cols] += 1
         
     if pdp_flag:
-        df[current_remote] = np.zeros_like(df[current_remote].values)
+        df[current_remote] = np.ones_like(df[current_remote].values)
         cols = ['a','b','m','n']
         cols.remove(current_remote)
         df[cols] += 1
