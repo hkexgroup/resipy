@@ -3854,12 +3854,15 @@ class App(QMainWindow):
                 self.meshOutputStack.setCurrentIndex(2)
             else: # 2D mesh
                 def func(ax):
-                    self.project.createModel(ax=ax, addAction=self.regionTable.addRow)
+                    self.project.createModel(ax=ax, addAction=replotMeshActions)
                 self.mwMesh.plot(func, aspect=aspect)
                 self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
                 self.mwMesh.canvas.setFocus() # set focus on the canvas
                 self.meshOutputStack.setCurrentIndex(1)
-                
+        
+        def replotMeshActions(): # HOTFIX: need to call this during interactive mesh design so regions numbers on the cBar are discrete
+            self.regionTable.addRow()
+            replotMesh()
                 
         def replotMesh3D(): 
             if self.project.mesh is None: 
