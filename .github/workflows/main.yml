@@ -14,7 +14,7 @@ jobs:
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Set up environment
         run: |
@@ -36,12 +36,12 @@ jobs:
           find ./
           cd ..
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ResIPy-linux.zip
           path: ./src/dist/ResIPy-linux.zip
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ResIPy-linux
           path: ./src/dist/ResIPy-linux
@@ -52,7 +52,7 @@ jobs:
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Set up environment
         run: |
@@ -72,12 +72,12 @@ jobs:
           .\build.bat
           cd ..
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ResIPy-windows.zip
           path: ./src/dist/ResIPy-windows.zip
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ResIPy-windows.exe
           path: ./src/dist/ResIPy-windows.exe
@@ -88,7 +88,7 @@ jobs:
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Set up environment
         run: |
@@ -116,12 +116,12 @@ jobs:
           cd ../..
           
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ResIPy-macos.app
           path: ./src/dist/ResIPy-macos.zip
           
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ResIPy-macos.dmg
           path: ./src/dist/ResIPy-macos.dmg
