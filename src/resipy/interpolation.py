@@ -1038,7 +1038,7 @@ def invRotGridData(local_x, local_y, x0, y0, rotAngle=0):
     y0: int, float, 
         Initial northing
     rotAngle:
-        Rotation angle (in radians)
+        Rotation angle (in degrees)
     
     Returns 
     ------------   

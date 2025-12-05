@@ -1751,6 +1751,9 @@ class Project(object): # Project master class instanciated by the GUI
             3D surveys from 2D lines). 
         
         """
+        if dump is None: 
+            def dump(x): 
+                print(x)
 
         finfo = pd.read_csv(fname, sep=delimiter) # file info dataframe 
         
@@ -1787,6 +1790,9 @@ class Project(object): # Project master class instanciated by the GUI
 
         if len(usid) > 1: 
             self.iTimeLapse = True 
+
+        if debug: 
+            dump("Number of surveys to merge: %i"%len(usid))
             
         c = 0 
         for i in usid: 
@@ -1795,12 +1801,19 @@ class Project(object): # Project master class instanciated by the GUI
             self.createSurvey(finfo.fpath[ii], ftype=finfo.ftype[ii], 
                               debug=debug, estMemory=False, string=finfo.string[ii])
             _ = sidx.pop(0)
+
+            if debug: 
+                fname = os.path.split(finfo.fpath[ii])[-1]
+                dump("Creating survey for index (or sid) %i, from source file %s"%(i, fname))
                 
-            for j in sidx: 
+            for j in sidx: # add data for each survey 
                 self.addData(index=c, fname=finfo.fpath[j], ftype=finfo.ftype[j],
                              string=finfo.string[j])
-                # add data for each survey 
-            if c == 0:
+                if debug: 
+                    fname = os.path.split(finfo.fpath[j])[-1]
+                    dump("Adding data to survey %i, from source file %s"%(i, fname))
+
+            if c == 0: # handle big survey generation 
                 self.bigSurvey = Survey(finfo.fpath[ii], ftype=finfo.ftype[ii],
                                         string=finfo.string[ii])
                 for j in sidx: 
@@ -2473,6 +2486,8 @@ class Project(object): # Project master class instanciated by the GUI
                     wd = wds.pop()
                     if OS == 'Windows':
                         p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                        pp = psutil.Process(p.pid) # set process priority to high on windows to avoid R2 hanging 
+                        pp.nice(psutil.HIGH_PRIORITY_CLASS)
                     else:
                         p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True)
                     self.procs.append(p)

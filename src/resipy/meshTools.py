@@ -3140,7 +3140,7 @@ class Mesh:
             #write to mesh.dat total num of elements and nodes
 
             if self.ndims == 3:
-                fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),0)) # flags 
+                fid.write('%i %i %i %i %i %i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),0)) # flags 
             else:
                 fid.write('%i %i %i\n'%(self.numel,self.numnp,idirichlet))
             
@@ -3229,9 +3229,9 @@ class Mesh:
         with open(file_path, 'w') as fid:
             # write to mesh.dat total num of elements and nodes
             if self.ndims == 3:
-                fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),adv_flag)) # flags 
+                fid.write('%i %i %i %i %i %i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),adv_flag)) # flags 
             else:
-                fid.write('%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,adv_flag))
+                fid.write('%i %i %i %i\n'%(self.numel,self.numnp,idirichlet,adv_flag))
             # write out elements         
             no_verts = self.type2VertsNo()
             for i in range(self.numel):
