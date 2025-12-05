@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.6.5' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.6.6' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -410,7 +410,7 @@ class Project(object): # Project master class instanciated by the GUI
     Parameters
     ----------
     dirname : str, optional
-        Path of the working directory. Can also be set using `R2.setwd()`.
+        Path of the working directory. Can also be set using `Project.setwd()`.
     typ : str, optional
         Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t`.
         Automatically infered when creating the survey.
@@ -460,7 +460,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.mproc = None # where the process for mesh building
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
-        self.trapeziod = None # trapeziod vertices of cropped 2D mesh (triangles removed from bottom corners)
+        self.trapezoid = None # trapezoid vertices of cropped 2D mesh (triangles removed from bottom corners)
         self.geom_input = {} # dictionnary used to create the mesh
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
@@ -586,8 +586,7 @@ class Project(object): # Project master class instanciated by the GUI
         elec : dataframe
             remote flag added to electrodes
         """
-        remote_flags = [-9999999, -999999, -99999,-9999,-999]
-                    #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+        remote_flags = [-9999999, -999999, -99999,-9999,-999, 9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes. both + and - values are needed for pole-pole
         iremote = np.isin(elec['x'].values, remote_flags)
         iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
         elec['remote'] = iremote
@@ -1484,7 +1483,13 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 if len(s.df['a'].iloc[0].split()) == 2: 
                     s._rmLineNum() 
-                    
+        
+        # Change type to cR2 to cR3t            
+        if ('ip' in self.surveys[0].df.columns) and (self.iTimeLapse is False): # no IP timelapse
+            if np.sum(self.surveys[0].df['ip'].values) > 0 or np.sum(self.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                if self.typ[0] != 'c':
+                    self.typ = 'c' + self.typ
+        
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = 1 
@@ -1598,7 +1603,7 @@ class Project(object): # Project master class instanciated by the GUI
             # later if reg_mode == 2 (difference inversion)
         dump('\n')
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
-        # elec and borehole flags assign when first call to R2.createSurvey()
+        # elec and borehole flags assign when first call to Project.createSurvey()
         
         # create bigSurvey (useful if we want to fit a single error model
         # based on the combined data of all the surveys)
@@ -2230,12 +2235,12 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     ztrapbot = np.ones_like(xtrapbot) * zminl
                     
-                proj.trapeziod = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+                proj.trapezoid = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
                                   np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
-                mesh = mesh.crop(proj.trapeziod)
+                mesh = mesh.crop(proj.trapezoid)
             
             else:
-                proj.trapeziod = None # make sure trapeziod mask is clear
+                proj.trapezoid = None # make sure trapezoid mask is clear
 
             meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
             
@@ -2781,8 +2786,8 @@ class Project(object): # Project master class instanciated by the GUI
         """Interactive manually filters the data visually. The manually selected
         points index are stored in `Survey.iselect` or `Survey.eselect``if it is
         an electrodes. Use `Survey.filterData()` to filter them out for a single
-        survey. Or `R2._filterSimilarQuads()` to filter quadrupoles amongs all
-        `R2.surveys`.
+        survey. Or `Project._filterSimilarQuads()` to filter quadrupoles amongs all
+        `Project.surveys`.
         """
         if self.typ[-1] == 't':
             kwargs['flag3d'] = True 
@@ -3423,7 +3428,7 @@ class Project(object): # Project master class instanciated by the GUI
                 - 'tank': closed geometry with tetrahedra
         buried : numpy.array, optional
             Boolean array of electrodes that are buried. Should be the same
-            length as `R2.elec`
+            length as `Project.elec`
         surface : numpy.array, optional
             Array with two or three columns x, y (optional) and elevation for
             additional surface points.
@@ -4350,8 +4355,7 @@ class Project(object): # Project master class instanciated by the GUI
         dirname : str, optional
             Path of the working directory.
         dump : function, optional
-            Function to be passed to `R2.runR2()` for printing output during
-            inversion.
+            Function for printing output during inversion.
         iMoveElec : bool, optional
             If `True` will move electrodes according to their position in each
             `Survey` object.
@@ -4603,7 +4607,7 @@ class Project(object): # Project master class instanciated by the GUI
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None, 
-               pseudoStart = True):
+               pseudoStart=False):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.  
 
@@ -4611,10 +4615,10 @@ class Project(object): # Project master class instanciated by the GUI
         ----------
         param : dict, optional
             Dictionary of parameters for inversion. Will be passed to
-            `R2.write2in()`.
+            `Project.write2in()`.
         iplot : bool, optional
             If `True`, will plot the results of the inversion using
-            `R2.showResults()`.
+            `Project.showResults()`.
         dump : function, optinal
             Function to print the output of the inversion. To be passed to
             `R2.runR2()`.
@@ -4649,9 +4653,9 @@ class Project(object): # Project master class instanciated by the GUI
             If no reciprocal data, a user supplied column can be read as IP
             error.
         pseudoStart : bool, optional 
-            Flag to start the inversion using using resisitivities from the pseudo section.
-            Default is True, in which case the starting resistivities will be estimated
-            from the psuedo section values. 
+            Flag to start the inversion using resisitivities from the pseudo section.
+            Default is False, in which case the starting resistivities will be estimated
+            from the pseudo section values. 
         """
         if dump is None:
             def dump(x):
@@ -4887,7 +4891,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.iTimeLapse = iTimeLapse0
         self.mesh.df['res0'] = list(res0)
         self.iForward = iForward # restore value
-        # .in and protocol will be written again in R2.invert()
+        # .in and protocol will be written again in Project.invert()
             
         return sensScaled
         
@@ -4912,7 +4916,9 @@ class Project(object): # Project master class instanciated by the GUI
             path = mpath.Path(verts, poly_codes)
             patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
             ax.add_patch(patch) # need to add so it knows the transform
-            cax.set_clip_path(patch) # -> depreciated function 
+            cax.set_clip_path(patch)
+            for col in ax.collections: # clipping all collections (e.g., sensitivity overlay)
+                col.set_clip_path(patch)
         
         # mask outer region
         node_x = self.mesh.node[:,0]
@@ -4921,7 +4927,7 @@ class Project(object): # Project master class instanciated by the GUI
         xmax = np.max(node_x)
         zmin = np.min(node_z)
         zmax = np.max(node_z)
-        
+
         (xsurf, zsurf) = self.mesh.extractSurface()
         if cropMaxDepth and self.fmd is not None:
             xfmd, zfmd = xsurf[::-1], zsurf[::-1] - self.fmd
@@ -4965,12 +4971,12 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 ztrapbot = np.ones_like(xtrapbot) * zminl
                 
-            self.trapeziod = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+            self.trapezoid = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
                                    np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
-            patcher(self.trapeziod)
+            patcher(self.trapezoid)
         
         else:
-            self.trapeziod = None # make sure trapeziod mask is clear
+            self.trapezoid = None # make sure trapezoid mask is clear
      
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
@@ -5002,7 +5008,7 @@ class Project(object): # Project master class instanciated by the GUI
             Label of the colorbar (by default the label is the value of `attr`).
         doi : bool, optional
             If True, it will draw a dotted red line corresponding to 0.02 from the
-            Oldenburg and Li method. Note that `R2.modeDOI()` needs to be run
+            Oldenburg and Li method. Note that `Project.modeDOI()` needs to be run
             for that.
         doiSens : bool, optional
             If True, it will draw a dashed line corresponding to 0.001 of the maximum
@@ -5071,7 +5077,6 @@ class Project(object): # Project master class instanciated by the GUI
             kwargs['ylim'] = findminmax(elec[:,1])
             if len(self.topo) > 4:
                 kwargs['ylim'] = findminmax(self.topo.y,1)
-            
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
             if self.typ[-1] == '2' and index != -1: # 2D case
@@ -5093,7 +5098,11 @@ class Project(object): # Project master class instanciated by the GUI
                     else:
                         raise ValueError('Rerun the inversion with `modelDOI=True` first or use `doiSens`.')
                 if doiSens is True: # DOI based on log10(sensitivity)
-                    if 'Sensitivity(log10)' in mesh.df.keys():
+                    if 'Scaled_Sensitivity(log10)' in mesh.df.keys():
+                        z = np.array(mesh.df['Scaled_Sensitivity(log10)'])
+                        levels=[np.log10(0.001*(10**np.nanmax(z)))]
+                        linestyle = '--'
+                    elif 'Sensitivity(log10)' in mesh.df.keys(): # for when scaled sensitivity is not there (e.g., IP)
                         z = np.array(mesh.df['Sensitivity(log10)'])
                         levels=[np.log10(0.001*(10**np.nanmax(z)))]
                         linestyle = '--'
@@ -5129,19 +5138,19 @@ class Project(object): # Project master class instanciated by the GUI
                         pvcontour=pvcontour, pvdelaunay3d=pvdelaunay3d, darkMode=self.darkMode, volume=volume, **kwargs)
                 
         else:
-            raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
+            raise ValueError('len(Project.meshResults) == 0, no inversion results parsed.')
 
 
 
     def getResults(self, dirname=None):
         """Collect inverted results after running the inversion and adding
-        them to `R2.meshResults` list.
+        them to `Project.meshResults` list.
         
         Parameters
         ----------
         dirname : str, optional
             If specified, dirname will be used as the working directory (this
-            is needed for R2.loadResults()). Default is self.dirname.
+            is needed for Project.loadResults()). Default is self.dirname.
         """
         if dirname is None:
             dirname = self.dirname
@@ -5760,7 +5769,7 @@ class Project(object): # Project master class instanciated by the GUI
 
     def designModel(self, ax=None, dump=print, typ='poly', addAction=None, fmd=None):
         """Interactive model design for forward modelling (triangular only).
-        As opposite to R2.createModel(). R2.designModel() allows to draw mesh
+        As opposite to Project.createModel(). Project.designModel() allows to draw mesh
         region **before** meshing. This allows to have straight boundaries for
         triangular mesh.
 
@@ -5819,11 +5828,11 @@ class Project(object): # Project master class instanciated by the GUI
 
     def createModelMesh(self, **kwargs):
         """Create a triangular mesh given the designed geometry by
-        R2.designModel().
+        Project.designModel().
 
         Parameters
         ----------
-        All parameters to be passed are similar to `R2.createMesh()`.
+        All parameters to be passed are similar to `Project.createMesh()`.
         """
         geom_input = self.geom_input
         self.createMesh(typ='trian', geom_input=geom_input, **kwargs)
@@ -5885,7 +5894,7 @@ class Project(object): # Project master class instanciated by the GUI
     def setRefModel(self, res0):
         """Set the reference model according to a previous inversion, avoids
         the need to invert reference model again for timelapse workflows.
-        In contrast to `R2.setStartingRes()` which assign resistivity to group
+        In contrast to `Project.setStartingRes()` which assign resistivity to group
         of elements, this method requires a vector of the same length as the 
         number of elements. This enables, notably to manually perform consecutive
         background constrained inversion.
@@ -6432,7 +6441,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
-        #fmd = self.fmd#.copy()
+        fmd = self.fmd  # this is needed as createSurvey() and setElec() will recompute fmd
         elec = self.elec.copy()
         if self.typ[-1]=='t' and not self.hasElecString():
             #need to add elec strings to labels if in 3D
@@ -6454,14 +6463,11 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise/100)
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
-        self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
+        self.setElec(elec) # using Project.createSurvey() overwrite self.elec so we need to set it back
         self.surveys[0].computeK()  # need to recompute K with the new electrode given by setElec()
         self.surveys[0].df['app'] = self.surveys[0].df['K']*self.surveys[0].df['resist']  # and recompute app
-        # self.fmd = fmd      
+        self.fmd = fmd      
 
-        # recompute doi (don't actually otherwise zlim is jumping)
-        # self.computeFineMeshDepth()
-        # self.zlim[0] = np.min(elec['z']) - self.fmd
         if iplot is True:
             self.showPseudo()
             
@@ -7516,8 +7522,8 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 fname = mesh.mesh_title + '.vtk'
             file_path = os.path.join(dirname, fname) 
-            if self.trapeziod is not None and self.pseudo3DMeshResult is None:
-                meshcopy = meshcopy.crop(self.trapeziod)
+            if self.trapezoid is not None and self.pseudo3DMeshResult is None:
+                meshcopy = meshcopy.crop(self.trapezoid)
             elif '3' in self.typ and self.param['num_xy_poly'] > 2: 
                 meshcopy = meshcopy.crop(self.param['xy_poly_table'])
                 meshcopy.elec = None 
@@ -7526,8 +7532,8 @@ class Project(object): # Project master class instanciated by the GUI
                 else: 
                     meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
                                                            self.param['zmax']])
-            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
-                meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapezoid is not None:
+                meshcopy = meshcopy.crop(self.projs[count-1].trapezoid)
                 
             meshcopy.vtk(file_path, title=mesh.mesh_title) # save to vtk 
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
@@ -7641,8 +7647,8 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 fname = mesh.mesh_title + ext 
             file_path = os.path.join(dirname, fname) 
-            if self.trapeziod is not None and self.pseudo3DMeshResult is None:
-                meshcopy = meshcopy.crop(self.trapeziod)
+            if self.trapezoid is not None and self.pseudo3DMeshResult is None:
+                meshcopy = meshcopy.crop(self.trapezoid)
             elif '3' in self.typ and self.param['num_xy_poly'] > 2: 
                 meshcopy = meshcopy.crop(self.param['xy_poly_table'])
                 meshcopy.elec = None 
@@ -7651,8 +7657,8 @@ class Project(object): # Project master class instanciated by the GUI
                 else: 
                     meshcopy = meshcopy.truncateMesh(zlim=[self.param['zmin'],
                                                            self.param['zmax']])
-            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
-                meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapezoid is not None:
+                meshcopy = meshcopy.crop(self.projs[count-1].trapezoid)
                 
             # convert to utm if needed (not for psuedo3d, that'll be handled differently)
             if self.coordLocal and self.pseudo3DMeshResult is None: 
@@ -7937,7 +7943,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
 
     def showParam(self):
-        """Print parameters in `R2.param` dictionary.
+        """Print parameters in `Project.param` dictionary.
         """
         [print(key) for i,key in enumerate(self.param)]
 

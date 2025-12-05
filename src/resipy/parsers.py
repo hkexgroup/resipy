@@ -8,7 +8,7 @@ and electrode positions as numpy.array
 """
 import os, warnings, struct, re, io, chardet 
 import numpy as np
-import pandas as pd 
+import pandas as pd
 from scipy.spatial import cKDTree 
 
 #%% function to compute geometric factor - Jamyd91
@@ -3131,17 +3131,39 @@ def lippmannParser(fname):
     elec_lineNum_e = [i-1 for i in range(len(dump)) if '* Remote electrode positions *' in dump[i]]
     elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
     
+    #finding remote electrodes
+    pp_flag = False
+    pdp_flag = False
+    if 'Electrode remote' in dump[elec_lineNum_e[0]+2]: # we have remote electrodes
+        remote_elec_lineNum_s = elec_lineNum_e[0]+2
+        remote_elec_lineNum_e = [i-1 for i in range(len(dump)) if '* Moving array settings *' in dump[i]][0]
+        pole1 = np.array([-99999, 0, 0])
+        pole2 = np.array([99999, 0, 0])
+        if remote_elec_lineNum_e - remote_elec_lineNum_s > 4: # pole-pole array
+            pp_flag = True
+            current_remote = dump[remote_elec_lineNum_s].split('remote ')[1][0].lower()
+            potential_remote = dump[remote_elec_lineNum_e].split('remote ')[1][0].lower()
+        else:
+            pdp_flag = True
+            current_remote = dump[remote_elec_lineNum_s].split('remote ')[1][0].lower()
+
     try: 
-        elec_raw = pd.read_csv(fname, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+        elec_raw = pd.read_csv(fname, sep='=', skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[1].str.replace(',', '.')
+        # elec_raw = pd.read_csv(fname, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
     except: #probably the problem is encoding. Doing this way because it's slow!
         with open(fname, 'rb') as f:
             result = chardet.detect(f.read()) 
-        elec_raw = pd.read_csv(fname, encoding=result['encoding'], skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+        elec_raw = pd.read_csv(fname, sep='=', encoding=result['encoding'], skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[1].str.replace(',', '.')
+        # elec_raw = pd.read_csv(fname, encoding=result['encoding'], skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
         encodingFlag = True
         
     elec = np.array(elec_raw.str.split(expand=True).astype(float))
-    
-    #for pole-pole and pole-dipole arrays
+    if pp_flag:
+        elec = np.vstack((pole1, elec, pole2))
+    elif pdp_flag:
+        elec = np.vstack((pole1, elec))
+
+    #for pole-pole and pole-dipole arrays that by default have the flags
     elec[elec > 9999] = 999999
     elec[elec < -9999] = -999999
 
@@ -3149,9 +3171,9 @@ def lippmannParser(fname):
     data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
     data_headers = dump[data_linNum_s[0]+1].split()[1:]
     if encodingFlag:
-        df = pd.read_csv(fname, encoding=result['encoding'], delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
+        df = pd.read_csv(fname, encoding=result['encoding'], sep=r'\s+', skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
     else:
-        df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1)
+        df = pd.read_csv(fname, sep=r'\s+', skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1)
     df = df.rename(columns={'A':'a',
                             'B':'b',
                             'M':'m',
@@ -3175,7 +3197,27 @@ def lippmannParser(fname):
     else:
         df = df[['a','b','m','n','i','vp']]
         df['ip'] = 0
+    
+    df[['i','vp','ip']] = df[['i','vp','ip']].astype(str)
+    df[['i','vp','ip']] = df[['i','vp','ip']].apply(lambda x: x.str.replace(',', '.'))
+    df[['i','vp','ip']] = df[['i','vp','ip']].apply(pd.to_numeric, errors='coerce')
+    
+    #replacing remote electrodes "-" with electrode numbers
+    if pp_flag:
+        df[current_remote] = np.ones_like(df[current_remote].values)
+        df[potential_remote] = np.ones_like(df[potential_remote].values)*len(elec)
+        cols = ['a','b','m','n']
+        cols.remove(current_remote)
+        cols.remove(potential_remote)
+        df[cols] += 1
         
+    if pdp_flag:
+        df[current_remote] = np.ones_like(df[current_remote].values)
+        cols = ['a','b','m','n']
+        cols.remove(current_remote)
+        df[cols] += 1
+    
+    
     df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float).reset_index().drop(columns='index')    
     
     #calculations

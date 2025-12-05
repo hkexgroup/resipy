@@ -1502,21 +1502,21 @@ class Mesh:
         self.cellCentres()
         
     #%% mesh display 
-    def _clipContour(self, ax, cont, maxDepth=None):
+    def _clipContour(self, ax, cax, maxDepth=None):
         """Clip contours using mesh bound and surface if available.
         
         Parameters
         ----------
         ax : matplotlib.Axes
             Axis.
-        cont : matplotlib.collections
-            Collection of contours.
+        cax : matplotlib.Artist
+            Artist (Collection) returned.
         maxDepth : float (m), optional
-                Depth of the fine/coarse region in mesh. 
-                If not None: Contour plots will crop out below maxDepth [m].
+            Depth of the fine/coarse region in mesh. 
+            If not None: Contour plots will crop out below maxDepth [m].
         """
         if self.ndims == 3:
-            raise ValueError('Cant clip contour on a 3D mesh')
+            raise ValueError('Cannot clip contour on a 3D mesh')
         # mask outer region
         xmin = np.min(self.node[:,0])
         xmax = np.max(self.node[:,0])
@@ -1536,8 +1536,7 @@ class Mesh:
         path = mpath.Path(verts)
         patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
         ax.add_patch(patch) # need to add so it knows the transform
-        for col in cont.collections:
-            col.set_clip_path(patch)        
+        cax.set_clip_path(patch)     
 
     def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
@@ -1690,21 +1689,21 @@ class Mesh:
             elec_x = self.elec[:,0][~iremote]
             if xlim==None:
                 xlim=[min(elec_x),max(elec_x)]
-            if zlim==None:
+            if zlim is None:
                 doiEstimate = 2/3*np.abs(np.min(elec_x) - np.max(elec_x))
                 # longest dipole calculation available in R2 class
-                zlim=[min(self.elec[:,2])-doiEstimate,max(self.elec[:,2])]
+                zlim = [min(self.elec[:,2])-doiEstimate,max(self.elec[:,2])]
         except:
-            if xlim==None:
-                xlim=[min(self.node[:,0]),max(self.node[:,0])]
-            if zlim==None:
-                zlim=[min(self.node[:,2]),max(self.node[:,2])]
+            if xlim is None:
+                xlim = [min(self.node[:,0]),max(self.node[:,0])]
+            if zlim is None:
+                zlim = [min(self.node[:,2]),max(self.node[:,2])]
 
         if np.diff(xlim) == 0: # protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
         if np.diff(zlim) == 0:
             zlim=[zlim[0]-2,zlim[1]+2]
-                
+
         ##plot mesh! ##
         #compile mesh coordinates into polygon coordinates  
         nodes = np.array([self.node[:,0],self.node[:,2]]).T
@@ -1810,11 +1809,15 @@ class Mesh:
 
         #biuld alpha channel if we have sensitivities 
         if sens:
-            if 'Sensitivity(log10)' not in self.df.keys():
+            if 'Scaled_Sensitivity(log10)' not in self.df.keys() and 'Sensitivity(log10)' not in self.df.keys():
                 print('ERROR: No sensitivity attribute found')
             else:
                 try:
-                    weights = np.array(self.df['Sensitivity(log10)']) #values assigned to alpha channels 
+                    if'Scaled_Sensitivity(log10)' in self.df.keys():
+                        sensColumn = 'Scaled_Sensitivity(log10)'
+                    else:
+                        sensColumn = 'Sensitivity(log10)'
+                    weights = np.array(self.df[sensColumn]) #values assigned to alpha channels 
                     if maxDepth is not None:
                         weights = weights[ikeep]
                     if sensPrc is None:

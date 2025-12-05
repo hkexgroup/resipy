@@ -672,6 +672,7 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, '*.resipy')
             if fname != '':
                 try:
+                    self.restartFunc()
                     self.loadingWidget('Loading Project, please wait...', False)
                     k = Project(dirname=self.newwd)
                     k.loadProject(fname)
@@ -725,7 +726,7 @@ class App(QMainWindow):
                             self.topoTable.initTable(self.project.topo.values)
                     else:
                         self.topoTable.initTable(np.array([['',''],['','']]))
-
+                    
                     # display pseudo-section and filtering graphs
                     self.settingUI()
 
@@ -1350,12 +1351,12 @@ class App(QMainWindow):
                 self.ftype = 'Electra'
                 self.fformat = 'Ele (*.ele)'
             elif index == 14:
-                self.ftype = 'Custom'
-                self.tabImporting.setCurrentIndex(2) # switch to the custom parser
-            elif index == 15:
                 self.ftype = 'Merged'
                 self.fformat = 'Files (*.csv *.CSV *.txt *.TXT)'
                 self.iMerged = True
+            elif index == 15:
+                self.ftype = 'Custom'
+                self.tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
                 self.ftype = '' # let to be guessed
         self.ftypeComboLabel = QLabel('File format:')
@@ -1376,8 +1377,8 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('E4D')
         self.ftypeCombo.addItem('DAS-1')
         self.ftypeCombo.addItem('Electra')
-        self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.addItem('Merged')
+        self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
         self.ftypeCombo.setFixedWidth(150)
         self.ftypeCombo.setToolTip('Select data format.')
@@ -2517,8 +2518,6 @@ class App(QMainWindow):
         self.delimiterBox.hide()
 
         self.delimLabel = QLabel('Delimiter:')
-#        delimiterEdit = QLineEdit('')
-#        delimiterEdit.setToolTip(r'For tab delimited data use: \t')
         self.skipRowsLabel = QLabel('Number of header to skip:')
         self.skipRowsEdit = QLineEdit('0')
         self.skipRowsEdit.setValidator(QIntValidator())
@@ -2731,7 +2730,7 @@ class App(QMainWindow):
                     nrows = self.nrowsEdit.text()
                     nrows = None if nrows == '' else int(nrows)
                     espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
-
+    
                     # parse
                     print('delimiter=', delimiter)
                     df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
@@ -2744,17 +2743,18 @@ class App(QMainWindow):
                         df['ip'] = 0
                     elif self.inputPhaseFlag == True:
                         df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
-
+    
                     ################ better method (adopted from syscalParser)
-
+    
                     array = df[['a','b','m','n']].values
-
+    
                     # get unique electrode positions and create ordered labels for them
                     val = np.sort(np.unique(array.flatten()))
                     elecLabel = 1 + np.arange(len(val))
-                    searchsoterdArr = np.searchsorted(val, array)
-                    newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+                    searchsortedArr = np.searchsorted(val, array)
+                    newval = elecLabel[searchsortedArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
                     df.loc[:,['a','b','m','n']] = newval # assign new label
+                    df[['a','b','m','n']] = df[['a','b','m','n']].astype(int)
                     zval = np.zeros_like(val)
                     yval = np.zeros_like(val) # 2D so Y values are all zeros
                     elec = np.c_[val, yval, zval]
@@ -2764,9 +2764,9 @@ class App(QMainWindow):
                     elec[iremote_p1, 0] = -99999
                     iremote_p2 = np.isin(val, remoteFlags_p2)
                     elec[iremote_p2, 0] = 99999
-
+    
                     ##### Old way
-
+    
                     # array = df[['a','b','m','n']].values.copy()
                     # arrayMin = np.min(np.unique(np.sort(array.flatten())))
                     # if arrayMin != 0:
@@ -2778,16 +2778,17 @@ class App(QMainWindow):
                     # imax = int(np.max(array))
                     # elec = np.zeros((imax,3))
                     # elec[:,0] = np.arange(0,imax)*espacing
-
+    
                     ################
-
+    
                     self.nbElecEdit.setText('%s' % (len(elec)))
     #                self.nbElecEdit.setEnabled(False)
                     self.elecDxEdit.setText('%s' % (espacing))
                     self.activateTabs(True)
                     return elec, df
-                except:
+                except Exception as e:
                     self.activateTabs(False)
+                    print('error: ', str(e))
                     self.errorDump("Import Failed: 'nan' values must be removed before importation. Use the 'Number of rows to read or skip' to remove 'nan's.")
             self.parser = parserFunc
 
@@ -2797,7 +2798,7 @@ class App(QMainWindow):
 
             if (self.project.iTimeLapse is False) & (self.project.iBatch is False):
                 self.importFile(self.fnameManual)
-            self.ftypeCombo.setCurrentIndex(12)
+            self.ftypeCombo.setCurrentIndex(15)
             self.tabImporting.setCurrentIndex(0)
 
         self.importBtn = QPushButton('Import Dataset')
@@ -3853,12 +3854,15 @@ class App(QMainWindow):
                 self.meshOutputStack.setCurrentIndex(2)
             else: # 2D mesh
                 def func(ax):
-                    self.project.createModel(ax=ax, addAction=self.regionTable.addRow)
+                    self.project.createModel(ax=ax, addAction=replotMeshActions)
                 self.mwMesh.plot(func, aspect=aspect)
                 self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
                 self.mwMesh.canvas.setFocus() # set focus on the canvas
                 self.meshOutputStack.setCurrentIndex(1)
-                
+        
+        def replotMeshActions(): # HOTFIX: need to call this during interactive mesh design so regions numbers on the cBar are discrete
+            self.regionTable.addRow()
+            replotMesh()
                 
         def replotMesh3D(): 
             if self.project.mesh is None: 
@@ -5854,7 +5858,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # add option to look up starting resistivities from psuedo section 
         self.pseudoStartLabel = QLabel('<a href="pseudo_start">Starting model from pseudo section</a>:')
         self.pseudoStartCheck = QCheckBox()
-        self.pseudoStartCheck.setChecked(True)
+        self.pseudoStartCheck.setChecked(False)
         self.pseudoStartLabel.linkActivated.connect(showHelp)
         invForm.addRow(self.pseudoStartLabel, self.pseudoStartCheck)
 
@@ -6128,7 +6132,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
                 # self.project.invert(iplot=False, dump=logTextFunc,
                 #                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
-                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s}, errResCol={:s}, errIPCol={:s}, pseudoStart = {:s}'.format(
+                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s}, errResCol={:s}, errIPCol={:s}, pseudoStart = {:s})'.format(
                     str(modErr), str(parallel), str(modelDOI), str(errResCol), str(errIPCol), str(pseudoStart)))
 
                 self.thread.finished.connect(afterInversion)
@@ -7556,15 +7560,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             col = 'white'
             bcol = 'red'
             pdebug('errorDump:', text)
+            self.errorLabel.setStyleSheet('QLabel{background:' + bcol + ';}')
         else:
             if resipySettings.param['dark'] == 'True':
                 col = 'white'
-                bcol = 'black'
             else:
                 col = 'black'
-                bcol = 'white'
             pdebug('infoDump:', text)
-        self.errorLabel.setStyleSheet('QLabel{background:' + bcol + ';}') #'font-weight:bold'
+            self.errorLabel.setStyleSheet('') #'font-weight:bold'
         self.errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         self.timer.timeout.connect(partial(self.timeOut, timeStamp))
         self.timer.start(10000) # 10 secs - making sure the error/message doen't stick forever!
@@ -7907,7 +7910,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 spacing = None
             else:
                 spacing = float(self.spacingEdit.text())
-
+    
             self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                  parser=self.parser)
             self.writeLog('k.createSurvey("{:s}", ftype="{:s}")'.format(self.fname, self.ftype))
@@ -7974,7 +7977,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.elecTable.initTable(self.project.elec)
         self.tabImporting.setTabEnabled(1,True)
-        if 'ip' in self.project.surveys[0].df.columns:
+        
+        if 'ip' in self.project.surveys[0].df.columns and self.project.typ[0] == 'c':
             if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                 self.ipCheck.setChecked(True)
                 self.plotPseudoIP()
