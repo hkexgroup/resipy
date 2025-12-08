@@ -5297,7 +5297,8 @@ class Project(object): # Project master class instanciated by the GUI
         _ = errfiles.pop(0)
         for f in errfiles:
             _df = np.genfromtxt(f, skip_header=1)
-            errdf = np.vstack([errdf, _df])
+            if _df.shape[0] > 0: 
+                errdf = np.vstack([errdf, _df])
         
         robs = errdf[:, iobs]
         rcal = errdf[:, ical]
