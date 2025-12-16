@@ -7110,7 +7110,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
         # force local grid output in the UI
         if _forceLocal and self.coordLocal:
-            self.mesh.exportMesh(outputname,False,self.coordParam, voxel)
+            self.mesh.exportMesh(outputname, None, False, self.coordParam, voxel)
             return 
             
         self.mesh.exportMesh(outputname, None, self.coordLocal,self.coordParam, voxel)

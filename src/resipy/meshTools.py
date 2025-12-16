@@ -3504,7 +3504,7 @@ class Mesh:
         
     def toVoxelMesh(self, elec=None, elec_type=None, **kwargs):
         """
-        Returns a special kind of mesh optimised for visualasation inside of 
+        Returns a special kind of grid mesh optimised for visualasation inside of 
         GIS software like Geovisionary. 
 
         Parameters
@@ -3539,6 +3539,7 @@ class Mesh:
             elec_x = elec.x.values 
             elec_y = elec.y.values 
             elec_z = elec.z.values 
+            
         if elec_type is None:
             elec_type = self.elec_type 
         
@@ -4105,18 +4106,22 @@ class Mesh:
             else:
                 coordParam['x0'] = np.min(self.node[:,0])
                 coordParam['y0'] = np.min(self.node[:,1])
-        
+
         kwargs = {} 
+        if self.elec is not None:
+            dist = np.unique(findDist(self.elec[:,0], self.elec[:,1], self.elec[:,2]))[1]
+            kwargs['cl'] = dist/2 
+        
         kwargs['cl_factor'] = 1 # force mesh to the extent of the electrodes 
         if meshParam is not None: 
             if 'cl' in meshParam.keys():
                 kwargs['cl'] = meshParam['cl']
             if 'fmd' in meshParam.keys():
                 kwargs['fmd'] = meshParam['fmd']
-                
-        if self.elec is not None:
-            dist = np.unique(findDist(self.elec[:,0], self.elec[:,1], self.elec[:,2]))[1]
-            kwargs['cl'] = dist/2 
+            if 'surface' in meshParam.keys():
+                kwargs['surface_refinement'] = meshParam['surface']
+            if 'surface_refinement' in meshParam.keys():
+                kwargs['surface_refinement'] = meshParam['surface_refinement']
                 
         if voxel: 
             mesh = self.toVoxelMesh(**kwargs)
@@ -6473,15 +6478,14 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     if whole_space:
         warnings.warn('Voxel mesh is not yet fully tested for whole space problems')
         interp_method = None 
-        
-    if surface_refinement is not None:
-        surf_x = surface_refinement[:,0]
-        surf_y = surface_refinement[:,1]
-        surf_z = surface_refinement[:,2]
-    else:
-        surf_x = []
-        surf_y = []
-        surf_z = []
+
+    if all(elec_y[0] == np.array(elec_y)):
+        flag3d = False  
+        dump('Running voxel mesh node generation (2D)...')
+    else: 
+        flag3d = True 
+        dump('Running voxel mesh node generation (3D)...')
+
     
     # setup electrodes 
     if elec_z is None:
@@ -6492,6 +6496,47 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         
     elec = np.c_[elec_x,elec_y,elec_z]
     elec_cache = elec.copy() 
+
+    ## mesh param 
+    dp_len = np.max(findDist(elec_x, elec_y, elec_z))
+    tree = cKDTree(elec) 
+    idist,_ = tree.query(elec,2) 
+
+    if 'cl' in kwargs.keys(): 
+        cl = kwargs['cl']
+    else: 
+        cl = min(idist[:,1])/4 
+    
+    if 'fmd' in kwargs.keys() and kwargs['fmd'] is not None: # compute depth of investigation if not given 
+        fmd = kwargs['fmd']
+    else:
+        fmd = dp_len/3 # maximum possible dipole length / 3
+        if whole_space: 
+            fmd = abs(max(elec_z) - min(elec_z))*1.1 
+    
+    if 'cl_factor' in kwargs.keys() and kwargs['cl_factor'] is not None:
+        cl_factor = kwargs['cl_factor']
+    else:
+        cl_factor = 5 
+        
+    if 'force_regular' in kwargs.keys():
+        force_regular = kwargs['force_regular']
+    else:
+        force_regular = False 
+        
+    if surface_refinement is not None:
+        surf_x = surface_refinement[:,0]
+        surf_y = surface_refinement[:,1]
+        surf_z = surface_refinement[:,2]
+        dump('Using additional surface refinement!')
+    else:
+        surf_x = []
+        surf_y = []
+        surf_z = []
+        # dump('no additional surface refinement used')
+
+    dump('Characteristic length = {:}'.format(cl))
+    dump('Mesh depth = {:}'.format(fmd))
     
     rem_elec_idx = []
     if elec_type is not None and not whole_space:
@@ -6553,9 +6598,8 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
             interp_method = 'nearest'
     
     if all(y_interp==y_interp[0]): # cant interpolate if on one plane 
-        interp_method = 'nearest'
-    
-    if interp_method is None:
+        elec_z_topo = np.interp(elec_x, x_interp, z_interp)
+    elif interp_method is None:
         elec_z_topo = np.zeros_like(elec_x) # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
     elif interp_method == 'bilinear': 
         elec_z_topo = interp.interp2d(elec_x, elec_y, x_interp, y_interp, z_interp)
@@ -6565,39 +6609,12 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         elec_z_topo = interp.interp2d(elec_x, elec_y, x_interp, y_interp, z_interp, method='spline')
     elif interp_method == 'triangulate':
         elec_z_topo = interp.triangulate(elec_x, elec_y, x_interp, y_interp, z_interp)
-        
-    ## mesh param 
-    dp_len = np.max(findDist(elec_x, elec_y, elec_z))
-    tree = cKDTree(elec) 
-    idist,_ = tree.query(elec,2) 
-    
-    if 'cl' in kwargs.keys(): 
-        cl = kwargs['cl']
-    else: 
-        cl = min(idist[:,1])/4 
-    
-    if 'fmd' in kwargs.keys() and kwargs['fmd'] is not None: # compute depth of investigation if not given 
-        fmd = kwargs['fmd']
-    else:
-        fmd = dp_len/3 # maximum possible dipole length / 3
-        if whole_space: 
-            fmd = abs(max(elec_z) - min(elec_z))*1.1 
-    
-    if 'cl_factor' in kwargs.keys() and kwargs['cl_factor'] is not None:
-        cl_factor = kwargs['cl_factor']
-    else:
-        cl_factor = 5 
-        
-    if 'force_regular' in kwargs.keys():
-        force_regular = kwargs['force_regular']
-    else:
-        force_regular = False 
 
     elec_z = elec_z - elec_z_topo
     elec_z = np.round(elec_z,6) # nuke near zero values 
-    
+        
     ## node generation algorithm 
-    dump('Running voxel mesh node generation...')
+
     # generate x - y plane first, will add topo later 
     ex = np.unique(elec_x).tolist()
     ey = np.unique(elec_y).tolist()
@@ -6607,7 +6624,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     ey = [ey[0] - cl*cl_factor] + ey 
     ey = ey + [ey[-1] + cl*cl_factor]
     ez = [max(ez) - fmd] + ez 
-    
+
     ## insert x values 
     xx = []
     x = min(ex)
@@ -6623,6 +6640,10 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     ## insert y values 
     yy = []
     y = min(ey)
+    if not flag3d: #triggers for 2d mode 
+        ey = [0]
+        yy = [0]
+
     for i in range(1,len(ey)):
         while ey[i] > y:
             y += cl 
@@ -6664,7 +6685,9 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
         interp_method = None 
         
     #using home grown functions to interpolate / extrapolate topography on mesh
-    if interp_method == 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
+    if all(y_interp==y_interp[0]): # cant interpolate if on one plane 
+        mesh_z_topo = np.interp(node[:,0], x_interp, z_interp)
+    elif interp_method == 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
         mesh_z_topo = interp.interp2d(node[:,0], node[:,1], x_interp, y_interp, z_interp)
     elif interp_method == 'nearest':
         mesh_z_topo = interp.nearest(node[:,0], node[:,1], x_interp, y_interp, z_interp)
@@ -6679,22 +6702,35 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     ## generate elements 
     # map the 8 nodes surrounding every element 
     nid = np.arange(numnp)
-    numel = (len(xx)-1)*(len(yy)-1)*(len(zz)-1)
-    nmesh = nid.reshape(meshx.shape) # node mesh 
-    connec = np.zeros((numel,8),dtype=int)-1
-    
     ii = 0 
-    for i in range(nmesh.shape[0]-1):
-        for j in range(nmesh.shape[1]-1):
-            for k in range(nmesh.shape[2]-1):
-                connec[ii,0] = nmesh[i,j,k]
-                connec[ii,1] = nmesh[i+1,j,k]
-                connec[ii,2] = nmesh[i,j+1,k]
-                connec[ii,3] = nmesh[i+1,j+1,k]
-                connec[ii,4] = nmesh[i,j,k+1]
-                connec[ii,5] = nmesh[i+1,j,k+1]
-                connec[ii,6] = nmesh[i,j+1,k+1]
-                connec[ii,7] = nmesh[i+1,j+1,k+1]
+    if flag3d:  
+        cell_type = [11]
+        numel = (len(xx)-1)*(len(yy)-1)*(len(zz)-1)
+        nmesh = nid.reshape(meshx.shape) # node mesh 
+        connec = np.zeros((numel,8),dtype=int)-1
+        for i in range(nmesh.shape[0]-1):
+            for j in range(nmesh.shape[1]-1):
+                for k in range(nmesh.shape[2]-1):
+                    connec[ii,0] = nmesh[i  , j  , k  ]
+                    connec[ii,1] = nmesh[i+1, j  , k  ]
+                    connec[ii,2] = nmesh[i  , j+1, k  ]
+                    connec[ii,3] = nmesh[i+1, j+1, k  ]
+                    connec[ii,4] = nmesh[i  , j  , k+1]
+                    connec[ii,5] = nmesh[i+1, j  , k+1]
+                    connec[ii,6] = nmesh[i  , j+1, k+1]
+                    connec[ii,7] = nmesh[i+1, j+1, k+1]
+                    ii += 1 
+    else: 
+        cell_type = [11]
+        numel = (len(xx)-1)*(len(zz)-1)
+        nmesh = nid.reshape(meshx.shape) # node mesh 
+        connec = np.zeros((numel,4),dtype=int)-1
+        for i in range(nmesh.shape[0]-1):
+            for j in range(nmesh.shape[2]-1):
+                connec[ii,0] = nmesh[i  , 0, j  ]
+                connec[ii,1] = nmesh[i+1, 0, j  ]
+                connec[ii,2] = nmesh[i  , 0, j+1]
+                connec[ii,3] = nmesh[i+1, 0, j+1]
                 ii += 1 
                 
     dump('Mesh consists of %i nodes and %i elements'%(numnp,numel)) 
@@ -6706,7 +6742,7 @@ def voxelMesh(elec_x, elec_y, elec_z=None, elec_type = None, keep_files=True,
     ## make mesh class    
     mesh = Mesh(node[:,0], node[:,1], node[:,2], 
                 connec,
-                cell_type=[11],
+                cell_type=cell_type,
                 original_file_path='N/A',
                 order_nodes=False) 
     
