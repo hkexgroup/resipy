@@ -37,4 +37,4 @@ six==1.16.0
 tzdata==2023.4
 urllib3==2.2.0
 vtk==9.3.0
-wheel==0.41.2
+wheel==0.38.1
