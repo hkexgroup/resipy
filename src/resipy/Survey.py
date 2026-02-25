@@ -2650,6 +2650,9 @@ class Survey(object):
             # select half of paired and all non-paired quadrupoles
             ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
             df = self.df[ie]
+        elif len(isubset) == 0: 
+            ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
+            df = self.df[ie]
         else:
             if isinstance(isubset[0], bool): 
                 df = self.df[isubset]

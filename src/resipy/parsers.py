@@ -2253,41 +2253,42 @@ def res2invInputParser(file_path):
     fmt_flag = True
             
     topo_flag_idx = idx_oi + num_meas
-    try:
-        int(dump[topo_flag_idx])#hot fix
-    except ValueError:
-        topo_flag_idx+=1
-    
-    if int(dump[topo_flag_idx]) == 2 :#if we have topography then we should read it into the API
-        topo_flag = True
-        num_elec_topo =  int(dump[topo_flag_idx+1])
-        ex_pos_topo=[0]*num_elec_topo
-        ez_pos_topo=[0]*num_elec_topo 
-        ey_pos=[0]*num_elec # actaully we can't have a y coordinate for 2d data so these will remain as zero
-        ez_pos=[0]*num_elec 
+    if len(dump) > topo_flag_idx: # in case there are no usual zeros at the end of the file (i.e., no topography at the end)
+        try:
+            int(dump[topo_flag_idx])#hot fix
+        except ValueError:
+            topo_flag_idx+=1
         
-        for i in range(num_elec_topo):
-            e_pos_topo_str = dump[topo_flag_idx+2+i].strip()
-            e_pos_topo_vals = re.findall(r'[-+]?\d*\.\d+|\d+', e_pos_topo_str)
-#            e_pos_topo_vals = re.split(';|,|, | , | |    |\t', e_pos_topo_str)
-            ex_pos_topo[i] = float(e_pos_topo_vals[0])
-            ez_pos_topo[i] = float(e_pos_topo_vals[1])
+        if int(dump[topo_flag_idx]) == 2 :#if we have topography then we should read it into the API
+            topo_flag = True
+            num_elec_topo =  int(dump[topo_flag_idx+1])
+            ex_pos_topo=[0]*num_elec_topo
+            ez_pos_topo=[0]*num_elec_topo 
+            ey_pos=[0]*num_elec # actaully we can't have a y coordinate for 2d data so these will remain as zero
+            ez_pos=[0]*num_elec 
             
-        # finding common topography points
-        elecdf = pd.DataFrame()
-        elecdf['x'] = ex_pos
-        elecdf['z_i'] = ez_pos
-        
-        elecdf_topo = pd.DataFrame()
-        elecdf_topo['x'] = ex_pos_topo
-        elecdf_topo['z_topo'] = ez_pos_topo
-        
-        if len(elecdf) != len(elecdf_topo):
-            elecdf_merged = pd.merge(elecdf.copy(), elecdf_topo.copy(), how='left', on=['x'])
-            ez_pos = np.array(elecdf_merged['z_topo'])
-        else:
-            ex_pos = ex_pos_topo.copy()
-            ez_pos = ez_pos_topo.copy()        
+            for i in range(num_elec_topo):
+                e_pos_topo_str = dump[topo_flag_idx+2+i].strip()
+                e_pos_topo_vals = re.findall(r'[-+]?\d*\.\d+|\d+', e_pos_topo_str)
+    #            e_pos_topo_vals = re.split(';|,|, | , | |    |\t', e_pos_topo_str)
+                ex_pos_topo[i] = float(e_pos_topo_vals[0])
+                ez_pos_topo[i] = float(e_pos_topo_vals[1])
+                
+            # finding common topography points
+            elecdf = pd.DataFrame()
+            elecdf['x'] = ex_pos
+            elecdf['z_i'] = ez_pos
+            
+            elecdf_topo = pd.DataFrame()
+            elecdf_topo['x'] = ex_pos_topo
+            elecdf_topo['z_topo'] = ez_pos_topo
+            
+            if len(elecdf) != len(elecdf_topo):
+                elecdf_merged = pd.merge(elecdf.copy(), elecdf_topo.copy(), how='left', on=['x'])
+                ez_pos = np.array(elecdf_merged['z_topo'])
+            else:
+                ex_pos = ex_pos_topo.copy()
+                ez_pos = ez_pos_topo.copy()
        
     #add some protection against a dodgey file 
     if fmt_flag is False:

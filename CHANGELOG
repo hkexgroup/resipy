@@ -1,3 +1,20 @@
+v3.6.6
+------
+- Fix banding in 3D columns mesh (disable pseudoStart by default)
+- Add OhmPi parser
+- Fix Lippmann parser to support remote electrodes
+- Fix custom parser
+- Fix backwards compatibility for Project.createSequence() arguments
+- Fix Project.saveProject() Numpy int64 issue
+- Tweaks to meshing modules to enable the import of large meshes
+- Fix nearest3d throwing a non finite value error
+- Various bug and stability fixes with mesh 3D generation
+- Fix loading saved 3D project file without IP data
+- Fix clipCorners not working on contoured mesh
+- Fix fmd change after forward modeling
+- Update sensitivity overlay and estimated DOI to the scaled sensitivity
+
+
 v3.6.3
 ------
 - Added module sequence generation (min/max a, n or s parameters)
