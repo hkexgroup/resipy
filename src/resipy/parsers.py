@@ -3670,6 +3670,7 @@ def ohmpiParser(fname):
     df = df.rename(columns={
         'r_[Ohm]': 'resist', 
         'r_std_[%]': 'dev',
+        'sp_[mV]': 'sp',
     })
     df['cR'] = df['rab_[kOhm]']/2
     emax = np.max(df[['a', 'b', 'm', 'n']].values)
