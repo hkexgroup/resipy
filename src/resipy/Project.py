@@ -5177,12 +5177,13 @@ class Project(object): # Project master class instanciated by the GUI
             initMesh.setElec(elec_x, elec_y, elec_z)
             initMesh.mesh_title = 'Forward Model'
             self.meshResults.append(initMesh)
-
+            
         for i in range(len(self.surveys)):
             if self.iTimeLapse is True:
                 j = i + 1
             else:
                 j = i
+
             fname = os.path.join(dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fname):
                 try:
@@ -5195,14 +5196,17 @@ class Project(object): # Project master class instanciated by the GUI
                     #TODO : Rethink storage of timelapse results 
                     idone += 1
                 except Exception as e:
+                    # (uncomment for error readout)
+                    # print('failure on %s: '%self.surveys[j].name)
+                    # print(e)
                     ifailed += 1
                     # print(e)
                     # if inversion fails in time-lapse it's that the initial
                     # model is good enough to explain the data (a_wgt/b_wgt
                     # error too low) so we can replace it by the initial model
                     if self.iTimeLapse:
-                        self.meshResults.append(mesh0) 
-                        self.meshResults[-1].mesh_title = self.surveys[j].name
+                        self.meshResults.append(mesh0.copy()) 
+                        self.meshResults[j].mesh_title = self.surveys[j].name
                 print('\r{:d}/{:d} results parsed ({:d} ok; {:d} failed)'.format(
                     j+1, len(self.surveys), idone, ifailed), end='')
             else:

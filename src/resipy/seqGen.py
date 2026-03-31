@@ -1039,7 +1039,7 @@ class Generator():
                     fh.write('%i '%n)
                 fh.write('\n')
                 cl+=1
-                if cl>=900:
+                if cl>=950:
                     fh.close() # close the file
                     cf += 1
                     fname = fnames[i].replace(fext, '_p{:0>2d}'.format(cf)+fext)
