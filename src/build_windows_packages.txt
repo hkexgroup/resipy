@@ -33,6 +33,6 @@ six==1.14.0
 uncertainties==3.1.2
 urllib3==1.25.9
 vtk==8.1.2
-wheel==0.34.2
+wheel==0.38.1
 wincertstore==0.2
 zipp==3.1.0
