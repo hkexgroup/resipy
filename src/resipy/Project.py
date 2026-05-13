@@ -586,9 +586,16 @@ class Project(object): # Project master class instanciated by the GUI
         elec : dataframe
             remote flag added to electrodes
         """
-        remote_flags = [-9999999, -999999, -99999,-9999,-999, 9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes. both + and - values are needed for pole-pole
-        iremote = np.isin(elec['x'].values, remote_flags)
-        iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
+        if "remote" in elec.columns: # remote column already present 
+            iremote = np.array([False]*len(elec))
+            for i in range(len(elec)):
+                rval = elec["remote"][i]
+                if (rval == True) or (rval == 1):
+                    iremote[i] = True 
+        else: # look for remote values in the x coordinates 
+            remote_flags = [-9999999, -999999, -99999,-9999,-999, 9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes. both + and - values are needed for pole-pole
+            iremote = np.isin(elec['x'].values, remote_flags)
+            iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
         elec['remote'] = iremote
         if np.sum(iremote) > 0:
             print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
@@ -2272,6 +2279,112 @@ class Project(object): # Project master class instanciated by the GUI
             meshMerged = mt.mergeMeshes(meshOutList)
             meshMerged.ndims = 3
             self.pseudo3DMeshResult = meshMerged
+
+    
+    def getPseudo3DMeshResult(self,cropMesh=True, cropMaxDepth=False, 
+                              clipCorners=False):
+        
+        """Get merged mesh result from pseudo 3D inversion. 
+        
+        Parameters
+        ----------
+        meshList : list of Mesh classes
+            If not None, pseudo 3D meshes will be plotted by default.
+        cropMesh : bool, optional
+            If True, 2D mesh will be bound to electrodes and zlim.
+        cropMaxDepth : bool, optional
+            If True, region below fine mesh depth (fmd) will be cropped.
+        clipCorners : bool, optional
+            If 'True', triangles from bottom corners will be cropped (only if the whole mesh is not shown).
+        
+        Returns 
+        -------
+        Mesh : meshTools.mesh 
+            Mesh object. 
+        """ 
+
+        meshList = [deepcopy(p.meshResults[0]) for p in self.projs]
+        elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
+        meshOutList = []
+            
+        for proj, elecdf, mesh in zip(self.projs, elecList, meshList):
+            if mesh is None:
+                print('Mesh undefined for this project!')
+                continue
+
+            if cropMesh:
+                node_x = mesh.node[:,0]
+                node_z = mesh.node[:,2]
+                xmin = np.min(node_x)
+                xmax = np.max(node_x)
+                zmin = np.min(node_z)
+                zmax = np.max(node_z)
+                (xsurf, zsurf) = mesh.extractSurface()
+                if cropMaxDepth and proj.fmd is not None:
+                    xfmd, zfmd = xsurf[::-1], zsurf[::-1] - proj.fmd
+                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
+                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zfmd, zmin]]
+                else:
+                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+                mesh = mesh.crop(verts)
+            
+            if clipCorners and proj.param['num_xz_poly'] != 0: # not clipping the corners of a mesh outside of the survey area!
+                elec_x = mesh.elec[:,0]
+                elec_z = mesh.elec[:,2]
+                elec_xmin = np.min(elec_x)
+                elec_xmax = np.max(elec_x)
+                if cropMaxDepth and proj.fmd is not None:
+                    zminl = elec_z[elec_x.argmin()] - proj.fmd
+                    zminr = elec_z[elec_x.argmax()] - proj.fmd
+                elif cropMaxDepth is False and proj.fmd is not None:
+                    zminl = zminr = np.min(elec_z) - proj.fmd
+                else:
+                    zminl = zminr = zmin
+                zmaxl = elec_z[elec_x.argmin()]
+                zmaxr = elec_z[elec_x.argmax()]
+                ll = np.abs(zmaxl - zminl)
+                lr = np.abs(zmaxr - zminr)
+                lx = np.abs(elec_xmin - elec_xmax)
+                if ll >= lx/4:
+                    ll = lx/4
+                if lr >= lx/4:
+                    lr = lx/4
+    
+                # surf bound to elecs
+                elec_surf = np.c_[xsurf, zsurf][(np.abs(xsurf - elec_xmin)).argmin():
+                                                (np.abs(xsurf - elec_xmax)).argmin(),:]
+                idxl = (np.abs(elec_surf[:,0] - ll)).argmin()
+                idxr = (np.abs(elec_surf[:,0] - np.abs(elec_xmax - lr))).argmin() + 1       
+                xtrapbot = elec_surf[idxl:idxr,0]
+                if cropMaxDepth and proj.fmd is not None:
+                    ztrapbot = elec_surf[idxl:idxr,1] - proj.fmd
+                else:
+                    ztrapbot = np.ones_like(xtrapbot) * zminl
+                    
+                proj.trapezoid = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+                                  np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
+                mesh = mesh.crop(proj.trapezoid)
+            
+            else:
+                proj.trapezoid = None # make sure trapezoid mask is clear
+
+            meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
+            
+            # if cropMesh:
+            #     limits = np.c_[meshMoved.elec[:,0][~meshMoved.iremote], meshMoved.elec[:,1][~meshMoved.iremote]]
+            # else:
+            #     limits = np.c_[meshMoved.node[:,0], meshMoved.node[:,1]]
+
+            meshMoved.ndims = 3 # overwrite dimension to use show3D() method
+            meshOutList.append(meshMoved)
+        
+
+        self.pseudo3DMeshResultList = meshOutList
+        meshMerged = mt.mergeMeshes(meshOutList)
+        meshMerged.ndims = 3
+        self.pseudo3DMeshResult = meshMerged
+        return meshMerged 
     
     
     def _setPseudo3DParam(self, targetProjParams):

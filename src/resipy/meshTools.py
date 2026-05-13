@@ -3206,7 +3206,10 @@ class Mesh:
         else: 
             zone = np.ones(self.numel,dtype=self.dint) 
         
-        nzones = len(np.unique(zone))
+        uzones = np.unique(zone) # unique zones 
+        nzones = len(uzones) # number of zones 
+        if np.max(uzones) > nzones: # catch cases where the zones might not be ordered sequentially 
+            nzones = np.max(uzones) 
             
         adv_flag = int(iadvanced)
         #compute neighbourhood matrix 
@@ -7182,6 +7185,9 @@ def points2vtk (x,y,z,fname="points.vtk",title='points',data=None, file_name=Non
         
     if file_name is not None:
         fname = file_name 
+        
+    if not fname.endswith(".vtk"):
+        fname += ".vtk"
     
     fh=open(fname,'w');#open file handle
     #add header information
@@ -7244,6 +7250,9 @@ def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None
     
     if file_name is not None:
         fname = file_name 
+        
+    if not fname.endswith(".vtp"):
+        fname += ".vtp"
     
     fh = open(fname,'w')
     

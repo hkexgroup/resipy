@@ -1019,7 +1019,7 @@ class Survey(object):
             array = np.asarray(self.isequence - 1, dtype=int)
         
         # print(type(phase))
-        unpackme = computeRecip(array, resist, phase)
+        unpackme = computeRecip(array.copy(), resist.copy(), phase.copy())
         irecip = unpackme[0] 
         reciprocalErr = unpackme[1] 
         reciprocalErrRel = unpackme[2] 
