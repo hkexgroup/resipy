@@ -38,7 +38,7 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
             'header':'Type of measurement (0=app. resistivity,1=resistance)',
             'res_type':1, # default resistance
             'num_meas':0, #number of measurements - to be determined
-            'x_loc_type':2, # != 0 default, 2 for location when there is topography
+            'x_loc_type':0, # 0 = no topography, 2 = topography in separate list (set dynamically below)
             'ip_flag':0, # 0 no IP, 1 with IP.
             'ip_type':'Chargeability', # IP type - default is Chargeability
             'ip_unit':'mV/V', # IP unit - default is mV/V
@@ -53,12 +53,34 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
     for a in dparam:
         if a not in param: # parameter missing
             param[a] = dparam[a]
-            
+
+    # FIX: recompute the smallest electrode spacing from the elec array. The
+    # caller may pass an unreliable value (Project.exportData computes it as
+    # elec[1,0]-elec[0,0], which collapses to ~0 when the first two rows are
+    # coincident or affected by floating-point noise). Res2DInv rejects files
+    # whose header spacing does not match the actual electrode grid.
+    xs = np.unique(np.round(elec[:, 0], 4))
+    diffs = np.diff(xs)
+    diffs = diffs[diffs > 1e-3]
+    if len(diffs) > 0:
+        param['spacing'] = float(np.min(diffs))
+
+    # FIX: set x_loc_type dynamically based on whether topography is present.
+    # The previous unconditional default of 2 produced files that declared
+    # topography in the header without writing the topography section, which
+    # Res2DInv silently rejects.
+    if np.sum(elec[:, 2]) != 0:
+        param['x_loc_type'] = 2
+    else:
+        param['x_loc_type'] = 0
+
     # create header text for .dat file
+    # FIX: format spacing as {:.4f} so it never serializes in scientific
+    # notation (Res2DInv rejects entries like "1.5e-05" on the spacing line).
     content = ''
-    content = content + '{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n'.format(
+    content = content + '{}\n{:.4f}\n{}\n{}\n{}\n{}\n{}\n{}\n'.format(
                         param['lineTitle'],
-                        param['spacing'],
+                        float(param['spacing']),
                         int(param['array_type']),
                         int(param['array_spec']),
                         param['header'],
@@ -78,13 +100,19 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
                             param['ip_spec'])
         
     # formattin measurement points and adding topography info
-    a = df.a#-df.a[0] # -1 for positional issues! first position should be at "0" Updat: NOT NEEDED anymore
+    # FIX: df.a/b/m/n are 1-based integer electrode labels (assigned in
+    # Project.exportData via lookupDict + 1), not coordinates. Map them back
+    # to actual X coordinates from the elec array. The previous code wrote
+    # the raw labels into the position fields, producing files where
+    # electrodes appeared at x = 1, 2, 3... regardless of the real grid.
+    elec_x = elec[:, 0]
+    a = pd.Series(elec_x[df['a'].astype(int).values - 1], index=df.index, name='a')
     az = 0*a.rename('az')
-    b = df.b#-df.a[0]
+    b = pd.Series(elec_x[df['b'].astype(int).values - 1], index=df.index, name='b')
     bz = 0*b.rename('bz')
-    m = df.m#-df.a[0]
+    m = pd.Series(elec_x[df['m'].astype(int).values - 1], index=df.index, name='m')
     mz = 0*m.rename('mz')
-    n = df.n#-df.a[0]
+    n = pd.Series(elec_x[df['n'].astype(int).values - 1], index=df.index, name='n')
     nz = 0*n.rename('nz')
     if 'resist' in df.columns:
         resist = df.resist
@@ -125,7 +153,6 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
         f.write(content)
     
     return content # if needed!
-
 
 def write2csv(fname, dfi, elec, typ='R2'):
     """Writes a clean csv format file.

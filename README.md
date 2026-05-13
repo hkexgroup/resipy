@@ -120,7 +120,7 @@ Y : yes, N : no, - : not applicable, ? : unknwon
 
 |Parser|2D|3D|IP|comments|
 |------|--|--|--|--------|
-|`syscalParser`|Y|Y|Y|separate electrode layout required|
+|`syscalParser`|Y|Y|Y|.bin and .binx files are partially supported|
 |`protocolParser`|Y|Y|Y|`ftype=ProtocolDC` and `ftype=ProtocolIP` required|
 |`primeTabParser`|Y|Y|N||
 |`stingParser`|Y|Y|Y||
