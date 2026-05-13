@@ -2743,7 +2743,7 @@ class App(QMainWindow):
                         df['ip'] = 0
                     elif self.inputPhaseFlag == True:
                         df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
-    
+                        
                     ################ better method (adopted from syscalParser)
     
                     array = df[['a','b','m','n']].values
@@ -2785,6 +2785,7 @@ class App(QMainWindow):
     #                self.nbElecEdit.setEnabled(False)
                     self.elecDxEdit.setText('%s' % (espacing))
                     self.activateTabs(True)
+                    
                     return elec, df
                 except Exception as e:
                     self.activateTabs(False)
@@ -2795,7 +2796,7 @@ class App(QMainWindow):
             # test the parser
             elec, df = parserFunc(self.fnameManual)
             pdebug('custom parserFunc: shapes = ', elec.shape, df.shape)
-
+            
             if (self.project.iTimeLapse is False) & (self.project.iBatch is False):
                 self.importFile(self.fnameManual)
             self.ftypeCombo.setCurrentIndex(15)
@@ -7512,10 +7513,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 <a href="https://matplotlib.org/">matplotlib</a>,
                 <a href="https://scipy.org/index.html">scipy</a>,
                 <a href="https://pypi.org/project/PyQt5/">PyQt5</a>,
-                <a href="https://pypi.org/project/pyvista/">PyVista</a>.
+                <a href="https://pypi.org/project/pyvista/">PyVista</a>,
+                <a href="https://mplcursors.readthedocs.io/en/stable/">mplcursors</a>.
             </p>
             <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-            <p>Contributors: Pedro Concha, Michael Tso, John McKnight</p>
+            <p>Contributors: Pedro Concha, Michael Tso, John McKnight, Riccardo Castagner</p>
             <p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P.
             and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for
             Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423.
@@ -7922,7 +7924,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.tempElec = self.elecTable.getTable()
             self.elecDx2DTape.setEnabled(True)
             # self.localGrid.setEnabled(True)
-            self.infoDump(fname + ' imported successfully')
+                      
+            # RC 11/03/2026 print number of quadrupoles
+            df = self.project.surveys[0].df
+            n_quad = len(df['app'])
+            self.infoDump(fname + ' imported successfully (' + str(n_quad) + ' quadrupoles)')
+            
         except Exception as e:
             self.loadingWidget(exitflag=True)
             pdebug('importFile: ERROR:', e)

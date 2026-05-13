@@ -17,6 +17,9 @@ from scipy.stats import gaussian_kde
 from scipy.linalg import lstsq
 from functools import reduce
 
+# RC 17/03/2026 import library to display label on graph
+import mplcursors
+
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
@@ -1019,7 +1022,7 @@ class Survey(object):
             array = np.asarray(self.isequence - 1, dtype=int)
         
         # print(type(phase))
-        unpackme = computeRecip(array.copy(), resist.copy(), phase.copy())
+        unpackme = computeRecip(array, resist, phase)
         irecip = unpackme[0] 
         reciprocalErr = unpackme[1] 
         reciprocalErrRel = unpackme[2] 
@@ -2256,8 +2259,7 @@ class Survey(object):
             zpos[special] = max(elecm[:,2]) - zpos[special]
 
         return xpos,ypos,zpos 
-    
-        
+
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', magFlag=False,
                            darkMode=False, cmap='viridis'):
@@ -2297,12 +2299,17 @@ class Survey(object):
         if geom and column=='resist': # compute and applied geometric factor
             # self.computeK()
             resist = resist*self.df['K'].values 
-            
-        label = r'$\rho_a$ [$\Omega.m$]' # default label 
-        title = 'Apparent Resistivity\npseudo section'
+
+        # RC 17/03/2026 print nb. of quadrupoles in top graph title
+        n_quad = len(resist)
+
+        # RC 12/05/2025 modified . with ⋅ (multiplication dot) and title modified with quadrupoles
+        label = r'$\rho_a$ [$\Omega⋅m$]' # default label 
+        title = 'Apparent Resistivity\npseudo section (' + str(n_quad) + ' quadrupoles)'
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
-            label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+            # RC 12/05/2025 modified . with ⋅ (multiplication dot)
+            label = r'$\log_{10}(\rho_a)$ [$\Omega⋅m$]'
             
         if column =='cR': # need to add more labels here probably 
             label = r'$R_{cr}$ [$\Omega$]'
@@ -2341,6 +2348,30 @@ class Survey(object):
         ax.set_title(title)
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
+        
+        # RC 12/05/2026 hover feature
+        # Transient = 2, Persistent = 1 = True, NoHover = 0 = False
+        cursor = mplcursors.cursor(plotPsRes, hover=2)
+        
+        @cursor.connect("add")
+        def on_add(sel):
+            i = sel.index
+
+            sel.annotation.set_text(
+                f"x = {xpos[i]} m\n"
+                f"z = {ypos[i]} m\n"
+                f"ρa = {round(resist[i],2)} Ω⋅m"
+            )
+        
+        # Print quadrupoles
+        #arr_quad = np.empty(n_quad, dtype = int)
+        #for i in range(n_quad):
+        #    arr_quad[i] = i+1
+        #for i, txt in enumerate(arr_quad):
+        #    annot = ax.annotate(txt, (xpos[i], ypos[i]))
+        #    annot.set_visible(True)
+        #    print(txt,resist[i],xpos[i],ypos[i])
+        
         if ax is None:
             return fig
     
@@ -2577,6 +2608,9 @@ class Survey(object):
 
         label = r'$\phi$ [mrad]'
         
+        # RC 12/05/2026 print nb. of quadrupoles in top graph title
+        n_ip_quad = len(ip)
+        
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -2602,9 +2636,26 @@ class Survey(object):
             ax.scatter(self.elec['x'], max(self.elec['z'])-self.elec['z'], c=elecColor)
             
         ax.invert_yaxis() # to remove negative sign in y axis
-        ax.set_title('Phase Shift\npseudo section')  
+        # RC 12/05/2026 title modified with quadrupoles
+        #ax.set_title('Phase Shift\npseudo section')
+        ax.set_title('Phase Shift\npseudo section (' + str(n_ip_quad) + ' quadrupoles)')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
+        
+        # RC 12/05/2026 hover feature
+        # Transient = 2, Persistent = 1 = True, NoHover = 0 = False
+        cursor = mplcursors.cursor(plotPsIP, hover=2)
+        
+        @cursor.connect("add")
+        def on_add(sel):
+            i = sel.index
+
+            sel.annotation.set_text(
+                f"x = {xpos[i]} m\n"
+                f"z = {ypos[i]} m\n"
+                f"φ = {round(ip[i],2)} mrad"
+            )
+        
         if ax is None:
             return fig
     
@@ -2779,6 +2830,10 @@ class Survey(object):
         if len(self.df) != self.isequence.shape[0]:
             self.setSeqIds()
 
+        # RC 07/05/2026 getting number of quadrupoles after filtering
+        n_quad = len(self.df)
+        #print(n_quad)
+        
         array = self.isequence -1
         if self.df.shape[0] == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
@@ -2788,7 +2843,8 @@ class Survey(object):
             if attr == 'app':
                 # self.computeK() # k is already computed 
                 self.df['app'] = self.df['K']*self.df['resist']
-                label = r'Apparent Resistivity [$\Omega.m$]'
+                # RC 12/05/2025 modified . with ⋅ (multiplication dot)
+                label = r'Apparent Resistivity [$\Omega⋅m$]'
             elif attr == 'resist':
                 label = r'Transfer Resistance [$\Omega$]'
             elif attr == 'reciprocalErrRel':
@@ -2861,7 +2917,8 @@ class Survey(object):
         ax.invert_yaxis() # to remove negative sign in y axis
         ax2 = ax.twiny()
         if elec:
-            ax.set_xlabel('Electrode number')
+            # RC 07/05/2026 print number of quadrupoles after filtering
+            ax.set_xlabel('Electrode number (' + str(n_quad) + ' quadrupoles)')
         ax.set_ylabel('Pseudo depth [m]')
         ax.xaxis.set_label_position('top')
         ax.xaxis.set_ticks_position('top')
@@ -2892,6 +2949,45 @@ class Survey(object):
         
         ax.set_xlim(ax2.get_xlim()) # here to get correct limits form ax2
         
+        # RC 12/05/2026 hover feature
+        # Transient = 2, Persistent = 1 = True, NoHover = 0 = False
+        cursor = mplcursors.cursor(cax, hover=2)
+        
+        @cursor.connect("add")
+        def on_add(sel):
+            i = sel.index
+
+            if attr == 'app':
+                sel.annotation.set_text(
+                    f"x = {xpos[i]} m\n"
+                    f"z = {ypos[i]} m\n"
+                    f"ρa = {round(val[i],2)} Ω⋅m"
+                )
+            elif attr == 'resist':
+                sel.annotation.set_text(
+                    f"x = {xpos[i]} m\n"
+                    f"z = {ypos[i]} m\n"
+                    f"R = {round(val[i],2)} Ω"
+                )
+            elif attr == 'reciprocalErrRel':
+                sel.annotation.set_text(
+                    f"x = {xpos[i]} m\n"
+                    f"z = {ypos[i]} m\n"
+                    f"Recip. Err. = {round(val[i])}%"
+                )
+            elif attr == 'dev':
+                sel.annotation.set_text(
+                    f"x = {xpos[i]} m\n"
+                    f"z = {ypos[i]} m\n"
+                    f"Stack. Err. = {round(val[i])}%"
+                )
+            else:
+                sel.annotation.set_text(
+                    f"x = {xpos[i]} m\n"
+                    f"z = {ypos[i]} m\n"
+                    f"{round(val[i],2)}"
+                )
+            
         # put the numbers right next to the electrodes
 #        elecNumber = 1 + np.arange(len(elecpos))
 ##        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]

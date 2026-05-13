@@ -6,3 +6,4 @@ requests
 psutil
 pyvista==0.44.2
 chardet
+mplcursors
