@@ -5577,7 +5577,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.createSurvey(os.path.join(invdir, 'protocol.dat'), ftype=ftype)
 
         # get electrodes
-        elec = pd.read_csv(os.path.join(invdir, 'electrodes.dat'), delim_whitespace=True, header=None)
+        elec = pd.read_csv(os.path.join(invdir, 'electrodes.dat'), sep='\s+', header=None)
         self.setElec(elec.values) # assuming none are buried
  
         # load mesh
@@ -5638,7 +5638,7 @@ class Project(object): # Project master class instanciated by the GUI
                         name = 'dataset{:03.0f}'.format(idataset)
                 elif line[0] == 'End' and self.typ != 'R3t':
                     idataset -= 1
-        df = df.apply(pd.to_numeric, errors='ignore').reset_index(drop=True)
+        df = df.apply(pd.to_numeric, errors='coerce').reset_index(drop=True)
         return df
 
 
@@ -5981,7 +5981,7 @@ class Project(object): # Project master class instanciated by the GUI
         Region 0 is the background region. It has zone=1, and fixed=False
         """
         regions = np.array(self.mesh.df['region'])
-        res0 = np.asarray(self.mesh.df['res0'].values, dtype=float)
+        res0 = np.array(self.mesh.df['res0'].values, dtype=float).copy()
         for key in regionValues.keys():
             idx = regions == int(key)
             res0[idx] = regionValues[key]
@@ -6926,7 +6926,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         fs = sorted(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
-            x = pd.read_csv(os.path.join(self.dirname, fs[index]), header=None, delim_whitespace=True).values
+            x = pd.read_csv(os.path.join(self.dirname, fs[index]), header=None, sep='\s+').values
             if self.typ[-1]=='t' and self.elec['buried'].sum()==0: # if 3D get the iteration mesh - and no buried electrodes [HOT FIX] #TODO: extract 3D xbh top surface
                 try: # let it pass if surface extraction failed for showing iteration plot
                     if self.surfaceIdx is None: # no surface index
@@ -7003,12 +7003,12 @@ class Project(object): # Project master class instanciated by the GUI
                 if self.iTimeLapse:
                     fname = os.path.join(self.dirname, 'ref/f001_err.dat')
                     if os.path.exists(fname):                    
-                        df = pd.read_csv(fname, delim_whitespace=True)
+                        df = pd.read_csv(fname, sep='\s+')
                         dfs.append(df)
                 for i in range(len(self.surveys)-a):
                     fname = os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1))
                     if os.path.exists(fname):
-                        df = pd.read_csv(fname, delim_whitespace=True)
+                        df = pd.read_csv(fname, sep='\s+')
                         dfs.append(df)
             elif self.typ == 'R3t':
                 dfs = []
