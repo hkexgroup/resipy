@@ -2095,7 +2095,10 @@ class App(QMainWindow):
                 """Return dataframe.
                 """
                 cols = ['label','x','y','z','buried']
-                df = pd.DataFrame(np.zeros((self.nrow, self.ncol)), columns=cols)
+                df = pd.DataFrame()
+                df['label'] = ''
+                df[['x', 'y', 'z']] = np.zeros((self.nrow, 3))
+                df['buried'] = False
                 for i in range(self.nrow):
                     for j in range(self.ncol):
                         col = cols[j]

@@ -6578,7 +6578,9 @@ class Project(object): # Project master class instanciated by the GUI
             
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
-        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise/100)
+        x = addnoise(self.surveys[0].df['resist'].values, self.noise/100)
+        print(x.shape, self.surveys[0].df.shape)
+        self.surveys[0].df.loc[:, 'resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise/100)
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
         self.setElec(elec) # using Project.createSurvey() overwrite self.elec so we need to set it back

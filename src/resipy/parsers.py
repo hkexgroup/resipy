@@ -3677,5 +3677,5 @@ def ohmpiParser(fname):
     emax = np.max(df[['a', 'b', 'm', 'n']].values)
     elec = np.zeros((emax, 3))
     elec[:, 0] = np.arange(emax) * 1                        
-    return elec, df[['a', 'b', 'm', 'n', 'vp', 'i', 'resist', 'ip', 'dev', 'cR']]
+    return elec, df[['a', 'b', 'm', 'n', 'vp', 'i', 'resist', 'ip', 'dev', 'cR', 'sp']]
 
