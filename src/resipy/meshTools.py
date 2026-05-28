@@ -3331,7 +3331,7 @@ class Mesh:
                 continue 
             fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
             fh.write("LOOKUP_TABLE default\n")
-            X = np.array(df[key])
+            X = np.array(df[key]).copy()
             X[np.isnan(X)]=replace_nan
             [fh.write("%16.8f "%X[j]) for j in range(self.numel)]
             fh.write("\n")
@@ -3342,7 +3342,7 @@ class Mesh:
             for i,key in enumerate(self.ptdf.keys()):
                 fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
                 fh.write("LOOKUP_TABLE default\n")
-                X = np.array(self.ptdf[key])
+                X = np.array(self.ptdf[key]).copy()
                 X[np.isnan(X)]=replace_nan
                 [fh.write("%16.8f "%X[j]) for j in range(self.numnp)]
                 fh.write("\n")
@@ -3642,7 +3642,7 @@ class Mesh:
                 continue 
             header = 'DataArray type="Float32" Name="%s" format="ascii"'%column 
             writeXMLline(header,tab=3)
-            X = self.df[column].values 
+            X = self.df[column].values.copy()
             X[np.isnan(X)] = -9999
             for i in range(len(X)):
                 writeXMLline('%f'%X[i], False, 4)
@@ -3721,7 +3721,7 @@ class Mesh:
         # write out point data
         writeXMLline('PointData', tab=3)
         for column in self.ptdf.columns:
-            X = self.ptdf[column].values 
+            X = self.ptdf[column].values.copy() 
             header = data_header_template.format(column, np.min(X), np.max(X))
             writeXMLline(header, tab=4)
             X[np.isnan(X)] = -9999
@@ -3734,7 +3734,7 @@ class Mesh:
         for column in self.df.columns:
             if column in ['X','Y','Z','cellType']: 
                 continue 
-            X = self.df[column].values 
+            X = self.df[column].values.copy() 
             header = data_header_template.format(column, np.min(X), np.max(X))
             writeXMLline(header,tab=4)
             X[np.isnan(X)] = -9999
@@ -7205,9 +7205,9 @@ def points2vtk (x,y,z,fname="points.vtk",title='points',data=None, file_name=Non
             fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
             fh.write("LOOKUP_TABLE default\n")
             if isinstance(data, dict):
-                X = np.array(data[key])
+                X = np.array(data[key]).copy()
             else:
-                X = data[key].values 
+                X = data[key].values.copy()
             X[np.isnan(X)]=-9999
             [fh.write("%16.8f "%X[j]) for j in range(len(x))]
             fh.write("\n")
@@ -7308,9 +7308,9 @@ def points2vtp (x,y,z,fname="points.vtp",title='points',data=None,file_name=None
     if data is not None: 
         for column in data.keys():
             if isinstance(data, dict):
-                X = np.array(data[column])
+                X = np.array(data[column]).copy()
             else:
-                X = data[column].values 
+                X = data[column].values.copy()
             header = data_header_template.format(column, np.min(X), np.max(X))
             writeXMLline(header, tab=4)
             X[np.isnan(X)] = -9999

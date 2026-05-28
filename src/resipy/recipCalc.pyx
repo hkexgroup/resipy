@@ -82,7 +82,7 @@ cdef dlong mergeInt(int a, int b, int pad): #merge 2 ints
     return np.floor(a*10**pad + b) # merge a and b
     
 
-def computeRecip(conf_data, double[:] r, double[:] p): 
+def computeRecip(conf_data, const double[:] r, const double[:] p): 
     """Compute reciprocal measurements with compiled code.
     
     Parameters

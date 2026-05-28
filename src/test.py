@@ -148,7 +148,7 @@ k.createSurvey(testdir + 'ip-2d/IP_MICP_all.csv', ftype='Syscal')
 
 rtime = {}
 t0 = time.time()
-#k.surveys[0].computeReciprocal(alg='Bisection Search')
+k.surveys[0].computeReciprocal(alg='Bisection Search')
 rtime['bisection'] = time.time() - t0
 t0 = time.time()
 df1 = k.surveys[0].df.copy()

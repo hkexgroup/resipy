@@ -746,8 +746,8 @@ class Survey(object):
         self.filterData(i2keep)
         return np.sum(~i2keep)
     
-    def computeReciprocal(self, alg='Pandas Merge'):
-    #def computeReciprocal(self, alg='Bisection Search'):
+    #def computeReciprocal(self, alg='Pandas Merge'):
+    def computeReciprocal(self, alg='Bisection Search'):
         """
         Compute Reciprocals and store them in self.df (the dataframe)
 
