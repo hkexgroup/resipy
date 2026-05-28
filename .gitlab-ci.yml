@@ -1,4 +1,4 @@
-image: python:3.12-bookworm
+image: python:3.12-trixie
 
 test:
   script:
@@ -23,7 +23,7 @@ pages:
   - apt-get update
   - apt-get install --assume-yes wine pandoc libxcb-xinerama0
   - pip install -r requirements.txt
-  - pip install setuptools==59.6.0
+  - pip install setuptools
   - pip install sphinx numpydoc sphinx_rtd_theme nbsphinx sphinxcontrib-svg2pdfconverter sphinx-codeautolink
   - pip install SALib
   - ls
