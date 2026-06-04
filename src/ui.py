@@ -4519,8 +4519,8 @@ class App(QMainWindow):
                 'Open File',
                 self.datadir,
                 'VTK (*.vtk);;NODE (*.node);;DAT (*.dat) ;; VTU (*.vtu)')
-            ftype = '.'+ftype.split()[0].lower()
             if mfpathout != '':
+                ftype = '.'+ftype.split()[0].lower()
                 voxel = False
                 _forceLocal = False
                 self.loadingWidget('Saving mesh file...')
