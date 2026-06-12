@@ -5622,12 +5622,19 @@ class Project(object): # Project master class instanciated by the GUI
                 elif (line[0] == 'Measurements') & (line[1] == 'read:'):
                     read = int(line[2])
                     rejected = int(line[5])
-                elif line[0] == 'Final':
+                elif (line[0] == 'Final') and (line[2] != 'improvement'):
                     resRMS = float(line[3])
                     df.loc[irow, :] = [name, idataset, iiter, resRMS, phaseRMS,
-                                       read, rejected, success]
+                                        read, rejected, success]
                     irow += 1
+                elif line[0] == 'Phase':
+                    phaseRMS = float(line[3])
+                    df.loc[irow, :] = [name, idataset, iiter, resRMS, phaseRMS,
+                        read, rejected, success]
                 elif line[0] == 'FATAL:':
+                    resRMS = np.nan
+                elif (line[0] == 'Final') and (line[1] == 'phase'):
+                    iiter = 0
                     resRMS = np.nan
                 elif line[0] == 'Processing':
                     iiter = 0
