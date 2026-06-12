@@ -2405,7 +2405,7 @@ class Project(object): # Project master class instanciated by the GUI
                 'flux_type', 'singular_type', 'res_matrix', 'scale', 'patch_x', 'patch_z',
                 'inverse_type', 'target_decrease', 'qual_ratio', 'data_type', 'zmin', 'zmax',
                 'reg_mode', 'tolerance', 'max_iter', 'error_mod', 'alpha_aniso',
-                'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type']
+                'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type', 'checkTxSign']
         
         for key in keys:
             if key in self.param.keys():
