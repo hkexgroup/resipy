@@ -2844,7 +2844,7 @@ class Project(object): # Project master class instanciated by the GUI
                     ie0.append(uids0_indexs[isearch])
                     ien.append(i)
                     nmatch += 1 
-            print('%i quadrapoles matched (exl. reciprocals) at survey index %i'%(nmatch, sid))
+            print('%i quadrupoles matched (exl. reciprocals) at survey index %i'%(nmatch, sid))
             indexes.append((ie0, ien))
 
         print('done in {:.3}s'.format(time.time()-t0))
