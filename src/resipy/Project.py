@@ -2678,7 +2678,6 @@ class Project(object): # Project master class instanciated by the GUI
         shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
         return ProjInstance
 
-
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """Plot pseudo-section with dots.
 
@@ -2696,6 +2695,10 @@ class Project(object): # Project master class instanciated by the GUI
         **kwargs : optional
             Passed to `Survey.showPseudo()`.
         """
+        if 'column' in kwargs:
+            if kwargs['column'] == 'appdiffprc':
+                if 'appdiffprc' not in self.surveys[index].df.columns:
+                    self.computeAppDiff()
         self.surveys[index].showPseudo(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
@@ -2719,12 +2722,12 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[index].showPseudoIP(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
-    def matchSurveysOld(self):
+    def matchSurveys(self):
         """Will trim all surveys to get them ready for difference inversion
         so that each PAIRS of (background, surveyX) have the same number of
         quadrupoles. We do not take all quadrupoles in common among all
         surveys as this is not needed and if there is a small survey, it would
-        reduce all other larger surveys.
+        reduce all other larger surveys. Updated in July 2026 with integer index.
         """
         print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
         t0 = time.time()
@@ -2732,34 +2735,25 @@ class Project(object): # Project master class instanciated by the GUI
         df0 = self.surveys[0].df.reset_index(drop=True)
         df0['tlindex0'] = df0.index.astype(int)
         df0['irecip0'] = df0.irecip.copy()
-        ie0 = np.ones(df0.shape[0], dtype=bool)
+        ie0 = df0[df0['irecip'].ge(0)].index.values
         indexes = [(ie0, ie0)]  # array of tuple
         for survey in self.surveys[1:]:
             df = survey.df.reset_index(drop=True)
             df['tlindex'] = df.index.astype(int)
-            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip0']],
-                           df[['a', 'b', 'm', 'n', 'tlindex','irecip']],
-                           how='inner', on=['a', 'b', 'm', 'n'])
+            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip0']].reset_index(),
+                           df[['a', 'b', 'm', 'n', 'tlindex','irecip']].reset_index(),
+                           how='inner', on=['a', 'b', 'm', 'n'], suffixes=('_0', ''))
             # don't keep reciprocals
             dfm = dfm[dfm[['irecip0', 'irecip']].ge(0).all(axis=1)]
-            ie0 = np.zeros(df0.shape[0], dtype=bool)
-            ie0[dfm['tlindex0'].values] = True
-            ie = np.zeros(df.shape[0], dtype=bool)
-            ie[dfm['tlindex'].values] = True
-            # dont keep reciprocals too 
-#            for i in dfm['tlindex0'].values:
-#                if df0.irecip0[i] < 0: 
-#                    ie0[i] = False 
-#            for i in dfm['tlindex'].values:
-#                if df.irecip[i] < 0: 
-#                    ie[i] = False  
+            ie0 = dfm['index_0'].values
+            ie = dfm['index'].values
             indexes.append((ie0, ie))
 
         print('done in {:.3}s'.format(time.time()-t0))
 
         return indexes
     
-    def matchSurveys(self):
+    def matchSurveys2(self):
         """Will trim all surveys to get them ready for difference inversion
         so that each PAIRS of (background, surveyX) have the same number of
         quadrupoles. We do not take all quadrupoles in common among all
@@ -3465,7 +3459,19 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             numRemoved = self.surveys[index].filterContRes(vmin=vmin, vmax=vmax)
         return numRemoved
-    
+
+    def computeAppDiff(self):
+        """Compute difference in apparent values in new column 'appdiffprc'."""
+        if len(self.surveys) > 0:
+            indexes = self.matchSurveys()
+            for i, survey in enumerate(self.surveys):
+                app0 = self.surveys[0].df['app'][indexes[i][0]]
+                survey.df['appdiffprc'] = np.nan
+                survey.df.loc[indexes[i][1], 'appdiffprc'] = (
+                    survey.df['app'][indexes[i][1]] - app0)/app0*100
+        else:
+            raise ValueError('Not enough surveys (' + str(len(self.surveys)) + ') to compute appdiffprc')
+                
     def computeReciprocal(self,alg='Bisection Search',forceSign=False):
         """
         Compute Reciprocals and store them in self.surveys[0:n].df. 

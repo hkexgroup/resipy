@@ -1987,8 +1987,7 @@ class Survey(object):
             ax.plot(self.df['ip'].values, '.')
             ax.set_xlabel('Measurements')
             ax.set_ylabel('Phase [mrad]')
-            
-            
+
     def computeK(self):
         """
         Compute geometric factors, if any buried electrodes present then the 
