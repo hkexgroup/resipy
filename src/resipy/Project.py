@@ -792,7 +792,9 @@ class Project(object): # Project master class instanciated by the GUI
             self.computeFineMeshDepth()
             for s in self.surveys:
                 s.setSeqIds()
-                s.computeK() # recalculate K 
+                s.computeK() # recalculate K
+                if 'app' in s.df.columns:
+                    s.df['app'] = s.df['K'] * s.df['resist']  # update app
                 
         self.pinfo['Number of electrodes'] = len(self.elec)
         if 'iremote' in self.elec.columns: 
