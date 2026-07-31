@@ -559,6 +559,7 @@ k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
                          testdir + 'dc-2d-timelapse/17051601_incomplete.csv'])
 k.showPseudo(0)
 k.showPseudo(2)
+k.showPseudo(column='appdiffprc')
 k.showError(0)
 k.showError(2)
 k.showError(-2) # combined surveys
