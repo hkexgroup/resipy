@@ -1638,6 +1638,9 @@ class Project(object): # Project master class instanciated by the GUI
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = len(self.surveys) 
+
+        # computeAppDiff()
+        self.computeAppDiff()
         
         _ = self._estimateMemory(dump=donothing)
 
