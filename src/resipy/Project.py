@@ -3465,10 +3465,10 @@ class Project(object): # Project master class instanciated by the GUI
         if len(self.surveys) > 0:
             indexes = self.matchSurveys()
             for i, survey in enumerate(self.surveys):
-                app0 = self.surveys[0].df['app'][indexes[i][0]]
+                app0 = self.surveys[0].df['app'][indexes[i][0]].values
                 survey.df['appdiffprc'] = np.nan
                 survey.df.loc[indexes[i][1], 'appdiffprc'] = (
-                    survey.df['app'][indexes[i][1]] - app0)/app0*100
+                    survey.df['app'][indexes[i][1]].values - app0)/app0*100
         else:
             raise ValueError('Not enough surveys (' + str(len(self.surveys)) + ') to compute appdiffprc')
                 
