@@ -3485,12 +3485,12 @@ def dasParser(fname):
     nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
     
     try: 
-        dfElec_raw = pd.read_csv(io.StringIO(cleanData), delim_whitespace=True, skiprows=elec_lineNum_s[0], 
+        dfElec_raw = pd.read_csv(io.StringIO(cleanData), sep='\s+', skiprows=elec_lineNum_s[0], 
                                  nrows=nrows, index_col=False, header=None)
     except: # probably the problem is encoding. Doing this way because it's slow!
         with open(fname, 'rb') as f:
             result = chardet.detect(f.read())
-        dfElec_raw = pd.read_csv(io.StringIO(cleanData), encoding=result['encoding'], delim_whitespace=True, skiprows=elec_lineNum_s[0], 
+        dfElec_raw = pd.read_csv(io.StringIO(cleanData), encoding=result['encoding'], sep='\s+', skiprows=elec_lineNum_s[0], 
                                  nrows=nrows, index_col=False, header=None)
     
     elecNum = dfElec_raw.iloc[:,0].str.split(',', expand=True).astype(int).astype(str)
@@ -3677,5 +3677,5 @@ def ohmpiParser(fname):
     emax = np.max(df[['a', 'b', 'm', 'n']].values)
     elec = np.zeros((emax, 3))
     elec[:, 0] = np.arange(emax) * 1                        
-    return elec, df[['a', 'b', 'm', 'n', 'vp', 'i', 'resist', 'ip', 'dev', 'cR']]
+    return elec, df[['a', 'b', 'm', 'n', 'vp', 'i', 'resist', 'ip', 'dev', 'cR', 'sp']]
 

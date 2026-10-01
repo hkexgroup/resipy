@@ -792,7 +792,9 @@ class Project(object): # Project master class instanciated by the GUI
             self.computeFineMeshDepth()
             for s in self.surveys:
                 s.setSeqIds()
-                s.computeK() # recalculate K 
+                s.computeK() # recalculate K
+                if 'app' in s.df.columns:
+                    s.df['app'] = s.df['K'] * s.df['resist']  # update app
                 
         self.pinfo['Number of electrodes'] = len(self.elec)
         if 'iremote' in self.elec.columns: 
@@ -1636,6 +1638,9 @@ class Project(object): # Project master class instanciated by the GUI
         # flag that data has been added 
         self.pinfo['Data'] = True 
         self.pinfo['Number of Surveys'] = len(self.surveys) 
+
+        # computeAppDiff()
+        self.computeAppDiff()
         
         _ = self._estimateMemory(dump=donothing)
 
@@ -2405,7 +2410,7 @@ class Project(object): # Project master class instanciated by the GUI
                 'flux_type', 'singular_type', 'res_matrix', 'scale', 'patch_x', 'patch_z',
                 'inverse_type', 'target_decrease', 'qual_ratio', 'data_type', 'zmin', 'zmax',
                 'reg_mode', 'tolerance', 'max_iter', 'error_mod', 'alpha_aniso',
-                'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type']
+                'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type', 'checkTxSign']
         
         for key in keys:
             if key in self.param.keys():
@@ -2676,7 +2681,6 @@ class Project(object): # Project master class instanciated by the GUI
         shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
         return ProjInstance
 
-
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """Plot pseudo-section with dots.
 
@@ -2694,6 +2698,10 @@ class Project(object): # Project master class instanciated by the GUI
         **kwargs : optional
             Passed to `Survey.showPseudo()`.
         """
+        if 'column' in kwargs:
+            if kwargs['column'] == 'appdiffprc':
+                if 'appdiffprc' not in self.surveys[index].df.columns:
+                    self.computeAppDiff()
         self.surveys[index].showPseudo(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
@@ -2717,12 +2725,12 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[index].showPseudoIP(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
-    def matchSurveysOld(self):
+    def matchSurveys(self):
         """Will trim all surveys to get them ready for difference inversion
         so that each PAIRS of (background, surveyX) have the same number of
         quadrupoles. We do not take all quadrupoles in common among all
         surveys as this is not needed and if there is a small survey, it would
-        reduce all other larger surveys.
+        reduce all other larger surveys. Updated in July 2026 with integer index.
         """
         print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
         t0 = time.time()
@@ -2730,34 +2738,25 @@ class Project(object): # Project master class instanciated by the GUI
         df0 = self.surveys[0].df.reset_index(drop=True)
         df0['tlindex0'] = df0.index.astype(int)
         df0['irecip0'] = df0.irecip.copy()
-        ie0 = np.ones(df0.shape[0], dtype=bool)
+        ie0 = df0[df0['irecip'].ge(0)].index.values
         indexes = [(ie0, ie0)]  # array of tuple
         for survey in self.surveys[1:]:
             df = survey.df.reset_index(drop=True)
             df['tlindex'] = df.index.astype(int)
-            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip0']],
-                           df[['a', 'b', 'm', 'n', 'tlindex','irecip']],
-                           how='inner', on=['a', 'b', 'm', 'n'])
+            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip0']].reset_index(),
+                           df[['a', 'b', 'm', 'n', 'tlindex','irecip']].reset_index(),
+                           how='inner', on=['a', 'b', 'm', 'n'], suffixes=('_0', ''))
             # don't keep reciprocals
             dfm = dfm[dfm[['irecip0', 'irecip']].ge(0).all(axis=1)]
-            ie0 = np.zeros(df0.shape[0], dtype=bool)
-            ie0[dfm['tlindex0'].values] = True
-            ie = np.zeros(df.shape[0], dtype=bool)
-            ie[dfm['tlindex'].values] = True
-            # dont keep reciprocals too 
-#            for i in dfm['tlindex0'].values:
-#                if df0.irecip0[i] < 0: 
-#                    ie0[i] = False 
-#            for i in dfm['tlindex'].values:
-#                if df.irecip[i] < 0: 
-#                    ie[i] = False  
+            ie0 = dfm['index_0'].values
+            ie = dfm['index'].values
             indexes.append((ie0, ie))
 
         print('done in {:.3}s'.format(time.time()-t0))
 
         return indexes
     
-    def matchSurveys(self):
+    def matchSurveys2(self):
         """Will trim all surveys to get them ready for difference inversion
         so that each PAIRS of (background, surveyX) have the same number of
         quadrupoles. We do not take all quadrupoles in common among all
@@ -2844,7 +2843,7 @@ class Project(object): # Project master class instanciated by the GUI
                     ie0.append(uids0_indexs[isearch])
                     ien.append(i)
                     nmatch += 1 
-            print('%i quadrapoles matched (exl. reciprocals) at survey index %i'%(nmatch, sid))
+            print('%i quadrupoles matched (exl. reciprocals) at survey index %i'%(nmatch, sid))
             indexes.append((ie0, ien))
 
         print('done in {:.3}s'.format(time.time()-t0))
@@ -3463,7 +3462,19 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             numRemoved = self.surveys[index].filterContRes(vmin=vmin, vmax=vmax)
         return numRemoved
-    
+
+    def computeAppDiff(self):
+        """Compute difference in apparent values in new column 'appdiffprc'."""
+        if len(self.surveys) > 0:
+            indexes = self.matchSurveys()
+            for i, survey in enumerate(self.surveys):
+                app0 = self.surveys[0].df['app'][indexes[i][0]].values
+                survey.df['appdiffprc'] = np.nan
+                survey.df.loc[indexes[i][1], 'appdiffprc'] = (
+                    survey.df['app'][indexes[i][1]].values - app0)/app0*100
+        else:
+            raise ValueError('Not enough surveys (' + str(len(self.surveys)) + ') to compute appdiffprc')
+                
     def computeReciprocal(self,alg='Bisection Search',forceSign=False):
         """
         Compute Reciprocals and store them in self.surveys[0:n].df. 
@@ -5577,7 +5588,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.createSurvey(os.path.join(invdir, 'protocol.dat'), ftype=ftype)
 
         # get electrodes
-        elec = pd.read_csv(os.path.join(invdir, 'electrodes.dat'), delim_whitespace=True, header=None)
+        elec = pd.read_csv(os.path.join(invdir, 'electrodes.dat'), sep='\s+', header=None)
         self.setElec(elec.values) # assuming none are buried
  
         # load mesh
@@ -5622,12 +5633,19 @@ class Project(object): # Project master class instanciated by the GUI
                 elif (line[0] == 'Measurements') & (line[1] == 'read:'):
                     read = int(line[2])
                     rejected = int(line[5])
-                elif line[0] == 'Final':
+                elif (line[0] == 'Final') and (line[2] != 'improvement'):
                     resRMS = float(line[3])
                     df.loc[irow, :] = [name, idataset, iiter, resRMS, phaseRMS,
-                                       read, rejected, success]
+                                        read, rejected, success]
                     irow += 1
+                elif line[0] == 'Phase':
+                    phaseRMS = float(line[3])
+                    df.loc[irow, :] = [name, idataset, iiter, resRMS, phaseRMS,
+                        read, rejected, success]
                 elif line[0] == 'FATAL:':
+                    resRMS = np.nan
+                elif (line[0] == 'Final') and (line[1] == 'phase'):
+                    iiter = 0
                     resRMS = np.nan
                 elif line[0] == 'Processing':
                     iiter = 0
@@ -5638,7 +5656,7 @@ class Project(object): # Project master class instanciated by the GUI
                         name = 'dataset{:03.0f}'.format(idataset)
                 elif line[0] == 'End' and self.typ != 'R3t':
                     idataset -= 1
-        df = df.apply(pd.to_numeric, errors='ignore').reset_index(drop=True)
+        df = df.apply(pd.to_numeric, errors='coerce').reset_index(drop=True)
         return df
 
 
@@ -5981,7 +5999,7 @@ class Project(object): # Project master class instanciated by the GUI
         Region 0 is the background region. It has zone=1, and fixed=False
         """
         regions = np.array(self.mesh.df['region'])
-        res0 = np.asarray(self.mesh.df['res0'].values, dtype=float)
+        res0 = np.array(self.mesh.df['res0'].values, dtype=float).copy()
         for key in regionValues.keys():
             idx = regions == int(key)
             res0[idx] = regionValues[key]
@@ -6549,13 +6567,11 @@ class Project(object): # Project master class instanciated by the GUI
         dump('(forward modelling finished)\n')
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
-            return x + np.random.randn(1)*x*level
+            return x + np.random.randn(len(x))*x*level
 
         def addnoiseIP(x, level=2):
-            return x + np.random.randn(1)*level
+            return x + np.random.randn(len(x))*level
 
-        addnoise = np.vectorize(addnoise)
-        addnoiseIP = np.vectorize(addnoiseIP)
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
@@ -6924,7 +6940,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         fs = sorted(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
-            x = pd.read_csv(os.path.join(self.dirname, fs[index]), header=None, delim_whitespace=True).values
+            x = pd.read_csv(os.path.join(self.dirname, fs[index]), header=None, sep='\s+').values
             if self.typ[-1]=='t' and self.elec['buried'].sum()==0: # if 3D get the iteration mesh - and no buried electrodes [HOT FIX] #TODO: extract 3D xbh top surface
                 try: # let it pass if surface extraction failed for showing iteration plot
                     if self.surfaceIdx is None: # no surface index
@@ -7001,12 +7017,12 @@ class Project(object): # Project master class instanciated by the GUI
                 if self.iTimeLapse:
                     fname = os.path.join(self.dirname, 'ref/f001_err.dat')
                     if os.path.exists(fname):                    
-                        df = pd.read_csv(fname, delim_whitespace=True)
+                        df = pd.read_csv(fname, sep='\s+')
                         dfs.append(df)
                 for i in range(len(self.surveys)-a):
                     fname = os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1))
                     if os.path.exists(fname):
-                        df = pd.read_csv(fname, delim_whitespace=True)
+                        df = pd.read_csv(fname, sep='\s+')
                         dfs.append(df)
             elif self.typ == 'R3t':
                 dfs = []

@@ -690,7 +690,7 @@ def facesPrism(dlong[:,:] connection, double[:,:] node, dlong[:,:] neigh):
  
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def sortNeigh(dlong[:,:] neigh, dlong[:] zone):
+def sortNeigh(const dlong[:,:] neigh, const dlong[:] zone):
     """Sort neighbour matrix for input into R3t. 
     -----------
     neigh: nd array 

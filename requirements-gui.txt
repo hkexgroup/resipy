@@ -1,4 +1,4 @@
-numpy<2.0.0
+numpy
 matplotlib
 pandas
 scipy
@@ -11,3 +11,4 @@ pyvistaqt==0.11.0
 PyQt5
 # pyinstaller==6.5 # for now this works better than other version on Windows 11
 vtk
+mplcursors
