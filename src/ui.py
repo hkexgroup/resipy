@@ -1495,7 +1495,7 @@ class App(QMainWindow):
                 except Exception as e:
                     self.loadingWidget(exitflag=True)
                     print('Error in getdir(): ', e)
-                    # RC 01/1/2026 more details about the error
+                    # RC 01/10/2026 more details about the error
                     import traceback
                     traceback.print_exc()
                     self.errorDump('Something went wrong importing the data! Check file formats are correct.')
