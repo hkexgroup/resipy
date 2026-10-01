@@ -801,7 +801,38 @@ class Project(object): # Project master class instanciated by the GUI
             if any(elec['iremote']):
                 self.pinfo['Remote electrodes'] = True 
                 
-    
+
+    # RC 30/09/2026 difference between 2 timelapse datasets
+    def timelapseDiff(self):
+        if(len(self.surveys)==2):
+            resist1 = self.surveys[0].df['resist'].values.copy()
+            resist2 = self.surveys[1].df['resist'].values.copy()
+            diff = resist1-resist2
+            #print("Differences: ", diff)
+            df_diff = self.surveys[0].df.copy()
+            elec_diff = self.surveys[0].elec
+            survey_diff1 = type(self.surveys[0])(df=df_diff, elec=elec_diff, name='Difference')
+            df_diff['resist'] = diff
+            survey_diff1.df = df_diff
+            self.surveys.append(survey_diff1)
+            # backup original datasets
+            survey_diff1 = self.surveys[0]
+            survey_diff2 = self.surveys[1]
+            self.surveys[0] = self.surveys[2]
+            self.surveys[1] = self.surveys[2]
+            return True, survey_diff1, survey_diff2
+        else:
+            return False, None, None
+
+    def timelapseDiff_clean(self, survey_diff1, survey_diff2):
+        if(len(self.surveys)==3):
+            # copy original datasets back to their place
+            self.surveys[0] = survey_diff1
+            self.surveys[1] = survey_diff2
+            # remove Differences dataset
+            survey_diff = self.surveys.pop()
+            return True
+
     def mergeElec(self, dist=-1):
         """Merge electrodes that have less than a certain distance to eache other
         
@@ -2702,6 +2733,9 @@ class Project(object): # Project master class instanciated by the GUI
             if kwargs['column'] == 'appdiffprc':
                 if 'appdiffprc' not in self.surveys[index].df.columns:
                     self.computeAppDiff()
+        # RC 01/10/2026 fixing case of loading 2→3→2 datasets
+        if index >= len(self.surveys):
+            index = 0
         self.surveys[index].showPseudo(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 

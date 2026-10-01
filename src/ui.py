@@ -1074,6 +1074,9 @@ class App(QMainWindow):
                 self.pseudo3DCheck.setChecked(False)
                 self.base_target_decrease.setVisible(True)
                 self.base_target_decreaseLabel.setVisible(True)
+                # RC 28/09/2026 adding timelapsediffCheck checkbox when active
+                self.timelapsediffCheck.setEnabled(False)
+                self.timelapsediffCheck.setVisible(True)
             else:
                 self.iTimeLapse = False
                 if self.project is not None:
@@ -1086,6 +1089,9 @@ class App(QMainWindow):
                 self.pseudo3DCheck.setEnabled(True)
                 self.base_target_decrease.setVisible(False)
                 self.base_target_decreaseLabel.setVisible(False)
+                # RC 28/09/2026 removing timelapsediffCheck checkbox when inactive
+                self.timelapsediffCheck.setEnabled(False)
+                self.timelapsediffCheck.setVisible(False)
 
         self.timeLapseCheck = QCheckBox('Time-lapse Survey')
         self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
@@ -1432,6 +1438,12 @@ class App(QMainWindow):
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
                             return
+                        # RC 28/09/2026 activate checkbox only when 2 datasets are imported
+                        elif len(fnames) == 2:
+                            self.timelapsediffCheck.setEnabled(True)
+                        else:
+                            self.timelapsediffCheck.setChecked(False)
+                            self.timelapsediffCheck.setEnabled(False)
                         self.project.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.writeLog('k.createTimeLapseSurvey({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
                         self.ipCheck.setEnabled(False) # TODO enable IP for timelapse
@@ -1483,6 +1495,9 @@ class App(QMainWindow):
                 except Exception as e:
                     self.loadingWidget(exitflag=True)
                     print('Error in getdir(): ', e)
+                    # RC 01/1/2026 more details about the error
+                    import traceback
+                    traceback.print_exc()
                     self.errorDump('Something went wrong importing the data! Check file formats are correct.')
 
         self.loadingDialog = QDialog()
@@ -1780,9 +1795,11 @@ class App(QMainWindow):
         self.fnamesCombo.activated.connect(fnamesComboFunc)
         self.fnamesCombo.hide()
 
+        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps                                                                 
         # self.pcmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
-                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r']
+                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r',
+                 'turbo','turbo_r','RdYlBu','RdYlBu_r']
         def pcmapComboFunc(index):
             self.pParams['cmap'] = cmaps[index]
             self.pParamsIP['cmap'] = cmaps[index]
@@ -1804,6 +1821,20 @@ class App(QMainWindow):
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
 
+        # RC 28/09/2026 difference between 2 timelapse datasets
+        def timelapseDiff(state):
+            if self.project is not None and self.project.elec is not None:
+                if state == Qt.Checked:
+                    check_return, survey_diff1, survey_diff2 = self.project.timelapseDiff()
+                    if  check_return:
+                        self.infoDump('Dataset difference done.')
+                        self.plotPseudo()
+                        self.project.timelapseDiff_clean(survey_diff1, survey_diff2)
+                    else:
+                        self.timelapsediffCheck.setChecked(False)
+                        self.timelapsediffCheck.setEnabled(False)
+                        self.infoDump('More than 2 datasets loaded! Difference accepts max. 2 datasets!')
+
         def mergeElecs(state):
             if self.project is not None and self.project.elec is not None:
                 if state  == Qt.Checked:
@@ -1824,6 +1855,14 @@ class App(QMainWindow):
                 self.updateElec()
 
         # display options for pseudo-sections
+
+        # RC 28/09/2026 adding timelapse difference checkbox
+        self.timelapsediffCheck = QCheckBox('Datasets difference')
+        self.timelapsediffCheck.stateChanged.connect(timelapseDiff)
+        self.timelapsediffCheck.setEnabled(False)
+        self.timelapsediffCheck.setVisible(False)
+        self.timelapsediffCheck.setToolTip('Shows apparent resistivity pseudo-section difference between max. 2 loaded datasets')
+        
         self.mergElecCheck = QCheckBox('Merge close electrodes')
         self.mergElecCheck.stateChanged.connect(mergeElecs)
         self.mergElecCheck.setEnabled(False)
@@ -1942,6 +1981,8 @@ class App(QMainWindow):
         # self.ipboxcheck.addWidget(self.ipCheck)
         # self.hbox5.addWidget(self.ipCheckLabel, alignment=Qt.AlignLeft)
         self.hbox5.addWidget(self.ipCheck, Qt.AlignLeft)
+        # RC 28/09/2026 adding checkbox timelapsediffCheck
+        self.hbox5.addWidget(self.timelapsediffCheck)
         self.hbox5.addWidget(self.mergElecCheck)
         self.hbox5.addWidget(self.psContourCheck)
         self.hbox5.addWidget(self.pvminLabel)
@@ -6390,9 +6431,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.doiSensCheck.stateChanged.connect(doiSensCheckFunc)
         self.doiSensCheck.setToolTip('Depth of Investigation (DOI) estimated based on sensitivity.\nSee advanced inversion settings for DOI with the Oldengburg and Li method.')
 
+        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps                                                                 
         self.cmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
-                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r']
+                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r',
+                 'turbo','turbo_r','RdYlBu','RdYlBu_r']
+                 
         def cmapComboFunc(index):
             self.displayParams['cmap'] = cmaps[index]
             self.replotSection()
