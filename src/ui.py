@@ -1438,12 +1438,10 @@ class App(QMainWindow):
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
                             return
-                        # RC 28/09/2026 activate checkbox only when 2 datasets are imported
-                        elif len(fnames) == 2:
-                            self.timelapsediffCheck.setEnabled(True)
+                        # RC 03/10/2026 activate checkbox and deselect checkbox
                         else:
-                            self.timelapsediffCheck.setChecked(False)
-                            self.timelapsediffCheck.setEnabled(False)
+                            self.timelapsediffCheck.setEnabled(True)
+                            self.fnamesCombo.currentIndexChanged.connect(lambda: self.timelapsediffCheck.setChecked(False))
                         self.project.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.writeLog('k.createTimeLapseSurvey({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
                         self.ipCheck.setEnabled(False) # TODO enable IP for timelapse
@@ -1507,7 +1505,6 @@ class App(QMainWindow):
         loadingDialogLayout.addWidget(self.loadingDialogTxtWidget)
         self.loadingDialog.setLayout(loadingDialogLayout)
         self.loadingDialog.setWindowFlags(Qt.FramelessWindowHint)
-
 
         def importDataBtnFunc():
             if self.iMerged: # if special case of getting a merged file use get dir function instead
@@ -1795,7 +1792,7 @@ class App(QMainWindow):
         self.fnamesCombo.activated.connect(fnamesComboFunc)
         self.fnamesCombo.hide()
 
-        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps                                                                 
+        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps
         # self.pcmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
                  'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r',
@@ -1809,7 +1806,6 @@ class App(QMainWindow):
         self.pcmapCombo.setCurrentIndex(0)
         self.pcmapCombo.activated.connect(pcmapComboFunc)
 
-
         def psContourFunc(state):
             if state  == Qt.Checked:
                 self.pParams['contour'] = True
@@ -1821,19 +1817,26 @@ class App(QMainWindow):
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
 
-        # RC 28/09/2026 difference between 2 timelapse datasets
+        # RC 03/10/2026 difference between timelapse datasets
         def timelapseDiff(state):
             if self.project is not None and self.project.elec is not None:
                 if state == Qt.Checked:
-                    check_return, survey_diff1, survey_diff2 = self.project.timelapseDiff()
+                    sel_idx = self.fnamesCombo.currentIndex()
+                    #print("Selected index: ", sel_idx)
+                    check_return, survey_diff = self.project.timelapseDiff(sel_idx)
                     if  check_return:
-                        self.infoDump('Dataset difference done.')
+                        #if sel_idx == 0:
+                        #    self.infoDump('Difference done between ' + self.fnamesCombo.itemText(0) + ' and ' + self.fnamesCombo.itemText(sel_idx+1))
+                        #else:
+                        self.infoDump('Difference done between ' + self.fnamesCombo.itemText(0) + ' and ' + self.fnamesCombo.itemText(sel_idx))
                         self.plotPseudo()
-                        self.project.timelapseDiff_clean(survey_diff1, survey_diff2)
+                        self.project.timelapseDiff_clean(survey_diff)
                     else:
                         self.timelapsediffCheck.setChecked(False)
                         self.timelapsediffCheck.setEnabled(False)
-                        self.infoDump('More than 2 datasets loaded! Difference accepts max. 2 datasets!')
+                        self.errorDump('Dataset difference failed!')
+                elif state == Qt.Unchecked:
+                    self.plotPseudo()
 
         def mergeElecs(state):
             if self.project is not None and self.project.elec is not None:
@@ -1856,12 +1859,12 @@ class App(QMainWindow):
 
         # display options for pseudo-sections
 
-        # RC 28/09/2026 adding timelapse difference checkbox
+        # RC 05/10/2026 adding timelapse difference checkbox
         self.timelapsediffCheck = QCheckBox('Datasets difference')
         self.timelapsediffCheck.stateChanged.connect(timelapseDiff)
         self.timelapsediffCheck.setEnabled(False)
         self.timelapsediffCheck.setVisible(False)
-        self.timelapsediffCheck.setToolTip('Shows apparent resistivity pseudo-section difference between max. 2 loaded datasets')
+        self.timelapsediffCheck.setToolTip('Shows the difference between apparent resistivities of first vs. other loaded datasets')
         
         self.mergElecCheck = QCheckBox('Merge close electrodes')
         self.mergElecCheck.stateChanged.connect(mergeElecs)
@@ -6431,7 +6434,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.doiSensCheck.stateChanged.connect(doiSensCheckFunc)
         self.doiSensCheck.setToolTip('Depth of Investigation (DOI) estimated based on sensitivity.\nSee advanced inversion settings for DOI with the Oldengburg and Li method.')
 
-        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps                                                                 
+        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps
         self.cmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
                  'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r',

@@ -799,39 +799,42 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of electrodes'] = len(self.elec)
         if 'iremote' in self.elec.columns: 
             if any(elec['iremote']):
-                self.pinfo['Remote electrodes'] = True 
-                
+                self.pinfo['Remote electrodes'] = True
 
-    # RC 30/09/2026 difference between 2 timelapse datasets
-    def timelapseDiff(self):
-        if(len(self.surveys)==2):
-            resist1 = self.surveys[0].df['resist'].values.copy()
-            resist2 = self.surveys[1].df['resist'].values.copy()
-            diff = resist1-resist2
-            #print("Differences: ", diff)
-            df_diff = self.surveys[0].df.copy()
-            elec_diff = self.surveys[0].elec
-            survey_diff1 = type(self.surveys[0])(df=df_diff, elec=elec_diff, name='Difference')
-            df_diff['resist'] = diff
-            survey_diff1.df = df_diff
-            self.surveys.append(survey_diff1)
-            # backup original datasets
-            survey_diff1 = self.surveys[0]
-            survey_diff2 = self.surveys[1]
-            self.surveys[0] = self.surveys[2]
-            self.surveys[1] = self.surveys[2]
-            return True, survey_diff1, survey_diff2
-        else:
-            return False, None, None
+    # RC 03/10/2026 difference between 2 timelapse datasets
+    def timelapseDiff(self, sel_idx):
+        resist1 = self.surveys[0].df['resist'].values.copy()
+        #if sel_idx == 0:
+        #    sel_idx = sel_idx + 1
+        #    resist2 = self.surveys[sel_idx].df['resist'].values.copy()
+        #else:
+        resist2 = self.surveys[sel_idx].df['resist'].values.copy()
+        diff = resist1-resist2
+        #print("Differences: ", diff)
+        df_diff = self.surveys[0].df.copy()
+        elec_diff = self.surveys[0].elec
+        survey_diff = []
+        survey_diff.append(type(self.surveys[0])(df=df_diff, elec=elec_diff))
+        df_diff['resist'] = diff
+        survey_diff[0].df = df_diff
+        self.surveys.append(survey_diff[0])
+        last_idx = len(self.surveys) - 1
+        # backup original datasets and copy last to all
+        survey_diff[0] = self.surveys[0]
+        for i in range(1, len(self.surveys)):
+            survey_diff.append(type(self.surveys[i])(df=df_diff, elec=elec_diff))
+            survey_diff[i] = self.surveys[i]
+        for i in range(len(self.surveys)):
+            self.surveys[i] = self.surveys[last_idx]
+        return True, survey_diff
 
-    def timelapseDiff_clean(self, survey_diff1, survey_diff2):
-        if(len(self.surveys)==3):
+    def timelapseDiff_clean(self, survey_diff):
+        for i in range(len(self.surveys)):
             # copy original datasets back to their place
-            self.surveys[0] = survey_diff1
-            self.surveys[1] = survey_diff2
-            # remove Differences dataset
-            survey_diff = self.surveys.pop()
-            return True
+            self.surveys[i] = survey_diff[i]
+        # remove the additional "diff" dataset
+        survey_diff[0] = self.surveys.pop()
+        return True
 
     def mergeElec(self, dist=-1):
         """Merge electrodes that have less than a certain distance to eache other
