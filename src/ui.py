@@ -1797,6 +1797,7 @@ class App(QMainWindow):
         cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
                  'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r',
                  'turbo','turbo_r','RdYlBu','RdYlBu_r']
+        
         def pcmapComboFunc(index):
             self.pParams['cmap'] = cmaps[index]
             self.pParamsIP['cmap'] = cmaps[index]
@@ -1806,14 +1807,22 @@ class App(QMainWindow):
         self.pcmapCombo.setCurrentIndex(0)
         self.pcmapCombo.activated.connect(pcmapComboFunc)
 
+        # RC 19/10/2026 edited to work with timelapseDiff
         def psContourFunc(state):
             if state  == Qt.Checked:
                 self.pParams['contour'] = True
                 self.pParamsIP['contour'] = True
+                if self.timelapsediffCheck.isChecked():
+                    sel_idx = self.fnamesCombo.currentIndex()
+                    survey_diff = self.project.timelapseDiff(sel_idx)
+                    self.plotPseudo()
+                    self.project.timelapseDiff_clean(survey_diff)
+                else:
+                    self.plotPseudo()
             else:
                 self.pParams['contour'] = False
                 self.pParamsIP['contour'] = False
-            self.plotPseudo()
+            #self.plotPseudo()
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
 
@@ -1821,13 +1830,14 @@ class App(QMainWindow):
         def timelapseDiff(state):
             if self.project is not None and self.project.elec is not None:
                 if state == Qt.Checked:
+                    self.mergElecCheck.setChecked(False)
+                    self.mergElecCheck.setEnabled(False)
+                    self.psContourCheck.setChecked(False)
+                    self.psContourCheck.setEnabled(True)
                     sel_idx = self.fnamesCombo.currentIndex()
                     #print("Selected index: ", sel_idx)
-                    check_return, survey_diff = self.project.timelapseDiff(sel_idx)
-                    if  check_return:
-                        #if sel_idx == 0:
-                        #    self.infoDump('Difference done between ' + self.fnamesCombo.itemText(0) + ' and ' + self.fnamesCombo.itemText(sel_idx+1))
-                        #else:
+                    survey_diff = self.project.timelapseDiff(sel_idx)
+                    if  survey_diff:
                         self.infoDump('Difference done between ' + self.fnamesCombo.itemText(0) + ' and ' + self.fnamesCombo.itemText(sel_idx))
                         self.plotPseudo()
                         self.project.timelapseDiff_clean(survey_diff)
@@ -1836,6 +1846,10 @@ class App(QMainWindow):
                         self.timelapsediffCheck.setEnabled(False)
                         self.errorDump('Dataset difference failed!')
                 elif state == Qt.Unchecked:
+                    self.mergElecCheck.setChecked(False)
+                    self.mergElecCheck.setEnabled(True)
+                    self.psContourCheck.setChecked(False)
+                    self.psContourCheck.setEnabled(True)
                     self.plotPseudo()
 
         def mergeElecs(state):
@@ -1898,13 +1912,20 @@ class App(QMainWindow):
 
         self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark']), 'cmap': 'viridis'}
         self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark']), 'cmap': 'viridis'}
+        # RC 19/10/2026 edited to work with timelapseDiff
         def prescaleBtnFunc():
             if self.project is not None:
                 self.pParams['vmin'] = float(self.pvmin.text()) if self.pvmin.text() != '' else None
                 self.pParams['vmax'] = float(self.pvmax.text()) if self.pvmax.text() != '' else None
                 self.pParamsIP['vmin'] = float(self.pvminIP.text()) if self.pvminIP.text() != '' else None
                 self.pParamsIP['vmax'] = float(self.pvmaxIP.text()) if self.pvmaxIP.text() != '' else None
-                self.plotPseudo()
+                if self.timelapsediffCheck.isChecked():
+                    sel_idx = self.fnamesCombo.currentIndex()
+                    survey_diff = self.project.timelapseDiff(sel_idx)
+                    self.plotPseudo()
+                    self.project.timelapseDiff_clean(survey_diff)
+                else:
+                    self.plotPseudo()
                 if self.project.typ[0] == 'c':
                     self.plotPseudoIP()
             QApplication.processEvents()

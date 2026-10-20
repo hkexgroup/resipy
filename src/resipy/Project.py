@@ -804,37 +804,33 @@ class Project(object): # Project master class instanciated by the GUI
     # RC 03/10/2026 difference between 2 timelapse datasets
     def timelapseDiff(self, sel_idx):
         resist1 = self.surveys[0].df['resist'].values.copy()
-        #if sel_idx == 0:
-        #    sel_idx = sel_idx + 1
-        #    resist2 = self.surveys[sel_idx].df['resist'].values.copy()
-        #else:
         resist2 = self.surveys[sel_idx].df['resist'].values.copy()
-        diff = resist1-resist2
-        #print("Differences: ", diff)
+        if len(resist1) == len(resist2): # check if same number of quadrupoles
+            diff = resist1-resist2
+            #print("Differences: ", diff)
+        else:
+            return False
         df_diff = self.surveys[0].df.copy()
         elec_diff = self.surveys[0].elec
         survey_diff = []
         survey_diff.append(type(self.surveys[0])(df=df_diff, elec=elec_diff))
         df_diff['resist'] = diff
         survey_diff[0].df = df_diff
-        self.surveys.append(survey_diff[0])
+        self.surveys.append(survey_diff[0]) # adding the difference dataset
         last_idx = len(self.surveys) - 1
-        # backup original datasets and copy last to all
-        survey_diff[0] = self.surveys[0]
-        for i in range(1, len(self.surveys)):
+        survey_diff[0] = self.surveys[0] # backup original dataset using survey_diff as buffer
+        for i in range(1, len(self.surveys)): # backup original dataset using survey_diff as buffer
             survey_diff.append(type(self.surveys[i])(df=df_diff, elec=elec_diff))
             survey_diff[i] = self.surveys[i]
-        for i in range(len(self.surveys)):
+        for i in range(len(self.surveys)): # copy last to all for display purposes
             self.surveys[i] = self.surveys[last_idx]
-        return True, survey_diff
+        return survey_diff
 
+    # RC 03/10/2026 remove temporarily "display-only" datasets
     def timelapseDiff_clean(self, survey_diff):
         for i in range(len(self.surveys)):
-            # copy original datasets back to their place
-            self.surveys[i] = survey_diff[i]
-        # remove the additional "diff" dataset
-        survey_diff[0] = self.surveys.pop()
-        return True
+            self.surveys[i] = survey_diff[i] # copy original datasets back to their place
+        survey_diff[0] = self.surveys.pop() # remove the additional "diff" dataset
 
     def mergeElec(self, dist=-1):
         """Merge electrodes that have less than a certain distance to eache other
