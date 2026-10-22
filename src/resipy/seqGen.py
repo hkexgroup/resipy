@@ -1022,6 +1022,11 @@ class Generator():
             fnamer = fname.replace(fext,'_R' + fext)
         fnames = [fnamef, fnamer]
         lines2write = [self.lines, self.linesR]
+
+        if len(self.lines) > 950: 
+            max_lines:int = 900 
+        else:
+            max_lines:int = 950 
         # nperline = len(self.lines[0])
         
         for i, lines in enumerate(lines2write):
@@ -1041,15 +1046,17 @@ class Generator():
                     fh.write('%i '%n)
                 fh.write('\n')
                 cl+=1
-                if cl>=950:
+                if cl > max_lines:
+                    fh.write('\nend\n')
                     fh.close() # close the file
                     cf += 1
                     fname = fnames[i].replace(fext, '_p{:0>2d}'.format(cf)+fext)
                     fh = open(fname, 'w') # make a new file 
                     fh.write('# test 0\n\n')
                     cl = 1 # reset count to 1 
-                    
+
             if not fh.closed: 
+                fh.write('\nend\n')
                 fh.close() 
                 
     def write2sting(self, fname):
