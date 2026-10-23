@@ -1075,8 +1075,9 @@ class App(QMainWindow):
                 self.base_target_decrease.setVisible(True)
                 self.base_target_decreaseLabel.setVisible(True)
                 # RC 28/09/2026 adding timelapsediffCheck checkbox when active
-                self.timelapsediffCheck.setEnabled(False)
                 self.timelapsediffCheck.setVisible(True)
+                self.timelapsediffCheck.setEnabled(False)
+                self.timelapsediffCheck.setChecked(False)
             else:
                 self.iTimeLapse = False
                 if self.project is not None:
@@ -1090,8 +1091,9 @@ class App(QMainWindow):
                 self.base_target_decrease.setVisible(False)
                 self.base_target_decreaseLabel.setVisible(False)
                 # RC 28/09/2026 removing timelapsediffCheck checkbox when inactive
-                self.timelapsediffCheck.setEnabled(False)
                 self.timelapsediffCheck.setVisible(False)
+                self.timelapsediffCheck.setEnabled(False)
+                self.timelapsediffCheck.setChecked(False)
 
         self.timeLapseCheck = QCheckBox('Time-lapse Survey')
         self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
@@ -1438,14 +1440,12 @@ class App(QMainWindow):
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
                             return
-                        # RC 03/10/2026 activate checkbox and deselect checkbox
-                        else:
-                            self.timelapsediffCheck.setEnabled(True)
-                            self.fnamesCombo.currentIndexChanged.connect(lambda: self.timelapsediffCheck.setChecked(False))
                         self.project.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.writeLog('k.createTimeLapseSurvey({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
                         self.ipCheck.setEnabled(False) # TODO enable IP for timelapse
                         self.infoDump('Time-lapse survey created.')
+                        self.timelapsediffCheck.setEnabled(True)
+                        self.timelapsediffCheck.setChecked(False)
                     else:
                         self.project.createBatchSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.writeLog('k.createBatchSurvey({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
@@ -1778,10 +1778,15 @@ class App(QMainWindow):
         self.fnamesComboLabel = QLabel('Choose a dataset to plot:')
         self.fnamesComboLabel.hide()
 
+        # RC 23/10/2026 edited to work with timelapseDif
         def fnamesComboFunc(index):
-            self.pParams['index'] = index
-            self.pParamsIP['index'] = index
-            self.plotPseudo()
+            if self.timelapsediffCheck.isChecked():
+                timelapseDiff(Qt.Checked)
+            else:
+                self.pParams['index'] = index
+                self.pParamsIP['index'] = index
+                #print('file: ', index)
+                self.plotPseudo()
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
                 self.dcaProgress.setValue(0)
@@ -1807,22 +1812,22 @@ class App(QMainWindow):
         self.pcmapCombo.setCurrentIndex(0)
         self.pcmapCombo.activated.connect(pcmapComboFunc)
 
-        # RC 19/10/2026 edited to work with timelapseDiff
+        # RC 23/10/2026 edited to work with timelapseDiff
         def psContourFunc(state):
-            if state  == Qt.Checked:
+            if state == Qt.Checked:
                 self.pParams['contour'] = True
                 self.pParamsIP['contour'] = True
                 if self.timelapsediffCheck.isChecked():
-                    sel_idx = self.fnamesCombo.currentIndex()
-                    survey_diff = self.project.timelapseDiff(sel_idx)
-                    self.plotPseudo()
-                    self.project.timelapseDiff_clean(survey_diff)
+                    timelapseDiff(Qt.Checked)
                 else:
                     self.plotPseudo()
             else:
                 self.pParams['contour'] = False
                 self.pParamsIP['contour'] = False
-            #self.plotPseudo()
+                if self.timelapsediffCheck.isChecked():
+                    timelapseDiff(Qt.Checked)
+                else:
+                    self.plotPseudo()
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
 
@@ -1832,8 +1837,6 @@ class App(QMainWindow):
                 if state == Qt.Checked:
                     self.mergElecCheck.setChecked(False)
                     self.mergElecCheck.setEnabled(False)
-                    self.psContourCheck.setChecked(False)
-                    self.psContourCheck.setEnabled(True)
                     sel_idx = self.fnamesCombo.currentIndex()
                     #print("Selected index: ", sel_idx)
                     survey_diff = self.project.timelapseDiff(sel_idx)
@@ -1848,8 +1851,6 @@ class App(QMainWindow):
                 elif state == Qt.Unchecked:
                     self.mergElecCheck.setChecked(False)
                     self.mergElecCheck.setEnabled(True)
-                    self.psContourCheck.setChecked(False)
-                    self.psContourCheck.setEnabled(True)
                     self.plotPseudo()
 
         def mergeElecs(state):
