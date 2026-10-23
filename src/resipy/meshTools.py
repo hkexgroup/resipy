@@ -3215,8 +3215,8 @@ class Mesh:
         #compute neighbourhood matrix 
         if self.neigh_matrix is None:
             self.computeNeigh()
-        neigh = self.neigh_matrix.copy()
-        neigh = mc.sortNeigh(neigh,zone) # organise for (c)R3t input  
+        neigh = self.neigh_matrix
+        neigh = mc.sortNeigh(neigh.copy(),zone.copy()) # organise for (c)R3t input  
         neigh += 1 # add one for FOTRAN indexing 
         
         if self.NsizeA is None:#then the finite element conductance matrix needs calculating 

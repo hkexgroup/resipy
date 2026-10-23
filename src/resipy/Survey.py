@@ -1012,14 +1012,14 @@ class Survey(object):
         The method first sorts the dipole AB and MN. Then efficiently searches
         for reciprocal pairs with a bisection search. 
         """
-        resist = np.asarray(self.df['resist'].values,dtype=float)
-        phase = np.asarray(-self.kFactor*self.df['ip'].values,dtype=float) #converting chargeability to phase shift
+        resist = np.asarray(self.df['resist'].values,dtype=float).copy()
+        phase = np.asarray(-self.kFactor*self.df['ip'].values,dtype=float).copy() #converting chargeability to phase shift
         ndata = self.df.shape[0]
         
         if platform.system() == 'Windows':
-            array = np.asarray(self.isequence - 1, dtype=np.int64)
+            array = np.asarray(self.isequence - 1, dtype=np.int64).copy()
         else: 
-            array = np.asarray(self.isequence - 1, dtype=int)
+            array = np.asarray(self.isequence - 1, dtype=int).copy()
         
         # print(type(phase))
         unpackme = computeRecip(array, resist, phase)

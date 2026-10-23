@@ -237,7 +237,7 @@ class Generator():
         return np.array(seq)
     
     
-    def xdgen(self, amin=0, amax=8, nmin=1, nmax=3, discrepancy = 0.5, dump=print):
+    def xdgen(self, amin=0, amax=4, nmin=1, nmax=8, discrepancy = 0.5, dump=print):
         
         assert isinstance(amin,int)
         assert isinstance(amax,int)
@@ -314,9 +314,10 @@ class Generator():
                             p2 = c2 + n
                             if p2 < 0 or p2 >= nelec1:
                                 continue 
-                            line = [belec0.label[c1], belec1.label[c2], belec0.label[p1], belec1.label[p2]]
-                            if line not in seq: 
-                                seq.append(line)
+                            lineF = [belec0.label[c1], belec1.label[c2], belec0.label[p1], belec1.label[p2]]
+                            lineR = [belec0.label[p1], belec1.label[p2], belec0.label[c1], belec1.label[c2]]
+                            if lineF not in seq and lineR not in seq: 
+                                seq.append(lineF)
                         
                         # extend in the NEGATIVE direction 
                         c2 = i1 - a 
@@ -329,9 +330,10 @@ class Generator():
                             p2 = c2 - n 
                             if p2 < 0 or p2 >= nelec1:
                                 continue 
-                            line = [belec0.label[c1], belec1.label[c2], belec0.label[p1], belec1.label[p2]]
-                            if line not in seq: 
-                                seq.append(line)
+                            lineF = [belec0.label[c1], belec1.label[c2], belec0.label[p1], belec1.label[p2]]
+                            lineR = [belec0.label[p1], belec1.label[p2], belec0.label[c1], belec1.label[c2]]
+                            if lineF not in seq and lineR not in seq: # need to double check here we dont add reciprocals accidently 
+                                seq.append(lineF)
                                 
         t1 = time.time()
         dt = t1 - t0
@@ -1020,6 +1022,11 @@ class Generator():
             fnamer = fname.replace(fext,'_R' + fext)
         fnames = [fnamef, fnamer]
         lines2write = [self.lines, self.linesR]
+
+        if len(self.lines) > 950: 
+            max_lines:int = 900 
+        else:
+            max_lines:int = 950 
         # nperline = len(self.lines[0])
         
         for i, lines in enumerate(lines2write):
@@ -1039,15 +1046,17 @@ class Generator():
                     fh.write('%i '%n)
                 fh.write('\n')
                 cl+=1
-                if cl>=950:
+                if cl > max_lines:
+                    fh.write('\nend\n')
                     fh.close() # close the file
                     cf += 1
                     fname = fnames[i].replace(fext, '_p{:0>2d}'.format(cf)+fext)
                     fh = open(fname, 'w') # make a new file 
                     fh.write('# test 0\n\n')
                     cl = 1 # reset count to 1 
-                    
+
             if not fh.closed: 
+                fh.write('\nend\n')
                 fh.close() 
                 
     def write2sting(self, fname):
