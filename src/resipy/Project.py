@@ -799,9 +799,39 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of electrodes'] = len(self.elec)
         if 'iremote' in self.elec.columns: 
             if any(elec['iremote']):
-                self.pinfo['Remote electrodes'] = True 
-                
-    
+                self.pinfo['Remote electrodes'] = True
+
+    # RC 03/10/2026 difference between 2 timelapse datasets
+    def timelapseDiff(self, sel_idx):
+        resist1 = self.surveys[0].df['resist'].values.copy()
+        resist2 = self.surveys[sel_idx].df['resist'].values.copy()
+        if len(resist1) == len(resist2): # check if same number of quadrupoles
+            diff = resist1-resist2
+            #print("Differences: ", diff)
+        else:
+            return False
+        df_diff = self.surveys[0].df.copy()
+        elec_diff = self.surveys[0].elec
+        survey_diff = []
+        survey_diff.append(type(self.surveys[0])(df=df_diff, elec=elec_diff))
+        df_diff['resist'] = diff
+        survey_diff[0].df = df_diff
+        self.surveys.append(survey_diff[0]) # adding the difference dataset
+        last_idx = len(self.surveys) - 1
+        survey_diff[0] = self.surveys[0] # backup original dataset using survey_diff as buffer
+        for i in range(1, len(self.surveys)): # backup original dataset using survey_diff as buffer
+            survey_diff.append(type(self.surveys[i])(df=df_diff, elec=elec_diff))
+            survey_diff[i] = self.surveys[i]
+        for i in range(len(self.surveys)): # copy last to all for display purposes
+            self.surveys[i] = self.surveys[last_idx]
+        return survey_diff
+
+    # RC 03/10/2026 remove temporarily "display-only" datasets
+    def timelapseDiff_clean(self, survey_diff):
+        for i in range(len(self.surveys)):
+            self.surveys[i] = survey_diff[i] # copy original datasets back to their place
+        survey_diff[0] = self.surveys.pop() # remove the additional "diff" dataset
+
     def mergeElec(self, dist=-1):
         """Merge electrodes that have less than a certain distance to eache other
         
@@ -2702,6 +2732,9 @@ class Project(object): # Project master class instanciated by the GUI
             if kwargs['column'] == 'appdiffprc':
                 if 'appdiffprc' not in self.surveys[index].df.columns:
                     self.computeAppDiff()
+        # RC 01/10/2026 fixing case of loading 2→3→2 datasets
+        if index >= len(self.surveys):
+            index = 0
         self.surveys[index].showPseudo(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 

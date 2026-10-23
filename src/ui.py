@@ -1074,6 +1074,10 @@ class App(QMainWindow):
                 self.pseudo3DCheck.setChecked(False)
                 self.base_target_decrease.setVisible(True)
                 self.base_target_decreaseLabel.setVisible(True)
+                # RC 28/09/2026 adding timelapsediffCheck checkbox when active
+                self.timelapsediffCheck.setVisible(True)
+                self.timelapsediffCheck.setEnabled(False)
+                self.timelapsediffCheck.setChecked(False)
             else:
                 self.iTimeLapse = False
                 if self.project is not None:
@@ -1086,6 +1090,10 @@ class App(QMainWindow):
                 self.pseudo3DCheck.setEnabled(True)
                 self.base_target_decrease.setVisible(False)
                 self.base_target_decreaseLabel.setVisible(False)
+                # RC 28/09/2026 removing timelapsediffCheck checkbox when inactive
+                self.timelapsediffCheck.setVisible(False)
+                self.timelapsediffCheck.setEnabled(False)
+                self.timelapsediffCheck.setChecked(False)
 
         self.timeLapseCheck = QCheckBox('Time-lapse Survey')
         self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
@@ -1436,6 +1444,8 @@ class App(QMainWindow):
                         self.writeLog('k.createTimeLapseSurvey({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
                         self.ipCheck.setEnabled(False) # TODO enable IP for timelapse
                         self.infoDump('Time-lapse survey created.')
+                        self.timelapsediffCheck.setEnabled(True)
+                        self.timelapsediffCheck.setChecked(False)
                     else:
                         self.project.createBatchSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.writeLog('k.createBatchSurvey({:s}, ftype="{:s}")'.format(str(fnames), self.ftype))
@@ -1483,6 +1493,9 @@ class App(QMainWindow):
                 except Exception as e:
                     self.loadingWidget(exitflag=True)
                     print('Error in getdir(): ', e)
+                    # RC 01/10/2026 more details about the error
+                    import traceback
+                    traceback.print_exc()
                     self.errorDump('Something went wrong importing the data! Check file formats are correct.')
 
         self.loadingDialog = QDialog()
@@ -1492,7 +1505,6 @@ class App(QMainWindow):
         loadingDialogLayout.addWidget(self.loadingDialogTxtWidget)
         self.loadingDialog.setLayout(loadingDialogLayout)
         self.loadingDialog.setWindowFlags(Qt.FramelessWindowHint)
-
 
         def importDataBtnFunc():
             if self.iMerged: # if special case of getting a merged file use get dir function instead
@@ -1766,10 +1778,15 @@ class App(QMainWindow):
         self.fnamesComboLabel = QLabel('Choose a dataset to plot:')
         self.fnamesComboLabel.hide()
 
+        # RC 23/10/2026 edited to work with timelapseDif
         def fnamesComboFunc(index):
-            self.pParams['index'] = index
-            self.pParamsIP['index'] = index
-            self.plotPseudo()
+            if self.timelapsediffCheck.isChecked():
+                timelapseDiff(Qt.Checked)
+            else:
+                self.pParams['index'] = index
+                self.pParamsIP['index'] = index
+                #print('file: ', index)
+                self.plotPseudo()
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
                 self.dcaProgress.setValue(0)
@@ -1780,9 +1797,12 @@ class App(QMainWindow):
         self.fnamesCombo.activated.connect(fnamesComboFunc)
         self.fnamesCombo.hide()
 
+        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps
         # self.pcmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
-                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r']
+                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r',
+                 'turbo','turbo_r','RdYlBu','RdYlBu_r']
+        
         def pcmapComboFunc(index):
             self.pParams['cmap'] = cmaps[index]
             self.pParamsIP['cmap'] = cmaps[index]
@@ -1792,17 +1812,46 @@ class App(QMainWindow):
         self.pcmapCombo.setCurrentIndex(0)
         self.pcmapCombo.activated.connect(pcmapComboFunc)
 
-
+        # RC 23/10/2026 edited to work with timelapseDiff
         def psContourFunc(state):
-            if state  == Qt.Checked:
+            if state == Qt.Checked:
                 self.pParams['contour'] = True
                 self.pParamsIP['contour'] = True
+                if self.timelapsediffCheck.isChecked():
+                    timelapseDiff(Qt.Checked)
+                else:
+                    self.plotPseudo()
             else:
                 self.pParams['contour'] = False
                 self.pParamsIP['contour'] = False
-            self.plotPseudo()
+                if self.timelapsediffCheck.isChecked():
+                    timelapseDiff(Qt.Checked)
+                else:
+                    self.plotPseudo()
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
+
+        # RC 03/10/2026 difference between timelapse datasets
+        def timelapseDiff(state):
+            if self.project is not None and self.project.elec is not None:
+                if state == Qt.Checked:
+                    self.mergElecCheck.setChecked(False)
+                    self.mergElecCheck.setEnabled(False)
+                    sel_idx = self.fnamesCombo.currentIndex()
+                    #print("Selected index: ", sel_idx)
+                    survey_diff = self.project.timelapseDiff(sel_idx)
+                    if  survey_diff:
+                        self.infoDump('Difference done between ' + self.fnamesCombo.itemText(0) + ' and ' + self.fnamesCombo.itemText(sel_idx))
+                        self.plotPseudo()
+                        self.project.timelapseDiff_clean(survey_diff)
+                    else:
+                        self.timelapsediffCheck.setChecked(False)
+                        self.timelapsediffCheck.setEnabled(False)
+                        self.errorDump('Dataset difference failed!')
+                elif state == Qt.Unchecked:
+                    self.mergElecCheck.setChecked(False)
+                    self.mergElecCheck.setEnabled(True)
+                    self.plotPseudo()
 
         def mergeElecs(state):
             if self.project is not None and self.project.elec is not None:
@@ -1824,6 +1873,14 @@ class App(QMainWindow):
                 self.updateElec()
 
         # display options for pseudo-sections
+
+        # RC 05/10/2026 adding timelapse difference checkbox
+        self.timelapsediffCheck = QCheckBox('Datasets difference')
+        self.timelapsediffCheck.stateChanged.connect(timelapseDiff)
+        self.timelapsediffCheck.setEnabled(False)
+        self.timelapsediffCheck.setVisible(False)
+        self.timelapsediffCheck.setToolTip('Shows the difference between apparent resistivities of first vs. other loaded datasets')
+        
         self.mergElecCheck = QCheckBox('Merge close electrodes')
         self.mergElecCheck.stateChanged.connect(mergeElecs)
         self.mergElecCheck.setEnabled(False)
@@ -1856,13 +1913,20 @@ class App(QMainWindow):
 
         self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark']), 'cmap': 'viridis'}
         self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark']), 'cmap': 'viridis'}
+        # RC 19/10/2026 edited to work with timelapseDiff
         def prescaleBtnFunc():
             if self.project is not None:
                 self.pParams['vmin'] = float(self.pvmin.text()) if self.pvmin.text() != '' else None
                 self.pParams['vmax'] = float(self.pvmax.text()) if self.pvmax.text() != '' else None
                 self.pParamsIP['vmin'] = float(self.pvminIP.text()) if self.pvminIP.text() != '' else None
                 self.pParamsIP['vmax'] = float(self.pvmaxIP.text()) if self.pvmaxIP.text() != '' else None
-                self.plotPseudo()
+                if self.timelapsediffCheck.isChecked():
+                    sel_idx = self.fnamesCombo.currentIndex()
+                    survey_diff = self.project.timelapseDiff(sel_idx)
+                    self.plotPseudo()
+                    self.project.timelapseDiff_clean(survey_diff)
+                else:
+                    self.plotPseudo()
                 if self.project.typ[0] == 'c':
                     self.plotPseudoIP()
             QApplication.processEvents()
@@ -1942,6 +2006,8 @@ class App(QMainWindow):
         # self.ipboxcheck.addWidget(self.ipCheck)
         # self.hbox5.addWidget(self.ipCheckLabel, alignment=Qt.AlignLeft)
         self.hbox5.addWidget(self.ipCheck, Qt.AlignLeft)
+        # RC 28/09/2026 adding checkbox timelapsediffCheck
+        self.hbox5.addWidget(self.timelapsediffCheck)
         self.hbox5.addWidget(self.mergElecCheck)
         self.hbox5.addWidget(self.psContourCheck)
         self.hbox5.addWidget(self.pvminLabel)
@@ -6390,9 +6456,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.doiSensCheck.stateChanged.connect(doiSensCheckFunc)
         self.doiSensCheck.setToolTip('Depth of Investigation (DOI) estimated based on sensitivity.\nSee advanced inversion settings for DOI with the Oldengburg and Li method.')
 
+        # RC 08/09/2026 adding turbo and Red-Yellow-Blu colormaps
         self.cmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
-                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r']
+                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r',
+                 'turbo','turbo_r','RdYlBu','RdYlBu_r']
+                 
         def cmapComboFunc(index):
             self.displayParams['cmap'] = cmaps[index]
             self.replotSection()
