@@ -5784,6 +5784,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.reg_mode.addItem('Normal regularization [0]')
         self.reg_mode.addItem('Regularization from initial model [1]')
         self.reg_mode.addItem('Regularization from difference inversion [2]')
+        self.reg_mode.addItem('Sequential regularization from previous model [3]')
+        self.reg_mode.addItem('Sequential difference inversion (t-1, t) [4]')
         self.reg_mode.activated.connect(reg_modeFunc)
         invForm.addRow(self.reg_modeLabel, self.reg_mode)
 
