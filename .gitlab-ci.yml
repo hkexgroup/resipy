@@ -3,7 +3,7 @@ image: python:3.12-trixie
 test:
   script:
   - apt-get update
-  - apt-get install --assume-yes wine libgl1-mesa-glx xvfb
+  - apt-get install --assume-yes wine libgl1 xvfb
   - pip install -r requirements.txt
   - pip install coverage
   - cd src
