@@ -588,6 +588,61 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-timelapse'] = time.time() - t0
 
 
+#%% test for sequential timelapse inversion (reg_mode 3 and 4)
+plt.close('all')
+print('-------------Testing sequential Time-lapse (reg_mode 3 and 4) ------------')
+t0 = time.time()
+for regMode in [3, 4]:
+    k = Project(apiPath + '/invdir/test2d-timelapse-seq/')
+    k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
+                             testdir + 'dc-2d-timelapse/data/17040301.csv',
+                             testdir + 'dc-2d-timelapse/data/17051601.csv',
+                             testdir + 'dc-2d-timelapse/17051601_incomplete.csv'])
+    k.createMesh()
+    k.fitErrorPwl(-1)
+    k.err = True
+    k.invert(param={'reg_mode': regMode}, parallel=True) # parallel is ignored: steps are sequential
+    assert len(k.meshResults) == 4
+    assert len(set([m.numel for m in k.meshResults])) == 1 # all cropped the same way
+    for m in k.meshResults:
+        assert 'difference(percent)' in m.df.columns # change since t0
+        assert 'stepDifference(percent)' in m.df.columns # change since t-1
+    # the first step has t0 as previous survey: both differences are the same
+    assert np.allclose(k.meshResults[1].df['difference(percent)'],
+                       k.meshResults[1].df['stepDifference(percent)'])
+    k.showResults(index=2, attr='stepDifference(percent)')
+    k.showRMS()
+    # reloading the results recovers the reg_mode and the step differences
+    k2 = Project(apiPath + '/invdir/t-seq/')
+    k2.loadResults(k.dirname)
+    assert k2.param['reg_mode'] == regMode
+    assert len(k2.meshResults) == 4
+    assert np.allclose(k2.meshResults[2].df['stepDifference(percent)'],
+                       k.meshResults[2].df['stepDifference(percent)'])
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['dc-2d-timelapse-sequential'] = time.time() - t0
+
+
+#%% test for more than 999 datasets in one run -- takes a few minutes
+plt.close('all')
+print('-------------Testing batch inversion with more than 999 datasets ------------')
+t0 = time.time()
+k = Project(apiPath + '/invdir/test2d-batch-1001/')
+fnames = [testdir + 'dc-2d-timelapse/data/17031501.csv',
+          testdir + 'dc-2d-timelapse/data/17040301.csv']
+k.createBatchSurvey([fnames[i % 2] for i in range(1001)]) # same 2 files, 1001 times
+k.createMesh(cl=0.5) # coarse mesh to keep it quick
+k.param['max_iter'] = 1
+k.invert() # R2 stops at the 1000th dataset of a run -> inverted in 2 chunks
+assert len(k.meshResults) == 1001
+assert os.path.exists(os.path.join(k.dirname, 'f1001_res.vtk'))
+# dataset 1001 (2nd chunk) and dataset 1 (1st chunk) are the same file
+assert np.allclose(k.meshResults[1000].df['Resistivity(ohm.m)'],
+                   k.meshResults[0].df['Resistivity(ohm.m)'])
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['dc-2d-batch-1001'] = time.time() - t0
+
+
 #%% test for batch inversion with moving electrodes
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
