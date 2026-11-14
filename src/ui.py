@@ -7591,7 +7591,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 <a href="https://mplcursors.readthedocs.io/en/stable/">mplcursors</a>.
             </p>
             <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-            <p>Contributors: Pedro Concha, Michael Tso, John McKnight, Riccardo Castagner</p>
+            <p>Contributors: Pedro Concha, Michael Tso, John McKnight, Riccardo Castagner, Raymon Hess</p>
             <p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P.
             and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for
             Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423.
