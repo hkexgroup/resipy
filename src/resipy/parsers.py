@@ -1667,7 +1667,7 @@ def primeParserTab(fname, espacing=1):
         c += 1 
         if c > maxline:
             raise ImportError("Cannot find data line in PRIME/RESIMGR file")
-            break 
+    
     dataline = c 
     fh.close()
     
@@ -1741,14 +1741,14 @@ def primeParserTab(fname, espacing=1):
             _ = fh.readline() 
             # make electrode data frame 
             _elec = pd.DataFrame({
-                'label':[0]*nelec,
+                'label':["0"]*nelec,
                 'x':[0.0]*nelec,
                 'y':[0.0]*nelec,
                 'z':[0.0]*nelec,
                 })
             for i in range(nelec):
                 linesep = fh.readline().split() 
-                _elec.loc[i,'label'] = int(linesep[0])
+                _elec.loc[i,'label'] = str(linesep[0])
                 _elec.loc[i,'x'] = float(linesep[1])
                 _elec.loc[i,'y'] = float(linesep[2])
                 _elec.loc[i,'z'] = float(linesep[3])
