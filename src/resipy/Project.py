@@ -11,7 +11,7 @@ the user.
 ResIPy_version = '3.6.6' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
-import os, sys, shutil, platform, warnings, time, glob # python standard libs
+import os, sys, shutil, platform, warnings, time, glob, json # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
 from copy import deepcopy
@@ -343,8 +343,40 @@ class cd:
     
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
-   
-#%% other helper functions 
+
+#%% protocol.dat and folder helpers for multi-dataset runs
+def splitProtocolFile(fname):
+    """Split a protocol.dat holding several datasets (time-lapse or batch)
+    into one text block per dataset. Each dataset starts with a line holding
+    only its number of rows. The raw text is kept so values are written back
+    untouched.
+    """
+    with open(fname, 'r') as f:
+        lines = [l for l in f.read().split('\n') if l.strip() != '']
+    blocks = []
+    j = 0
+    while j < len(lines):
+        n = int(lines[j].split()[0])
+        blocks.append('\n'.join(lines[j:j+n+1]) + '\n')
+        j = j + n + 1
+    return blocks
+
+
+def removeTempDir(path, dump=print):
+    """Remove a temporary folder. On Windows (OneDrive, antivirus) a folder
+    can stay locked for a moment after its files were used, so retry a few
+    times and only warn if it still fails: results are already saved.
+    """
+    for attempt in range(5):
+        shutil.rmtree(path, ignore_errors=True)
+        if not os.path.exists(path):
+            return
+        time.sleep(1)
+    dump('Note: could not remove the temporary folder {:s} (locked by another '
+         'program). It is safe to delete it later.\n'.format(path))
+
+
+#%% other helper functions
 # distance matrix function for 2D (numpy based from https://stackoverflow.com/questions/22720864/efficiently-calculating-a-euclidean-distance-matrix-using-numpy)
 def cdist(a):
     z = np.array([complex(x[0], x[1]) for x in a])
@@ -799,9 +831,39 @@ class Project(object): # Project master class instanciated by the GUI
         self.pinfo['Number of electrodes'] = len(self.elec)
         if 'iremote' in self.elec.columns: 
             if any(elec['iremote']):
-                self.pinfo['Remote electrodes'] = True 
-                
-    
+                self.pinfo['Remote electrodes'] = True
+
+    # RC 03/10/2026 difference between 2 timelapse datasets
+    def timelapseDiff(self, sel_idx):
+        resist1 = self.surveys[0].df['resist'].values.copy()
+        resist2 = self.surveys[sel_idx].df['resist'].values.copy()
+        if len(resist1) == len(resist2): # check if same number of quadrupoles
+            diff = resist1-resist2
+            #print("Differences: ", diff)
+        else:
+            return False
+        df_diff = self.surveys[0].df.copy()
+        elec_diff = self.surveys[0].elec
+        survey_diff = []
+        survey_diff.append(type(self.surveys[0])(df=df_diff, elec=elec_diff))
+        df_diff['resist'] = diff
+        survey_diff[0].df = df_diff
+        self.surveys.append(survey_diff[0]) # adding the difference dataset
+        last_idx = len(self.surveys) - 1
+        survey_diff[0] = self.surveys[0] # backup original dataset using survey_diff as buffer
+        for i in range(1, len(self.surveys)): # backup original dataset using survey_diff as buffer
+            survey_diff.append(type(self.surveys[i])(df=df_diff, elec=elec_diff))
+            survey_diff[i] = self.surveys[i]
+        for i in range(len(self.surveys)): # copy last to all for display purposes
+            self.surveys[i] = self.surveys[last_idx]
+        return survey_diff
+
+    # RC 03/10/2026 remove temporarily "display-only" datasets
+    def timelapseDiff_clean(self, survey_diff):
+        for i in range(len(self.surveys)):
+            self.surveys[i] = survey_diff[i] # copy original datasets back to their place
+        survey_diff[0] = self.surveys.pop() # remove the additional "diff" dataset
+
     def mergeElec(self, dist=-1):
         """Merge electrodes that have less than a certain distance to eache other
         
@@ -2702,6 +2764,9 @@ class Project(object): # Project master class instanciated by the GUI
             if kwargs['column'] == 'appdiffprc':
                 if 'appdiffprc' not in self.surveys[index].df.columns:
                     self.computeAppDiff()
+        # RC 01/10/2026 fixing case of loading 2→3→2 datasets
+        if index >= len(self.surveys):
+            index = 0
         self.surveys[index].showPseudo(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
@@ -2725,22 +2790,45 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[index].showPseudoIP(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
-    def matchSurveys(self):
+    def matchSurveys(self, sequential=False):
         """Will trim all surveys to get them ready for difference inversion
         so that each PAIRS of (background, surveyX) have the same number of
         quadrupoles. We do not take all quadrupoles in common among all
         surveys as this is not needed and if there is a small survey, it would
         reduce all other larger surveys. Updated in July 2026 with integer index.
+
+        Parameters
+        ----------
+        sequential : bool, optional
+            If `False` (default), each survey is matched against the first
+            survey (background), as needed for `reg_mode == 2`. If `True`,
+            each survey is matched against the PREVIOUS survey, i.e. the
+            pairs are (survey0, survey1), (survey1, survey2), ... as needed
+            for the sequential difference inversion (`reg_mode == 4`).
+
+        Returns
+        -------
+        indexes : list of tuple
+            For each survey i, a tuple (ie0, ien) where ie0 are the row
+            indexes in the baseline survey (survey 0, or survey i-1 if
+            `sequential`) and ien the matching row indexes in survey i.
         """
-        print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
+        if sequential:
+            print('Matching quadrupoles between pairs of (surveyX-1, surveyX) for sequential difference inversion...', end='')
+        else:
+            print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
         t0 = time.time()
-            
+
         df0 = self.surveys[0].df.reset_index(drop=True)
         df0['tlindex0'] = df0.index.astype(int)
         df0['irecip0'] = df0.irecip.copy()
         ie0 = df0[df0['irecip'].ge(0)].index.values
         indexes = [(ie0, ie0)]  # array of tuple
-        for survey in self.surveys[1:]:
+        for sid, survey in enumerate(self.surveys[1:], start=1):
+            if sequential and sid > 1: # baseline is now the previous survey
+                df0 = self.surveys[sid-1].df.reset_index(drop=True)
+                df0['tlindex0'] = df0.index.astype(int)
+                df0['irecip0'] = df0.irecip.copy()
             df = survey.df.reset_index(drop=True)
             df['tlindex'] = df.index.astype(int)
             dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0','irecip0']].reset_index(),
@@ -4176,7 +4264,24 @@ class Project(object): # Project master class instanciated by the GUI
             if 'reg_mode' not in self.param.keys():
                 self.param['reg_mode'] = 2
             self.param['res0File'] = 'Start_res.dat'
-            write2in(self.param, self.dirname, typ=typ) # actual time-lapse
+            if self.param['reg_mode'] in [3, 4]: # sequential time-lapse
+                # the inversion codes only know reg_mode 1 and 2, so we map
+                # 3 -> 1 (background constrained to the PREVIOUS model) and
+                # 4 -> 2 (difference inversion relative to the PREVIOUS survey)
+                seqParam = self.param.copy()
+                seqParam['reg_mode'] = 1 if self.param['reg_mode'] == 3 else 2
+                # the result of each step becomes the starting/reference model
+                # (Start_res.dat) of the next step, so it must cover the whole
+                # mesh -> no cropping polygon (results cropped in postProcTl())
+                if (self.typ == 'R2') or (self.typ == 'cR2'):
+                    seqParam['num_xz_poly'] = 0
+                else:
+                    seqParam['num_xy_poly'] = 0
+                    seqParam['zmin'] = np.min(self.mesh.node[:,2]) - 10
+                    seqParam['zmax'] = np.max(self.mesh.node[:,2]) + 10
+                write2in(seqParam, self.dirname, typ=typ) # sequential time-lapse
+            else:
+                write2in(self.param, self.dirname, typ=typ) # actual time-lapse
         else:
             self.configFile = write2in(self.param, self.dirname, typ=typ)
 
@@ -4282,8 +4387,12 @@ class Project(object): # Project master class instanciated by the GUI
         if self.iTimeLapse is True:
             if 'reg_mode' not in self.param.keys():
                 self.param['reg_mode'] = 2 # by default it's timelapse (difference)
-            if self.param['reg_mode'] == 2: # it's a difference inversion
+            regMode = self.param['reg_mode']
+            diffInv = regMode in [2, 4] # difference inversion (d - d0)
+            if regMode == 2: # it's a difference inversion
                 indexes = self.matchSurveys()
+            elif regMode == 4: # sequential difference inversion (pairs i-1, i)
+                indexes = self.matchSurveys(sequential=True)
                 # if (self.typ == 'R3t') | (self.typ == 'cR3t'):
                 #     if fm0 is not None:
                 #         fm0 = fm0[indexes[0] # we crop it so it has the same
@@ -4300,11 +4409,17 @@ class Project(object): # Project master class instanciated by the GUI
                     s.df = s.df.drop('resist0', axis=1)
                 if 'recipMean0' in s.df.columns:
                     s.df = s.df.drop('recipMean0', axis=1)
-                if self.param['reg_mode'] == 2 and i > 0:
+                if diffInv and i > 0:
                     # modelling error already accounted for in the baseline model! 
                     errTot = False 
+                
+                if regMode == 4 and i > 0:
+                    # sequential: the "background" data of survey i is survey i-1
+                    sPrev = self.surveys[i-1]
+                    df0 = sPrev.df[['a','b','m','n','resist','recipMean','resError']].reset_index(drop=True)
+                    df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0','resError':'resError0'})
                   
-                if self.param['reg_mode'] == 2: 
+                if diffInv: 
                     # s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left') --> old code, potentially dodgy 
                     recipMean0 = np.full(len(s.df), np.nan, dtype=float)
                     resist0 = np.full(len(s.df), np.nan, dtype=float)
@@ -4333,9 +4448,11 @@ class Project(object): # Project master class instanciated by the GUI
                 # if not it means that the 'resError' columns has already
                 # been populated when the files has been imported
 
-                res0Bool = False if self.param['reg_mode'] == 1 else True
+                res0Bool = False if regMode in [1, 3] else True
                 # use the measurements that are matched with both the reference and timelapse inversion 
-                fm00 = fm0[indexes[i][0]] if fm0 is not None else fm0 
+                # fm0 can be a list with one array per survey (sequential R3t)
+                fmi = fm0[i] if isinstance(fm0, list) else fm0
+                fm00 = fmi[indexes[i][0]] if fmi is not None else None 
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             ip=False, # no IP timelapse possible for now
                                             isubset=indexes[i][1], threed=threed,
@@ -4343,7 +4460,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
                 # need to do a guassian propogration of errors if the case we have 
                 # errors and difference inversion 
-                if err and self.param['reg_mode'] == 2 and errTyp!='global':
+                if err and diffInv and errTyp!='global':
                     resError0 = df0['resError0'][indexes[i][0]].values 
                     resError = protocol['resError'].values 
                     protocol.loc[:,'resError'] = np.sqrt(resError**2 + resError0**2)
@@ -4728,6 +4845,227 @@ class Project(object): # Project master class instanciated by the GUI
 
 
 
+    def runChunked(self, dirname=None, dump=None, chunkSize=999, rmDirTree=True):
+        """Run a time-lapse or batch inversion in chunks of datasets.
+
+        The inversion codes number their outputs with 3 digits (f001 to f999)
+        and stop at the 1000th dataset of a run. Here protocol.dat is split
+        in chunks of at most `chunkSize` datasets, each chunk is inverted in
+        its own folder and its outputs are renumbered (f001 of the 2nd chunk
+        becomes f1000, etc.) so the results look like a single run.
+
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the working directory. Default is `Project.dirname`.
+        dump : function, optional
+            Function for printing output during inversion.
+        chunkSize : int, optional
+            Maximum number of datasets per run of the inversion code.
+        rmDirTree : bool, optional
+            Remove the chunk folders after the inversion.
+        """
+        if dirname is None:
+            dirname = self.dirname
+        if dump is None:
+            def dump(x):
+                print(x, end='')
+        blocks = splitProtocolFile(os.path.join(dirname, 'protocol.dat'))
+        nchunks = int(np.ceil(len(blocks)/chunkSize))
+        dump('{:d} datasets: more than the {:d} the inversion code can handle '
+             'in one run, inverting them in {:d} chunks\n'.format(
+                 len(blocks), chunkSize, nchunks))
+
+        r2outText = ''
+        chunkDirs = []
+        for c in range(nchunks):
+            offset = c*chunkSize # number of datasets in the previous chunks
+            cdir = os.path.join(dirname, 'chunk{:d}'.format(c+1))
+            removeTempDir(cdir, dump=dump)
+            os.makedirs(cdir, exist_ok=True)
+            chunkDirs.append(cdir)
+            for f in ['mesh.dat', 'mesh3d.dat', self.typ + '.in', 'res0.dat', 'Start_res.dat']:
+                if os.path.exists(os.path.join(dirname, f)):
+                    shutil.copy(os.path.join(dirname, f), os.path.join(cdir, f))
+            with open(os.path.join(cdir, 'protocol.dat'), 'w') as f:
+                f.write(''.join(blocks[offset:offset+chunkSize]))
+            dump('\n---------- CHUNK {:d}/{:d}: datasets {:d} to {:d} ----------\n'.format(
+                c+1, nchunks, offset+1, min(offset+chunkSize, len(blocks))))
+
+            self.runR2(cdir, dump=dump)
+
+            # renumber the outputs: fXXX... -> f(XXX+offset)...
+            for f in os.listdir(cdir):
+                if f[:1] == 'f' and f[1:4].isdigit():
+                    newName = 'f' + str(int(f[1:4]) + offset).zfill(3) + f[4:]
+                    shutil.move(os.path.join(cdir, f), os.path.join(dirname, newName))
+            r2outFile = os.path.join(cdir, self.typ + '.out')
+            if os.path.exists(r2outFile):
+                with open(r2outFile, 'r') as f:
+                    r2outText = r2outText + f.read()
+
+        # combined .out file and the electrodes files of the last chunk
+        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
+            f.write(r2outText)
+        for f in ['electrodes.dat', 'electrodes.vtk']:
+            if os.path.exists(os.path.join(chunkDirs[-1], f)):
+                shutil.move(os.path.join(chunkDirs[-1], f), os.path.join(dirname, f))
+        if rmDirTree:
+            for cdir in chunkDirs:
+                removeTempDir(cdir, dump=dump)
+        print('----------- END OF CHUNKED INVERSION ----------')
+
+
+    def runSequential(self, dirname=None, dump=None, err=None, rmDirTree=True):
+        """Run a sequential (cascaded) time-lapse inversion (reg_mode 3 or 4).
+
+        Each survey i is inverted using the inverted model of survey i-1 as
+        starting and reference model (Start_res.dat):
+
+        - reg_mode 3: background constrained inversion of d_i, regularised
+          against m_{i-1} (as reg_mode 1, but the reference model moves).
+        - reg_mode 4: difference inversion of d_i - d_{i-1} + f(m_{i-1}),
+          regularised against m_{i-1} (as reg_mode 2, but the pairs are
+          (t0, t1), (t1, t2), (t2, t3), ...).
+
+        The first step uses the inverted reference survey (t0). Contrary to
+        `Project.runParallel()` the steps must run one after the other.
+        Results are written as f002_res.dat, f003_res.dat... as for the other
+        time-lapse modes, so `Project.getResults()` can read them.
+
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the working directory. Default is `Project.dirname`.
+        dump : function, optional
+            Function for printing output during inversion.
+        err : bool, optional
+            Passed to `Project.write2protocol()` when the protocol has to be
+            rewritten (3D difference inversion only).
+        rmDirTree : bool, optional
+            Remove the 'seq' working directory after the inversion.
+        """
+        if dirname is None:
+            dirname = self.dirname
+        if dump is None:
+            def dump(x):
+                print(x, end='')
+        regMode = self.param['reg_mode']
+        threed = (self.typ == 'R3t') or (self.typ == 'cR3t')
+        surveys = self.surveys[1:] # survey 0 is the reference (already inverted)
+
+        # split the combined protocol.dat in one protocol per survey
+        dfs = splitProtocolFile(os.path.join(dirname, 'protocol.dat'))
+        if len(dfs) != len(surveys):
+            raise ValueError('Number of datasets in protocol.dat ({:d}) does not '
+                             'match number of surveys ({:d})'.format(len(dfs), len(surveys)))
+
+        # create the working directory with the files common to all steps
+        seqDir = os.path.join(dirname, 'seq')
+        if os.path.exists(seqDir):
+            # on Windows/OneDrive an empty folder can stay locked for a moment,
+            # so if it cannot be removed we just reuse it (its files are replaced below)
+            shutil.rmtree(seqDir, ignore_errors=True)
+        os.makedirs(seqDir, exist_ok=True)
+        for f in ['mesh.dat', 'mesh3d.dat', self.typ + '.in', 'Start_res.dat']:
+            if os.path.exists(os.path.join(dirname, f)):
+                shutil.copy(os.path.join(dirname, f), os.path.join(seqDir, f))
+        startFile = os.path.join(seqDir, 'Start_res.dat') # prior model m_{i-1}
+
+        toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat',
+                  'f001_sen.dat', 'f001_diffres.dat',
+                  'f001.dat', 'f001.sen', 'f001.err', 'f001.vtk'] # all 3D stuff
+        r2outText = ''
+        nfailed = 0
+        for k, s in enumerate(surveys):
+            i = k + 1 # index of the survey in self.surveys
+            fname = 'f' + str(i).zfill(3) # name of the outputs as in a normal TL run
+            dump('\n---------- STEP {:d}/{:d}: {:s} -> {:s} (reg_mode {:d}) ----------\n'.format(
+                i, len(surveys), self.surveys[i-1].name, s.name, regMode))
+
+            # for R3t difference inversion, f(m_{i-1}) is not computed by R3t
+            # so we forward model the previous model with the previous sequence
+            # and rewrite the protocol with d_i - d_{i-1} + f(m_{i-1})
+            if threed and regMode == 4:
+                dump('Computing d-d0+f(m0) for this step...\n')
+                prior = np.loadtxt(startFile)[:,3]
+                surveysBackup = self.surveys.copy()
+                res0Backup = self.mesh.df['res0'].values.copy()
+                iForwardBackup = self.iForward
+                self.sequence = self.surveys[i-1].df[['a','b','m','n']].values
+                self.mesh.df.loc[:,'res0'] = prior
+                self.forward(dump=lambda x: None)
+                fm0 = self.surveys[0].df['resist'].values.copy()
+                self.iForward = iForwardBackup
+                self.sequence = None
+                self.surveys = surveysBackup
+                self.mesh.df['res0'] = res0Backup
+                fm0s = [None]*len(self.surveys)
+                fm0s[i] = fm0
+                self.write2protocol(err=err, errTot=False, fm0=fm0s)
+                dfs = splitProtocolFile(os.path.join(dirname, 'protocol.dat'))
+
+            # write the protocol of this step and clean previous outputs
+            for f in os.listdir(seqDir):
+                if f[:4] == 'f001':
+                    os.remove(os.path.join(seqDir, f))
+            with open(os.path.join(seqDir, 'protocol.dat'), 'w') as f:
+                f.write(dfs[k])
+
+            # run the inversion of this step
+            self.runR2(seqDir, dump=dump)
+
+            # gather the R2.out
+            r2outFile = os.path.join(seqDir, self.typ + '.out')
+            if os.path.exists(r2outFile):
+                with open(r2outFile, 'r') as f:
+                    r2outText = r2outText + f.read()
+
+            if os.path.exists(os.path.join(seqDir, 'f001_res.dat')):
+                # the result of this step becomes the prior of the next step
+                shutil.copy(os.path.join(seqDir, 'f001_res.dat'), startFile)
+                for f in toMove:
+                    if os.path.exists(os.path.join(seqDir, f)):
+                        shutil.move(os.path.join(seqDir, f),
+                                    os.path.join(dirname, f.replace('f001', fname)))
+            else:
+                # the inversion did not produce a model (often because the
+                # prior already explains the data), keep the prior unchanged
+                nfailed += 1
+                dump('WARNING: no model produced for {:s}, the previous model '
+                     'is kept for this step.\n'.format(s.name))
+                if k == 0:
+                    prevVtk = os.path.join(dirname, 'ref', 'f001_res.vtk')
+                else:
+                    prevVtk = os.path.join(dirname, 'f' + str(i-1).zfill(3) + '_res.vtk')
+                if os.path.exists(prevVtk):
+                    shutil.copy(prevVtk, os.path.join(dirname, fname + '_res.vtk'))
+                    shutil.copy(startFile, os.path.join(dirname, fname + '_res.dat'))
+
+        # write combined .out file and keep the electrodes files
+        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
+            f.write(r2outText)
+        for f in ['electrodes.dat', 'electrodes.vtk']:
+            if os.path.exists(os.path.join(seqDir, f)):
+                shutil.move(os.path.join(seqDir, f), os.path.join(dirname, f))
+
+        # record how this run was done so Project.loadResults() can recompute
+        # the step differences and crop the (uncropped) results later on
+        info = {'reg_mode': regMode}
+        for key in ['num_xz_poly', 'xz_poly_table', 'num_xy_poly', 'xy_poly_table', 'zmin', 'zmax']:
+            if key in self.param:
+                val = self.param[key]
+                info[key] = val.tolist() if isinstance(val, np.ndarray) else val
+        with open(os.path.join(dirname, 'sequential.json'), 'w') as f:
+            json.dump(info, f, default=float)
+
+        if rmDirTree:
+            removeTempDir(seqDir, dump=dump) # never stops the run if locked
+        dump('\n{:d}/{:d} sequential steps produced a model\n'.format(
+            len(surveys) - nfailed, len(surveys)))
+        print('----------- END OF SEQUENTIAL INVERSION ----------')
+
+
     def invert(self, param={}, iplot=False, dump=None, err=None, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True, modelDOI=False, errResCol=None, errIPCol=None, 
@@ -4795,9 +5133,10 @@ class Project(object): # Project master class instanciated by the GUI
         if 'mesh' not in self.param:
             self.createMesh()
             
-        # clean previous iterations
+        # clean previous iterations (f001..., but also f1000... for long
+        # time-lapse runs) and the marker of a previous sequential run
         for f in os.listdir(self.dirname):
-            if f[:3] == 'f00':
+            if (f[:1] == 'f' and f[1:4].isdigit()) or f == 'sequential.json':
                 os.remove(os.path.join(self.dirname, f))
                 
         # deal with potential user supply error (res)
@@ -4896,11 +5235,25 @@ class Project(object): # Project master class instanciated by the GUI
             print('Note: Skipping reference inversion, as reference model has already been assigned')
 
         dump('\n--------------------- MAIN INVERSION ------------------\n')
-        if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
+        if self.iTimeLapse is True and self.param['reg_mode'] in [3, 4]:
+            # sequential time-lapse: step i needs the result of step i-1, so
+            # the steps cannot run in parallel
+            if parallel is True:
+                dump('Note: reg_mode {:d} is sequential, ignoring parallel=True\n'.format(self.param['reg_mode']))
+            if iMoveElec is True:
+                dump('Note: iMoveElec is not supported for reg_mode 3 or 4, ignoring it\n')
+            self.runSequential(dump=dump, err=err, rmDirTree=rmDirTree)
+        elif parallel is True and (self.iTimeLapse is True or self.iBatch is True):
             self.runParallel(dump=dump, iMoveElec=iMoveElec, ncores=ncores, rmDirTree=rmDirTree)
         else:
-            self.runR2(dump=dump)
-            
+            # the inversion codes stop at the 1000th dataset of a run (3-digit
+            # output names), so longer time-lapse/batch runs are split in chunks
+            ndatasets = len(self.surveys) - 1 if self.iTimeLapse else len(self.surveys)
+            if (self.iTimeLapse or self.iBatch) and ndatasets > 999:
+                self.runChunked(dump=dump, rmDirTree=rmDirTree)
+            else:
+                self.runR2(dump=dump)
+
         # extract inversion errors
         try: # this is in the case getInvError() is called after the file .err is
             # created by R2 but before it is populated (when killing the run)
@@ -5537,11 +5890,27 @@ class Project(object): # Project master class instanciated by the GUI
         # get typ
         self.typ = [f.split('.')[0] for f in files if f[-3:] == '.in'][0]
 
-        # detect if time-lapse and assume reg_mode == 0
+        # detect if time-lapse and read the reg_mode used from the .in file
+        # (0 if it cannot be found)
+        regModeIn = 0
         if 'ref' in files:
             self.iTimeLapse = True
-            self.param['reg_mode'] = 0
-            
+            with open(os.path.join(invdir, self.typ + '.in'), 'r') as f:
+                for line in f:
+                    if ('regularization type' in line) or ('data_type, reg_mode' in line):
+                        regModeIn = int(line.split()[1])
+            self.param['reg_mode'] = regModeIn
+        # the background transfer resistance (res0) column is only present
+        # in 2D difference inversion (in 3D, d-d0+f(m0) is written instead)
+        hasRes0 = (regModeIn == 2) and (self.typ[-1] != 't')
+
+        # sequential time-lapse (reg_mode 3 or 4): the results are not cropped,
+        # get the real reg_mode and the cropping polygon from sequential.json
+        seqInfo = None
+        if 'sequential.json' in files:
+            with open(os.path.join(invdir, 'sequential.json'), 'r') as f:
+                seqInfo = json.load(f) # applied after importMesh() below
+
         # load surveys
         self.surveys = []
         if (self.typ == 'cR2') or (self.typ == 'cR3t'):
@@ -5549,52 +5918,91 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             ftype = 'ProtocolDC'
         if self.iTimeLapse:
-            # split the protocol.dat
-            # in pandas >= 1.4.0 header=None with first row with one column (nb of meas)
-            # causes ParseError. to fix it we first read the number of rows from line 2
-            with open(os.path.join(invdir, 'protocol.dat'), 'r') as f:
-                f.readline()  # first wow, we don't care
-                nline = len(f.readline().split('\t'))
-            dfall = pd.read_csv(os.path.join(invdir, 'protocol.dat'),
-                                sep='\t', header=None, names=np.arange(nline))
-            idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
-            idf.append(len(dfall))
-            dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
-    
+            # split the protocol.dat in one text block per dataset. The raw
+            # text is kept as columns are tab separated but, in 3D, each
+            # electrode is written as '<line> <electrode>' (e.g. '1 13')
+            blocks = splitProtocolFile(os.path.join(invdir, 'protocol.dat'))
+
             # writing all protocol.dat
             files = []
-            for i, df in enumerate(dfs):
+            for i, block in enumerate(blocks):
                 outputname = os.path.join(self.dirname, 'survey{:03d}.dat'.format(i))
                 files.append(outputname)
-                if self.typ[-1] == 't':
-                    df2 = df[1:].astype({0:int, 1:int, 2:int,
-                                         3:int, 4:int, 5:int,
-                                         6:int, 7:int, 8:int})
-                    df2 = df2.drop(10, axis=1) # discard res0 as parser doesn't support it
-                else:
-                    df2 = df[1:].astype({0:int, 1:int, 2:int,
-                                         3:int, 4:int})
-                    df2 = df2.drop(6, axis=1) # discard res0
-
+                lines = block.strip('\n').split('\n')
+                if hasRes0: # 2D difference inversion: remove the res0 column
+                    # (7th: num, a, b, m, n, res, res0) as the parser doesn't support it
+                    body = []
+                    for line in lines[1:]:
+                        cols = line.split('\t')
+                        del cols[6]
+                        body.append('\t'.join(cols))
+                    lines = [lines[0]] + body
                 with open(outputname, 'w') as f:
-                    f.write('{:d}\n'.format(int(df.values[0, 0])))
-                    df2.to_csv(f, sep='\t', header=False, index=False)
-                # header with line count already included
-            
+                    f.write('\n'.join(lines) + '\n') # header with line count included
+
             fnames = [os.path.join(invdir, 'ref', 'protocol.dat')] + files
             self.createTimeLapseSurvey(fnames, ftype=ftype)
-            self.param['reg_mode'] = 0 # assumed
+            # restore the reg_mode found above (createTimeLapseSurvey() may reset it)
+            self.param['reg_mode'] = seqInfo['reg_mode'] if seqInfo is not None else regModeIn
         else:
             self.createSurvey(os.path.join(invdir, 'protocol.dat'), ftype=ftype)
 
         # get electrodes
         elec = pd.read_csv(os.path.join(invdir, 'electrodes.dat'), sep='\s+', header=None)
-        self.setElec(elec.values) # assuming none are buried
+        if self.typ[-1] == 't':
+            # 3D: electrodes are labelled '<line> <electrode>' (e.g. '1 1',
+            # '1 2', ...) as in the protocol. The labels are listed in the .in
+            # file ('<line> <electrode>\t<node>'), in the order of electrodes.dat
+            with open(os.path.join(invdir, self.typ + '.in'), 'r') as f:
+                lines = f.read().split('\n')
+            j = [i for i, l in enumerate(lines) if '<< num_electrodes' in l][0]
+            nelec = int(lines[j].split()[0])
+            labels = [l.split('\t')[0].strip() for l in lines[j+1:j+1+nelec]]
+            elecdf = pd.DataFrame(elec.values[:, :3], columns=['x', 'y', 'z'])
+            elecdf.insert(0, 'label', labels)
+            self.setElec(elecdf) # assuming none are buried
+        else:
+            self.setElec(elec.values) # assuming none are buried
  
-        # load mesh
-        self.importMesh(os.path.join(invdir, 'mesh.msh'))
+        # load mesh: mesh.msh if present, otherwise the mesh used by the
+        # inversion code (gmsh files are named after the mesh type in 3D,
+        # e.g. cylinder_mesh.msh, but mesh3d.dat / mesh.dat is always written)
+        if os.path.exists(os.path.join(invdir, 'mesh.msh')):
+            self.importMesh(os.path.join(invdir, 'mesh.msh'))
+        elif self.typ[-1] == 't':
+            self.importMesh(os.path.join(invdir, 'mesh3d.dat'))
+        else:
+            self.importMesh(os.path.join(invdir, 'mesh.dat'))
         # self.mesh = mt.vtk_import(os.path.join(invdir, 'f001_res.vtk'))
         
+        # sequential time-lapse: restore reg_mode and the cropping polygon
+        # used for the run (importMesh() sets a default polygon)
+        if seqInfo is not None:
+            for key in seqInfo:
+                val = seqInfo[key]
+                self.param[key] = np.array(val) if key[-5:] == 'table' else val
+        elif self.iTimeLapse:
+            # reg_mode 1 or 2: the cropping polygon of the run is in the .in
+            # file, it is needed so the reference model (cropped in
+            # postProcTl()) has the same elements as the other models
+            with open(os.path.join(invdir, self.typ + '.in'), 'r') as f:
+                lines = f.read().split('\n')
+            threed = self.typ[-1] == 't'
+            for j, line in enumerate(lines):
+                if '<< num_poly' in line:
+                    npoly = int(line.split()[0])
+                    if npoly > 0:
+                        table = np.array([l.split()[:2] for l in lines[j+1:j+1+npoly]], dtype=float)
+                        if threed:
+                            self.param['num_xy_poly'] = npoly
+                            self.param['xy_poly_table'] = table
+                        else:
+                            self.param['num_xz_poly'] = npoly
+                            self.param['xz_poly_table'] = table
+                if threed and '<<zmin, zmax' in line:
+                    self.param['zmin'] = float(line.split()[0])
+                    self.param['zmax'] = float(line.split()[1])
+
         # get results
         self.getResults(invdir)
     
@@ -7603,8 +8011,44 @@ class Project(object): # Project master class instanciated by the GUI
         # compute absolute and relative difference in resistivity
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
         res_name = res_names[np.isin(res_names, list(self.meshResults[0].df.keys()))][0]
+
+        # sequential time-lapse (reg_mode 3 or 4): all results cover the whole
+        # mesh (no cropping by the inversion code) so we can compare each model
+        # with the baseline (t0) AND with the previous step (t-1), then crop
+        if self.param.get('reg_mode', 0) in [3, 4]:
+            resBase = np.array(self.meshResults[0].df[res_name])
+            zeros = np.zeros(self.meshResults[0].numel)
+            self.meshResults[0].addAttribute(zeros, 'diff(Resistivity)')
+            self.meshResults[0].addAttribute(zeros, 'difference(percent)')
+            self.meshResults[0].addAttribute(zeros, 'stepDiff(Resistivity)')
+            self.meshResults[0].addAttribute(zeros, 'stepDifference(percent)')
+            for i in range(1, len(self.meshResults)):
+                try:
+                    res = np.array(self.meshResults[i].df[res_name])
+                    resPrev = np.array(self.meshResults[i-1].df[res_name])
+                    # change relative to the baseline t0 (same meaning as reg_mode 1 and 2)
+                    self.meshResults[i].addAttribute(res - resBase, 'diff(Resistivity)')
+                    self.meshResults[i].addAttribute((res - resBase)/resBase*100, 'difference(percent)')
+                    # change relative to the previous time step t-1
+                    self.meshResults[i].addAttribute(res - resPrev, 'stepDiff(Resistivity)')
+                    self.meshResults[i].addAttribute((res - resPrev)/resPrev*100, 'stepDifference(percent)')
+                except Exception as e:
+                    print('error in computing difference:', e)
+                    pass
+            # crop all meshes to the zone of interest
+            for i in range(len(self.meshResults)):
+                if self.meshResults[i].numel != len(inside):
+                    continue # already cropped (should not happen)
+                if self.typ[-1] == 't': # 3D: polygon in XY + zmin/zmax
+                    title = self.meshResults[i].mesh_title # not kept by filterIdx()
+                    self.meshResults[i] = self.meshResults[i].filterIdx(inside)
+                    self.meshResults[i].mesh_title = title
+                elif self.param[pname] > 0:
+                    self.meshResults[i] = self.meshResults[i].crop(self.param[tableName])
+            return
+
         res0 = np.array(self.meshResults[0].df[res_name])[inside]
-        
+
         # nb: the first survey will have 0 % change
         self.meshResults[0].addAttribute(np.zeros(self.meshResults[0].numel), 'difference(percent)') 
         for i in range(1, len(self.meshResults)):
@@ -7619,7 +8063,12 @@ class Project(object): # Project master class instanciated by the GUI
                 
         # crop the mesh0 object
         if self.iTimeLapse:
-            self.meshResults[0] = self.meshResults[0].crop(self.param['xz_poly_table'])
+            if self.typ[-1] == 't': # 3D: XY polygon + zmin/zmax, as the other models
+                title = self.meshResults[0].mesh_title # not kept by filterIdx()
+                self.meshResults[0] = self.meshResults[0].filterIdx(inside)
+                self.meshResults[0].mesh_title = title
+            else:
+                self.meshResults[0] = self.meshResults[0].crop(self.param['xz_poly_table'])
         
 
     def saveVtks(self, dirname=None):
