@@ -1,5 +1,5 @@
 altgraph==0.17.4
-certifi==2023.11.17
+certifi==2024.7.4
 chardet==5.2.0
 charset-normalizer==3.3.2
 contourpy==1.2.0
