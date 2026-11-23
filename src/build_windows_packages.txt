@@ -25,7 +25,7 @@ pytz==2019.3
 pyvista==0.25.3
 pyvistaqt==0.1.0
 pywin32-ctypes==0.2.0
-requests==2.23.0
+requests==2.33.0
 scipy==1.4.1
 scooby==0.5.2
 setuptools==46.1.3
